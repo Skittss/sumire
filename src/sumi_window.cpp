@@ -30,10 +30,10 @@ namespace sumire {
 	}
 
 	void SumiWindow::fbResizeCallback(GLFWwindow* window, int width, int height) {
-		auto sdeWindow = reinterpret_cast<SumiWindow*>(glfwGetWindowUserPointer(window));
-		sdeWindow->fbResizeFlag = true;
-		sdeWindow->width = width;
-		sdeWindow->height = height;
+		auto sumiWindow = reinterpret_cast<SumiWindow*>(glfwGetWindowUserPointer(window));
+		sumiWindow->fbResizeFlag = true;
+		sumiWindow->width = width;
+		sumiWindow->height = height;
 	}
 
 }

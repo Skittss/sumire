@@ -3,8 +3,8 @@
 layout (location = 0) out vec4 col;
 
 layout(push_constant) uniform Push {
-	vec2 offset;
 	vec3 colour;
+	mat4 transform;
 } push;
 
 void main() {

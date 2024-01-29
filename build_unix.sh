@@ -2,5 +2,5 @@
 mkdir -p build
 cd build
 cmake -S ../ -B .
-make && make Shaders && ./sde
+make && make Shaders && ./sumire
 cd ../

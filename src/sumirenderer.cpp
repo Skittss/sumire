@@ -11,39 +11,47 @@
 namespace sumire {
 
 	struct SimplePushConstantData {
-		glm::vec2 offset;
 		alignas(16) glm::vec3 colour; // Deal with device reading push constants not tightly packed
+		glm::mat4 transform;
 	};
 
 	SumiRenderer::SumiRenderer() {
-		loadModels();
+		loadObjects();
 		createPipelineLayout();
 		recreateSwapChain();
 		createCommandBuffers();
 	}
 
 	SumiRenderer::~SumiRenderer() {
-		vkDestroyPipelineLayout(sdeDevice.device(), pipelineLayout, nullptr);
+		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
 	}
 
 	void SumiRenderer::run() {
-		while (!sdeWindow.shouldClose()) {
+		while (!sumiWindow.shouldClose()) {
 			glfwPollEvents();
 			drawFrame();
 		}
 
 		// Prevent cleanup from happening while GPU resources are in use on close.
-		vkDeviceWaitIdle(sdeDevice.device());
+		vkDeviceWaitIdle(sumiDevice.device());
 	}
 
-	void SumiRenderer::loadModels() {
+	void SumiRenderer::loadObjects() {
 		std::vector<SumiModel::Vertex> vertices{
 			{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
 			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
 			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 		};
 
-		sdeModel = std::make_unique<SumiModel>(sdeDevice, vertices);
+		auto model = std::make_shared<SumiModel>(sumiDevice, vertices);
+
+		auto triangle = SumiObject::createObject();
+		triangle.model = model;
+		triangle.colour = {1.0f, 0.0f, 0.0f};
+		triangle.transform = glm::mat4();
+
+		objects.push_back(std::move(triangle));
+
 	}
 
 	void SumiRenderer::createPipelineLayout() {
@@ -61,7 +69,7 @@ namespace sumire {
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
 		if (vkCreatePipelineLayout(
-				sdeDevice.device(), 
+				sumiDevice.device(), 
 				&pipelineLayoutInfo,
 				nullptr, 
 				&pipelineLayout) != VK_SUCCESS) {
@@ -70,36 +78,36 @@ namespace sumire {
 	}
 
 	void SumiRenderer::createPipeline() {
-		assert(sdeSwapChain != nullptr && "cannot create pipeline before swap chain");
+		assert(sumiSwapChain != nullptr && "cannot create pipeline before swap chain");
 		assert(pipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
 
 		PipelineConfigInfo pipelineConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
-		pipelineConfig.renderPass = sdeSwapChain->getRenderPass();
+		pipelineConfig.renderPass = sumiSwapChain->getRenderPass();
 		pipelineConfig.pipelineLayout = pipelineLayout;
-		sdePipeline = std::make_unique<SumiPipeline>(
-			sdeDevice,
+		sumiPipeline = std::make_unique<SumiPipeline>(
+			sumiDevice,
 			"shaders/simple_shader.vert.spv",
 			"shaders/simple_shader.frag.spv",
 			pipelineConfig);
 	}
 
 	void SumiRenderer::recreateSwapChain() {
-		auto extent = sdeWindow.getExtent();
+		auto extent = sumiWindow.getExtent();
 		while (extent.width == 0 || extent.height == 0) {
 			// Wait on minimization
-			extent = sdeWindow.getExtent();
+			extent = sumiWindow.getExtent();
 			glfwWaitEvents();
 		}
 
-		vkDeviceWaitIdle(sdeDevice.device());
+		vkDeviceWaitIdle(sumiDevice.device());
 		
-		if (sdeSwapChain == nullptr) {
-			sdeSwapChain = std::make_unique<SumiSwapChain>(sdeDevice, extent);
+		if (sumiSwapChain == nullptr) {
+			sumiSwapChain = std::make_unique<SumiSwapChain>(sumiDevice, extent);
 		}
 		else {
-			sdeSwapChain = std::make_unique<SumiSwapChain>(sdeDevice, extent, std::move(sdeSwapChain));
-			if (sdeSwapChain->imageCount() != commandBuffers.size()) {
+			sumiSwapChain = std::make_unique<SumiSwapChain>(sumiDevice, extent, std::move(sumiSwapChain));
+			if (sumiSwapChain->imageCount() != commandBuffers.size()) {
 				// make new cb
 				freeCommandBuffers();
 				createCommandBuffers();
@@ -111,25 +119,25 @@ namespace sumire {
 
 	void SumiRenderer::createCommandBuffers() {
 		// 1-to-1 relationship on command buffers -> frame buffers.
-		commandBuffers.resize(sdeSwapChain->imageCount());
+		commandBuffers.resize(sumiSwapChain->imageCount());
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		// We allocate the memory for command buffers once beforehand in a *pool* to save on
 		//  the cost of creating a buffer at runtime, as this is a frequent operation.
-		allocInfo.commandPool = sdeDevice.getCommandPool();
+		allocInfo.commandPool = sumiDevice.getCommandPool();
 		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
-		if (vkAllocateCommandBuffers(sdeDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+		if (vkAllocateCommandBuffers(sumiDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate command buffers");
 		}
 	}
 
 	void SumiRenderer::freeCommandBuffers() {
 		vkFreeCommandBuffers(
-			sdeDevice.device(),
-			sdeDevice.getCommandPool(),
+			sumiDevice.device(),
+			sumiDevice.getCommandPool(),
 			static_cast<uint32_t>(commandBuffers.size()),
 			commandBuffers.data());
 
@@ -146,11 +154,11 @@ namespace sumire {
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = sdeSwapChain->getRenderPass();
-		renderPassInfo.framebuffer = sdeSwapChain->getFrameBuffer(imageIdx);
+		renderPassInfo.renderPass = sumiSwapChain->getRenderPass();
+		renderPassInfo.framebuffer = sumiSwapChain->getFrameBuffer(imageIdx);
 
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = sdeSwapChain->getSwapChainExtent();
+		renderPassInfo.renderArea.extent = sumiSwapChain->getSwapChainExtent();
 
 		std::array<VkClearValue, 2> clearValues{};
 		clearValues[0].color = { 0.01f, 0.01f, 0.01f, 1.0f };
@@ -163,32 +171,15 @@ namespace sumire {
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(sdeSwapChain->getSwapChainExtent().width);
-		viewport.height = static_cast<float>(sdeSwapChain->getSwapChainExtent().height);
+		viewport.width = static_cast<float>(sumiSwapChain->getSwapChainExtent().width);
+		viewport.height = static_cast<float>(sumiSwapChain->getSwapChainExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		VkRect2D scissor{ {0, 0}, sdeSwapChain->getSwapChainExtent() };
+		VkRect2D scissor{ {0, 0}, sumiSwapChain->getSwapChainExtent() };
 		vkCmdSetViewport(commandBuffers[imageIdx], 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffers[imageIdx], 0, 1, &scissor);
 
-		sdePipeline->bind(commandBuffers[imageIdx]);
-		sdeModel->bind(commandBuffers[imageIdx]);
-
-		for (int i = 0; i < 4; i++) {
-			SimplePushConstantData push{};
-			push.offset = {0.0f, -0.4f * i * 0.25f};
-			push.colour = {0.0, 0.0f, 0.2f + 0.2f * i};
-
-			vkCmdPushConstants(
-				commandBuffers[imageIdx], 
-				pipelineLayout,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-				0,
-				sizeof(SimplePushConstantData),
-				&push
-			);
-			sdeModel->draw(commandBuffers[imageIdx]);
-		}
+		renderObjects(commandBuffers[imageIdx]);
 		
 		vkCmdEndRenderPass(commandBuffers[imageIdx]);
 
@@ -197,9 +188,31 @@ namespace sumire {
 		}
 	}
 
+	void SumiRenderer::renderObjects(VkCommandBuffer commandBuffer) {
+		sumiPipeline->bind(commandBuffer);
+
+		for (auto& obj: objects) {
+			SimplePushConstantData push{};
+			push.colour = obj.colour;
+			push.transform = obj.transform;
+
+			vkCmdPushConstants(
+				commandBuffer, 
+				pipelineLayout,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				sizeof(SimplePushConstantData),
+				&push
+			);
+			
+			obj.model->bind(commandBuffer);
+			obj.model->draw(commandBuffer);
+		}
+	}
+
 	void SumiRenderer::drawFrame() {
 		uint32_t imageIndex;
-		auto result = sdeSwapChain->acquireNextImage(&imageIndex);
+		auto result = sumiSwapChain->acquireNextImage(&imageIndex);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 			recreateSwapChain();
@@ -212,11 +225,11 @@ namespace sumire {
 		}
 	
 		recordCommandBuffer(imageIndex);
-		result = sdeSwapChain->submitCommandBuffers(&commandBuffers[imageIndex], &imageIndex);
+		result = sumiSwapChain->submitCommandBuffers(&commandBuffers[imageIndex], &imageIndex);
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || 
 				result == VK_SUBOPTIMAL_KHR || 
-				sdeWindow.wasWindowResized()) {
-			sdeWindow.resetWindowResizedFlag();
+				sumiWindow.wasWindowResized()) {
+			sumiWindow.resetWindowResizedFlag();
 			recreateSwapChain();
 			return;
 		}

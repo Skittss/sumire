@@ -53,7 +53,7 @@ namespace sumire {
 		void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 
 		// Aggregatitive relationship so this reference member is memory-safe.
-		SumiDevice& sdeDevice;
+		SumiDevice& sumiDevice;
 		VkPipeline graphicsPipeline;
 		VkShaderModule vertShaderModule;
 		VkShaderModule fragShaderModule;

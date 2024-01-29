@@ -5,6 +5,7 @@
 #include "sumi_swap_chain.hpp"
 #include "sumi_device.hpp"
 #include "sumi_model.hpp"
+#include "sumi_object.hpp"
 
 #include <memory>
 #include <vector>
@@ -25,7 +26,7 @@ namespace sumire {
 		SumiRenderer& operator=(const SumiRenderer&) = delete;
 
 	private:
-		void loadModels();
+		void loadObjects();
 		void createPipelineLayout();
 		void createPipeline();
 		void createCommandBuffers();
@@ -33,13 +34,14 @@ namespace sumire {
 		void drawFrame();
 		void recreateSwapChain();
 		void recordCommandBuffer(int imageIdx);
+		void renderObjects(VkCommandBuffer commandBuffer);
 
-		SumiWindow sdeWindow{ WIDTH, HEIGHT, "Sumire" };
-		SumiDevice sdeDevice{ sdeWindow };
-		std::unique_ptr<SumiSwapChain> sdeSwapChain;
-		std::unique_ptr<SumiPipeline> sdePipeline;
+		SumiWindow sumiWindow{ WIDTH, HEIGHT, "Sumire" };
+		SumiDevice sumiDevice{ sumiWindow };
+		std::unique_ptr<SumiSwapChain> sumiSwapChain;
+		std::unique_ptr<SumiPipeline> sumiPipeline;
 		VkPipelineLayout pipelineLayout;
 		std::vector<VkCommandBuffer> commandBuffers;
-		std::unique_ptr<SumiModel> sdeModel;
+		std::vector<SumiObject> objects;
 	};
 }

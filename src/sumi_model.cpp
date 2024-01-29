@@ -10,20 +10,20 @@
 
 namespace sumire {
 
-	SumiModel::SumiModel(SumiDevice& device, const std::vector<Vertex>& vertices) : sdeDevice{ device } {
+	SumiModel::SumiModel(SumiDevice& device, const std::vector<Vertex>& vertices) : sumiDevice{ device } {
 		createVertexBuffers(vertices);
 	}
 
 	SumiModel::~SumiModel() {
-		vkDestroyBuffer(sdeDevice.device(), vertexBuffer, nullptr);
-		vkFreeMemory(sdeDevice.device(), vertexBufferMemory, nullptr);
+		vkDestroyBuffer(sumiDevice.device(), vertexBuffer, nullptr);
+		vkFreeMemory(sumiDevice.device(), vertexBufferMemory, nullptr);
 	}
 
 	void SumiModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
 		vertexCount = static_cast<uint32_t>(vertices.size());
 		assert(vertexCount >= 3 && "Vertex count must be at least 3");
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount; // vb size
-		sdeDevice.createBuffer(
+		sumiDevice.createBuffer(
 			bufferSize,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			// Allow CPU to write to the buffer, and keep the CPU - GPU memory synced automatically, instead of having to manually flush
@@ -32,9 +32,9 @@ namespace sumire {
 			vertexBufferMemory);
 
 		void* data;
-		vkMapMemory(sdeDevice.device(), vertexBufferMemory, 0, bufferSize, 0, &data);
+		vkMapMemory(sumiDevice.device(), vertexBufferMemory, 0, bufferSize, 0, &data);
 		memcpy(data, vertices.data(), static_cast<size_t>(bufferSize)); // Write to host data region
-		vkUnmapMemory(sdeDevice.device(), vertexBufferMemory);
+		vkUnmapMemory(sumiDevice.device(), vertexBufferMemory);
 	}
 
 	void SumiModel::bind(VkCommandBuffer commandBuffer) {

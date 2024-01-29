@@ -19,14 +19,14 @@ namespace sumire {
 		const std::string& vertFilepath,
 		const std::string& fragFilepath,
 		const PipelineConfigInfo& configInfo
-	) : sdeDevice{ device } {
+	) : sumiDevice{ device } {
 		createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
 	}
 
 	SumiPipeline::~SumiPipeline() {
-		vkDestroyShaderModule(sdeDevice.device(), vertShaderModule, nullptr);
-		vkDestroyShaderModule(sdeDevice.device(), fragShaderModule, nullptr);
-		vkDestroyPipeline(sdeDevice.device(), graphicsPipeline, nullptr);
+		vkDestroyShaderModule(sumiDevice.device(), vertShaderModule, nullptr);
+		vkDestroyShaderModule(sumiDevice.device(), fragShaderModule, nullptr);
+		vkDestroyPipeline(sumiDevice.device(), graphicsPipeline, nullptr);
 	}
 
 	std::vector<char> SumiPipeline::readFile(const std::string& filepath) {
@@ -117,7 +117,7 @@ namespace sumire {
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 		if (vkCreateGraphicsPipelines(
-				sdeDevice.device(),
+				sumiDevice.device(),
 				VK_NULL_HANDLE,
 				1,
 				&pipelineInfo,
@@ -133,7 +133,7 @@ namespace sumire {
 		createInfo.codeSize = code.size();
 		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-		if (vkCreateShaderModule(sdeDevice.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
+		if (vkCreateShaderModule(sumiDevice.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create shader module");
 		}
 	}

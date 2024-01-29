@@ -34,7 +34,7 @@ namespace sumire {
 	private:
 		void createVertexBuffers(const std::vector<Vertex>& vertices);
 
-		SumiDevice& sdeDevice;
+		SumiDevice& sumiDevice;
 		VkBuffer vertexBuffer;
 		VkDeviceMemory vertexBufferMemory;
 		uint32_t vertexCount;
