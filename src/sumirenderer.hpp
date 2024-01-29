@@ -34,7 +34,7 @@ namespace sumire {
 		void recreateSwapChain();
 		void recordCommandBuffer(int imageIdx);
 
-		SumiWindow sdeWindow{ WIDTH, HEIGHT, "TDR" };
+		SumiWindow sdeWindow{ WIDTH, HEIGHT, "Sumire" };
 		SumiDevice sdeDevice{ sdeWindow };
 		std::unique_ptr<SumiSwapChain> sdeSwapChain;
 		std::unique_ptr<SumiPipeline> sdePipeline;
