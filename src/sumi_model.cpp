@@ -1,4 +1,4 @@
-#include "sde_model.hpp"
+#include "sumi_model.hpp"
 
 #include <cassert>
 #include <cstring>
@@ -8,18 +8,18 @@
 #define ENGINE_DIR "../"
 #endif
 
-namespace sde {
+namespace sumire {
 
-	SdeModel::SdeModel(SdeDevice& device, const std::vector<Vertex>& vertices) : sdeDevice{ device } {
+	SumiModel::SumiModel(SumiDevice& device, const std::vector<Vertex>& vertices) : sdeDevice{ device } {
 		createVertexBuffers(vertices);
 	}
 
-	SdeModel::~SdeModel() {
+	SumiModel::~SumiModel() {
 		vkDestroyBuffer(sdeDevice.device(), vertexBuffer, nullptr);
 		vkFreeMemory(sdeDevice.device(), vertexBufferMemory, nullptr);
 	}
 
-	void SdeModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
+	void SumiModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
 		vertexCount = static_cast<uint32_t>(vertices.size());
 		assert(vertexCount >= 3 && "Vertex count must be at least 3");
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount; // vb size
@@ -37,17 +37,17 @@ namespace sde {
 		vkUnmapMemory(sdeDevice.device(), vertexBufferMemory);
 	}
 
-	void SdeModel::bind(VkCommandBuffer commandBuffer) {
+	void SumiModel::bind(VkCommandBuffer commandBuffer) {
 		VkBuffer buffers[] = { vertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 	}
 
-	void SdeModel::draw(VkCommandBuffer commandBuffer) {
+	void SumiModel::draw(VkCommandBuffer commandBuffer) {
 		vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
 	}
 
-	std::vector<VkVertexInputBindingDescription> SdeModel::Vertex::getBindingDescriptions() {
+	std::vector<VkVertexInputBindingDescription> SumiModel::Vertex::getBindingDescriptions() {
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
 		bindingDescriptions[0].binding = 0;
 		bindingDescriptions[0].stride = sizeof(Vertex);
@@ -55,7 +55,7 @@ namespace sde {
 		return bindingDescriptions;
 	}
 
-	std::vector<VkVertexInputAttributeDescription> SdeModel::Vertex::getAttributeDescriptions() {
+	std::vector<VkVertexInputAttributeDescription> SumiModel::Vertex::getAttributeDescriptions() {
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;

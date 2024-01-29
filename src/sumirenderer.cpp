@@ -1,23 +1,32 @@
-#include "tile_deferred_renderer.hpp"
+#include "sumirenderer.hpp"
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
 
 #include <stdexcept>
 #include <array>
 #include <cassert>
 
-namespace sde {
+namespace sumire {
 
-	TileDeferredRenderer::TileDeferredRenderer() {
+	struct SimplePushConstantData {
+		glm::vec2 offset;
+		alignas(16) glm::vec3 colour; // Deal with device reading push constants not tightly packed
+	};
+
+	SumiRenderer::SumiRenderer() {
 		loadModels();
 		createPipelineLayout();
 		recreateSwapChain();
 		createCommandBuffers();
 	}
 
-	TileDeferredRenderer::~TileDeferredRenderer() {
+	SumiRenderer::~SumiRenderer() {
 		vkDestroyPipelineLayout(sdeDevice.device(), pipelineLayout, nullptr);
 	}
 
-	void TileDeferredRenderer::run() {
+	void SumiRenderer::run() {
 		while (!sdeWindow.shouldClose()) {
 			glfwPollEvents();
 			drawFrame();
@@ -27,23 +36,29 @@ namespace sde {
 		vkDeviceWaitIdle(sdeDevice.device());
 	}
 
-	void TileDeferredRenderer::loadModels() {
-		std::vector<SdeModel::Vertex> vertices{
+	void SumiRenderer::loadModels() {
+		std::vector<SumiModel::Vertex> vertices{
 			{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
 			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
 			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 		};
 
-		sdeModel = std::make_unique<SdeModel>(sdeDevice, vertices);
+		sdeModel = std::make_unique<SumiModel>(sdeDevice, vertices);
 	}
 
-	void TileDeferredRenderer::createPipelineLayout() {
+	void SumiRenderer::createPipelineLayout() {
+
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = sizeof(SimplePushConstantData);
+		
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 0;
 		pipelineLayoutInfo.pSetLayouts = nullptr;
-		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		pipelineLayoutInfo.pPushConstantRanges = nullptr;
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
 		if (vkCreatePipelineLayout(
 				sdeDevice.device(), 
@@ -54,22 +69,22 @@ namespace sde {
 		}
 	}
 
-	void TileDeferredRenderer::createPipeline() {
+	void SumiRenderer::createPipeline() {
 		assert(sdeSwapChain != nullptr && "cannot create pipeline before swap chain");
 		assert(pipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
 
 		PipelineConfigInfo pipelineConfig{};
-		SdePipeline::defaultPipelineConfigInfo(pipelineConfig);
+		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = sdeSwapChain->getRenderPass();
 		pipelineConfig.pipelineLayout = pipelineLayout;
-		sdePipeline = std::make_unique<SdePipeline>(
+		sdePipeline = std::make_unique<SumiPipeline>(
 			sdeDevice,
 			"shaders/simple_shader.vert.spv",
 			"shaders/simple_shader.frag.spv",
 			pipelineConfig);
 	}
 
-	void TileDeferredRenderer::recreateSwapChain() {
+	void SumiRenderer::recreateSwapChain() {
 		auto extent = sdeWindow.getExtent();
 		while (extent.width == 0 || extent.height == 0) {
 			// Wait on minimization
@@ -80,11 +95,12 @@ namespace sde {
 		vkDeviceWaitIdle(sdeDevice.device());
 		
 		if (sdeSwapChain == nullptr) {
-			sdeSwapChain = std::make_unique<SdeSwapChain>(sdeDevice, extent);
+			sdeSwapChain = std::make_unique<SumiSwapChain>(sdeDevice, extent);
 		}
 		else {
-			sdeSwapChain = std::make_unique<SdeSwapChain>(sdeDevice, extent, std::move(sdeSwapChain));
+			sdeSwapChain = std::make_unique<SumiSwapChain>(sdeDevice, extent, std::move(sdeSwapChain));
 			if (sdeSwapChain->imageCount() != commandBuffers.size()) {
+				// make new cb
 				freeCommandBuffers();
 				createCommandBuffers();
 			}
@@ -93,7 +109,7 @@ namespace sde {
 		createPipeline();
 	}
 
-	void TileDeferredRenderer::createCommandBuffers() {
+	void SumiRenderer::createCommandBuffers() {
 		// 1-to-1 relationship on command buffers -> frame buffers.
 		commandBuffers.resize(sdeSwapChain->imageCount());
 
@@ -110,7 +126,7 @@ namespace sde {
 		}
 	}
 
-	void TileDeferredRenderer::freeCommandBuffers() {
+	void SumiRenderer::freeCommandBuffers() {
 		vkFreeCommandBuffers(
 			sdeDevice.device(),
 			sdeDevice.getCommandPool(),
@@ -120,7 +136,7 @@ namespace sde {
 		commandBuffers.clear();
 	}
 
-	void TileDeferredRenderer::recordCommandBuffer(int imageIdx) {
+	void SumiRenderer::recordCommandBuffer(int imageIdx) {
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -137,7 +153,7 @@ namespace sde {
 		renderPassInfo.renderArea.extent = sdeSwapChain->getSwapChainExtent();
 
 		std::array<VkClearValue, 2> clearValues{};
-		clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+		clearValues[0].color = { 0.01f, 0.01f, 0.01f, 1.0f };
 		clearValues[1].depthStencil = { 1.0f, 0 };
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
@@ -157,8 +173,23 @@ namespace sde {
 
 		sdePipeline->bind(commandBuffers[imageIdx]);
 		sdeModel->bind(commandBuffers[imageIdx]);
-		sdeModel->draw(commandBuffers[imageIdx]);
 
+		for (int i = 0; i < 4; i++) {
+			SimplePushConstantData push{};
+			push.offset = {0.0f, -0.4f * i * 0.25f};
+			push.colour = {0.0, 0.0f, 0.2f + 0.2f * i};
+
+			vkCmdPushConstants(
+				commandBuffers[imageIdx], 
+				pipelineLayout,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				sizeof(SimplePushConstantData),
+				&push
+			);
+			sdeModel->draw(commandBuffers[imageIdx]);
+		}
+		
 		vkCmdEndRenderPass(commandBuffers[imageIdx]);
 
 		if (vkEndCommandBuffer(commandBuffers[imageIdx]) != VK_SUCCESS) {
@@ -166,7 +197,7 @@ namespace sde {
 		}
 	}
 
-	void TileDeferredRenderer::drawFrame() {
+	void SumiRenderer::drawFrame() {
 		uint32_t imageIndex;
 		auto result = sdeSwapChain->acquireNextImage(&imageIndex);
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sde_device.hpp"
+#include "sumi_device.hpp"
 
 // vulkan headers
 #include <vulkan/vulkan.h>
@@ -10,18 +10,18 @@
 #include <string>
 #include <vector>
 
-namespace sde {
+namespace sumire {
 
-	class SdeSwapChain {
+	class SumiSwapChain {
 	public:
 		static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
-		SdeSwapChain(SdeDevice& deviceRef, VkExtent2D windowExtent);
-		SdeSwapChain(SdeDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<SdeSwapChain> previous);
-		~SdeSwapChain();
+		SumiSwapChain(SumiDevice& deviceRef, VkExtent2D windowExtent);
+		SumiSwapChain(SumiDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<SumiSwapChain> previous);
+		~SumiSwapChain();
 
-		SdeSwapChain(const SdeSwapChain&) = delete;
-		SdeSwapChain& operator=(const SdeSwapChain&) = delete;
+		SumiSwapChain(const SumiSwapChain&) = delete;
+		SumiSwapChain& operator=(const SumiSwapChain&) = delete;
 
 		VkFramebuffer getFrameBuffer(int index) { return swapChainFramebuffers[index]; }
 		VkRenderPass getRenderPass() { return renderPass; }
@@ -68,11 +68,11 @@ namespace sde {
 		std::vector<VkImage> swapChainImages;
 		std::vector<VkImageView> swapChainImageViews;
 
-		SdeDevice& device;
+		SumiDevice& device;
 		VkExtent2D windowExtent;
 
 		VkSwapchainKHR swapChain;
-		std::shared_ptr<SdeSwapChain> oldSwapChain;
+		std::shared_ptr<SumiSwapChain> oldSwapChain;
 
 		std::vector<VkSemaphore> imageAvailableSemaphores;
 		std::vector<VkSemaphore> renderFinishedSemaphores;

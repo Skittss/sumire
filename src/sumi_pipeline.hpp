@@ -1,11 +1,11 @@
 #pragma once
 
-#include "sde_device.hpp"
+#include "sumi_device.hpp"
 
 #include <string>
 #include <vector>
 
-namespace sde {
+namespace sumire {
 
 	struct PipelineConfigInfo {
 		PipelineConfigInfo(const PipelineConfigInfo&) = delete;
@@ -25,19 +25,19 @@ namespace sde {
 		uint32_t subpass = 0;
 	};
 
-	class SdePipeline {
+	class SumiPipeline {
 	public:
-		SdePipeline() = default;
-		SdePipeline(
-			SdeDevice& device, 
+		SumiPipeline() = default;
+		SumiPipeline(
+			SumiDevice& device, 
 			const std::string& vertFilepath, 
 			const std::string& fragFilepath, 
 			const PipelineConfigInfo& configInfo
 		);
-		~SdePipeline();
+		~SumiPipeline();
 
-		SdePipeline(const SdePipeline&) = delete;
-		SdePipeline& operator=(const SdePipeline&) = delete;
+		SumiPipeline(const SumiPipeline&) = delete;
+		SumiPipeline& operator=(const SumiPipeline&) = delete;
 
 		void bind(VkCommandBuffer commandBuffer);
 		static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
@@ -53,7 +53,7 @@ namespace sde {
 		void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 
 		// Aggregatitive relationship so this reference member is memory-safe.
-		SdeDevice& sdeDevice;
+		SumiDevice& sdeDevice;
 		VkPipeline graphicsPipeline;
 		VkShaderModule vertShaderModule;
 		VkShaderModule fragShaderModule;

@@ -5,16 +5,16 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-namespace sde {
+namespace sumire {
 
-	class SdeWindow {
+	class SumiWindow {
 
 	public:
-		SdeWindow(int w, int h, std::string name);
-		~SdeWindow();
+		SumiWindow(int w, int h, std::string name);
+		~SumiWindow();
 
-		SdeWindow(const SdeWindow&) = delete;
-		SdeWindow& operator=(const SdeWindow&) = delete;
+		SumiWindow(const SumiWindow&) = delete;
+		SumiWindow& operator=(const SumiWindow&) = delete;
 
 		bool shouldClose() { return glfwWindowShouldClose(window); }
 		VkExtent2D getExtent() { return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sde_device.hpp"
+#include "sumi_device.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -8,9 +8,9 @@
 
 #include <vector>
 
-namespace sde {
+namespace sumire {
 
-	class SdeModel {
+	class SumiModel {
 
 	public: 
 
@@ -22,11 +22,11 @@ namespace sde {
 			static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 		};
 
-		SdeModel(SdeDevice& device, const std::vector<Vertex>& vertices);
-		~SdeModel();
+		SumiModel(SumiDevice& device, const std::vector<Vertex>& vertices);
+		~SumiModel();
 
-		SdeModel(const SdeModel&) = delete;
-		SdeModel& operator=(const SdeModel&) = delete;
+		SumiModel(const SumiModel&) = delete;
+		SumiModel& operator=(const SumiModel&) = delete;
 
 		void bind(VkCommandBuffer commandbuffer);
 		void draw(VkCommandBuffer commandbuffer);
@@ -34,7 +34,7 @@ namespace sde {
 	private:
 		void createVertexBuffers(const std::vector<Vertex>& vertices);
 
-		SdeDevice& sdeDevice;
+		SumiDevice& sdeDevice;
 		VkBuffer vertexBuffer;
 		VkDeviceMemory vertexBufferMemory;
 		uint32_t vertexCount;

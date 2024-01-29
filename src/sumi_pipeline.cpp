@@ -1,6 +1,6 @@
-#include "sde_pipeline.hpp"
+#include "sumi_pipeline.hpp"
 
-#include "sde_model.hpp"
+#include "sumi_model.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -12,10 +12,10 @@
 #define ENGINE_DIR "../"
 #endif
 
-namespace sde {
+namespace sumire {
 
-	SdePipeline::SdePipeline(
-		SdeDevice& device,
+	SumiPipeline::SumiPipeline(
+		SumiDevice& device,
 		const std::string& vertFilepath,
 		const std::string& fragFilepath,
 		const PipelineConfigInfo& configInfo
@@ -23,13 +23,13 @@ namespace sde {
 		createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
 	}
 
-	SdePipeline::~SdePipeline() {
+	SumiPipeline::~SumiPipeline() {
 		vkDestroyShaderModule(sdeDevice.device(), vertShaderModule, nullptr);
 		vkDestroyShaderModule(sdeDevice.device(), fragShaderModule, nullptr);
 		vkDestroyPipeline(sdeDevice.device(), graphicsPipeline, nullptr);
 	}
 
-	std::vector<char> SdePipeline::readFile(const std::string& filepath) {
+	std::vector<char> SumiPipeline::readFile(const std::string& filepath) {
 		std::string enginePath = ENGINE_DIR + filepath;
 		std::ifstream file{ enginePath, std::ios::ate | std::ios::binary };
 
@@ -47,7 +47,7 @@ namespace sde {
 		return buffer;
 	}
 
-	void SdePipeline::createGraphicsPipeline(
+	void SumiPipeline::createGraphicsPipeline(
 		const std::string& vertFilepath, 
 		const std::string& fragFilepath,
 		const PipelineConfigInfo& configInfo
@@ -82,8 +82,8 @@ namespace sde {
 		shaderStages[1].pNext = nullptr;
 		shaderStages[1].pSpecializationInfo = nullptr;
 
-		auto bindingDescriptions = SdeModel::Vertex::getBindingDescriptions();
-		auto attributeDescriptions = SdeModel::Vertex::getAttributeDescriptions();
+		auto bindingDescriptions = SumiModel::Vertex::getBindingDescriptions();
+		auto attributeDescriptions = SumiModel::Vertex::getAttributeDescriptions();
 		// How to interpret input vertex buffer data
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -127,7 +127,7 @@ namespace sde {
 		}
 	}
 
-	void SdePipeline::createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) {
+	void SumiPipeline::createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) {
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.codeSize = code.size();
@@ -138,11 +138,11 @@ namespace sde {
 		}
 	}
 
-	void SdePipeline::bind(VkCommandBuffer commandBuffer) {
+	void SumiPipeline::bind(VkCommandBuffer commandBuffer) {
 		// Pipeline types are graphics, compute and raytracing.
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 	}
-	void SdePipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
+	void SumiPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
 		// NOTE: Reading the Vk Documentation is VERY IMPORTANT for configuring configs as you desire.
 
 		// Triangle list input assembly.

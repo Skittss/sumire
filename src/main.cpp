@@ -1,14 +1,14 @@
-#include "tile_deferred_renderer.hpp"
+#include "sumirenderer.hpp"
 
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
 
 int main() {
-	sde::TileDeferredRenderer tdr{};
+	sumire::SumiRenderer sumi{};
 
 	try {
-		tdr.run();
+		sumi.run();
 	}
 	catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;

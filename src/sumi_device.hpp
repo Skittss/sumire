@@ -1,11 +1,11 @@
 #pragma once
 
-#include "sde_window.hpp"
+#include "sumi_window.hpp"
 
 #include <string>
 #include <vector>
 
-namespace sde {
+namespace sumire {
 
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
@@ -21,7 +21,7 @@ namespace sde {
 		bool isComplete() { return graphicsFamilyHasValue && presentFamilyHasValue; }
 	};
 
-	class SdeDevice {
+	class SumiDevice {
 	public:
 
 	#ifdef NDEBUG
@@ -30,14 +30,14 @@ namespace sde {
 		const bool enableValidationLayers = true;
 	#endif
 
-		SdeDevice(SdeWindow& window);
-		~SdeDevice();
+		SumiDevice(SumiWindow& window);
+		~SumiDevice();
 
 		// Not copyable or movable
-		SdeDevice(const SdeDevice&) = delete;
-		SdeDevice& operator=(const SdeDevice&) = delete;
-		SdeDevice(SdeDevice&&) = delete;
-		SdeDevice& operator=(SdeDevice&&) = delete;
+		SumiDevice(const SumiDevice&) = delete;
+		SumiDevice& operator=(const SumiDevice&) = delete;
+		SumiDevice(SumiDevice&&) = delete;
+		SumiDevice& operator=(SumiDevice&&) = delete;
 
 		VkCommandPool getCommandPool() { return commandPool; }
 		VkDevice device() { return device_; }
@@ -93,7 +93,7 @@ namespace sde {
 		VkInstance instance;
 		VkDebugUtilsMessengerEXT debugMessenger;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-		SdeWindow& window;
+		SumiWindow& window;
 		VkCommandPool commandPool;
 
 		VkDevice device_;

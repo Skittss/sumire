@@ -1,4 +1,4 @@
-#include "sde_swap_chain.hpp"
+#include "sumi_swap_chain.hpp"
 
 #include <array>
 #include <cstdlib>
@@ -8,14 +8,14 @@
 #include <set>
 #include <stdexcept>
 
-namespace sde {
+namespace sumire {
 
-	SdeSwapChain::SdeSwapChain(SdeDevice& deviceRef, VkExtent2D extent)
+	SumiSwapChain::SumiSwapChain(SumiDevice& deviceRef, VkExtent2D extent)
 		: device{ deviceRef }, windowExtent{ extent } {
 		init();
 	}
 
-	SdeSwapChain::SdeSwapChain(SdeDevice& deviceRef, VkExtent2D extent, std::shared_ptr<SdeSwapChain> previous)
+	SumiSwapChain::SumiSwapChain(SumiDevice& deviceRef, VkExtent2D extent, std::shared_ptr<SumiSwapChain> previous)
 		: device{ deviceRef }, windowExtent{ extent }, oldSwapChain{ previous } {
 		init();
 
@@ -23,7 +23,7 @@ namespace sde {
 		oldSwapChain = nullptr;
 	}
 
-	void SdeSwapChain::init() {
+	void SumiSwapChain::init() {
 		createSwapChain();
 		createImageViews();
 		createRenderPass();
@@ -32,7 +32,7 @@ namespace sde {
 		createSyncObjects();
 	}
 
-	SdeSwapChain::~SdeSwapChain() {
+	SumiSwapChain::~SumiSwapChain() {
 		for (auto imageView : swapChainImageViews) {
 			vkDestroyImageView(device.device(), imageView, nullptr);
 		}
@@ -63,7 +63,7 @@ namespace sde {
 		}
 	}
 
-	VkResult SdeSwapChain::acquireNextImage(uint32_t* imageIndex) {
+	VkResult SumiSwapChain::acquireNextImage(uint32_t* imageIndex) {
 		vkWaitForFences(
 			device.device(),
 			1,
@@ -82,7 +82,7 @@ namespace sde {
 		return result;
 	}
 
-	VkResult SdeSwapChain::submitCommandBuffers(
+	VkResult SumiSwapChain::submitCommandBuffers(
 		const VkCommandBuffer* buffers, uint32_t* imageIndex) {
 		if (imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
 			vkWaitForFences(device.device(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
@@ -130,7 +130,7 @@ namespace sde {
 		return result;
 	}
 
-	void SdeSwapChain::createSwapChain() {
+	void SumiSwapChain::createSwapChain() {
 		SwapChainSupportDetails swapChainSupport = device.getSwapChainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -192,7 +192,7 @@ namespace sde {
 		swapChainExtent = extent;
 	}
 
-	void SdeSwapChain::createImageViews() {
+	void SumiSwapChain::createImageViews() {
 		swapChainImageViews.resize(swapChainImages.size());
 		for (size_t i = 0; i < swapChainImages.size(); i++) {
 			VkImageViewCreateInfo viewInfo{};
@@ -213,7 +213,7 @@ namespace sde {
 		}
 	}
 
-	void SdeSwapChain::createRenderPass() {
+	void SumiSwapChain::createRenderPass() {
 		VkAttachmentDescription depthAttachment{};
 		depthAttachment.format = findDepthFormat();
 		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -274,7 +274,7 @@ namespace sde {
 		}
 	}
 
-	void SdeSwapChain::createFramebuffers() {
+	void SumiSwapChain::createFramebuffers() {
 		swapChainFramebuffers.resize(imageCount());
 		for (size_t i = 0; i < imageCount(); i++) {
 			std::array<VkImageView, 2> attachments = { swapChainImageViews[i], depthImageViews[i] };
@@ -299,7 +299,7 @@ namespace sde {
 		}
 	}
 
-	void SdeSwapChain::createDepthResources() {
+	void SumiSwapChain::createDepthResources() {
 		VkFormat depthFormat = findDepthFormat();
 		VkExtent2D swapChainExtent = getSwapChainExtent();
 
@@ -347,7 +347,7 @@ namespace sde {
 		}
 	}
 
-	void SdeSwapChain::createSyncObjects() {
+	void SumiSwapChain::createSyncObjects() {
 		imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 		renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 		inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -371,7 +371,7 @@ namespace sde {
 		}
 	}
 
-	VkSurfaceFormatKHR SdeSwapChain::chooseSwapSurfaceFormat(
+	VkSurfaceFormatKHR SumiSwapChain::chooseSwapSurfaceFormat(
 		const std::vector<VkSurfaceFormatKHR>& availableFormats) {
 		for (const auto& availableFormat : availableFormats) {
 			if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
@@ -383,7 +383,7 @@ namespace sde {
 		return availableFormats[0];
 	}
 
-	VkPresentModeKHR SdeSwapChain::chooseSwapPresentMode(
+	VkPresentModeKHR SumiSwapChain::chooseSwapPresentMode(
 		// Default Mailbox; GPU never idles and does not wait for Vsync, instead overwrites old buffers
 		// FIFO can be used to force a wait for the Vsync, this will introduce idling time on the GPU.
 		// These are both Vsync approaches, i.e. no screen tearing.
@@ -407,7 +407,7 @@ namespace sde {
 		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 
-	VkExtent2D SdeSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+	VkExtent2D SumiSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
 		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 			return capabilities.currentExtent;
 		}
@@ -424,7 +424,7 @@ namespace sde {
 		}
 	}
 
-	VkFormat SdeSwapChain::findDepthFormat() {
+	VkFormat SumiSwapChain::findDepthFormat() {
 		return device.findSupportedFormat(
 			{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
 			VK_IMAGE_TILING_OPTIMAL,

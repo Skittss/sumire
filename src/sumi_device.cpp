@@ -1,4 +1,4 @@
-#include "sde_device.hpp"
+#include "sumi_device.hpp"
 
 // std headers
 #include <cstring>
@@ -6,7 +6,7 @@
 #include <set>
 #include <unordered_set>
 
-namespace sde {
+namespace sumire {
 
 	// local callback functions
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -48,7 +48,7 @@ namespace sde {
 	}
 
 	// class member functions
-	SdeDevice::SdeDevice(SdeWindow& window) : window{ window } {
+	SumiDevice::SumiDevice(SumiWindow& window) : window{ window } {
 		createInstance();
 		setupDebugMessenger();
 		createSurface();
@@ -57,7 +57,7 @@ namespace sde {
 		createCommandPool();
 	}
 
-	SdeDevice::~SdeDevice() {
+	SumiDevice::~SumiDevice() {
 		// Note this encapsulates destroying components of the device: command pool, etc.
 		vkDestroyCommandPool(device_, commandPool, nullptr);
 		vkDestroyDevice(device_, nullptr);
@@ -70,7 +70,7 @@ namespace sde {
 		vkDestroyInstance(instance, nullptr);
 	}
 
-	void SdeDevice::createInstance() {
+	void SumiDevice::createInstance() {
 		if (enableValidationLayers && !checkValidationLayerSupport()) {
 			throw std::runtime_error("validation layers requested, but not available!");
 		}
@@ -111,7 +111,7 @@ namespace sde {
 		hasGflwRequiredInstanceExtensions();
 	}
 
-	void SdeDevice::pickPhysicalDevice() {
+	void SumiDevice::pickPhysicalDevice() {
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 		if (deviceCount == 0) {
@@ -136,7 +136,7 @@ namespace sde {
 		std::cout << "physical device: " << properties.deviceName << std::endl;
 	}
 
-	void SdeDevice::createLogicalDevice() {
+	void SumiDevice::createLogicalDevice() {
 		QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -183,7 +183,7 @@ namespace sde {
 		vkGetDeviceQueue(device_, indices.presentFamily, 0, &presentQueue_);
 	}
 
-	void SdeDevice::createCommandPool() {
+	void SumiDevice::createCommandPool() {
 		QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
 
 		VkCommandPoolCreateInfo poolInfo = {};
@@ -197,9 +197,9 @@ namespace sde {
 		}
 	}
 
-	void SdeDevice::createSurface() { window.createWindowSurface(instance, &surface_); }
+	void SumiDevice::createSurface() { window.createWindowSurface(instance, &surface_); }
 
-	bool SdeDevice::isDeviceSuitable(VkPhysicalDevice device) {
+	bool SumiDevice::isDeviceSuitable(VkPhysicalDevice device) {
 		QueueFamilyIndices indices = findQueueFamilies(device);
 
 		bool extensionsSupported = checkDeviceExtensionSupport(device);
@@ -217,7 +217,7 @@ namespace sde {
 			supportedFeatures.samplerAnisotropy;
 	}
 
-	void SdeDevice::populateDebugMessengerCreateInfo(
+	void SumiDevice::populateDebugMessengerCreateInfo(
 		VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
 		createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -230,7 +230,7 @@ namespace sde {
 		createInfo.pUserData = nullptr;  // Optional
 	}
 
-	void SdeDevice::setupDebugMessenger() {
+	void SumiDevice::setupDebugMessenger() {
 		if (!enableValidationLayers) return;
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		populateDebugMessengerCreateInfo(createInfo);
@@ -239,7 +239,7 @@ namespace sde {
 		}
 	}
 
-	bool SdeDevice::checkValidationLayerSupport() {
+	bool SumiDevice::checkValidationLayerSupport() {
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -264,7 +264,7 @@ namespace sde {
 		return true;
 	}
 
-	std::vector<const char*> SdeDevice::getRequiredExtensions() {
+	std::vector<const char*> SumiDevice::getRequiredExtensions() {
 		uint32_t glfwExtensionCount = 0;
 		const char** glfwExtensions;
 		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -278,7 +278,7 @@ namespace sde {
 		return extensions;
 	}
 
-	void SdeDevice::hasGflwRequiredInstanceExtensions() {
+	void SumiDevice::hasGflwRequiredInstanceExtensions() {
 		uint32_t extensionCount = 0;
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 		std::vector<VkExtensionProperties> extensions(extensionCount);
@@ -301,7 +301,7 @@ namespace sde {
 		}
 	}
 
-	bool SdeDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+	bool SumiDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -321,7 +321,7 @@ namespace sde {
 		return requiredExtensions.empty();
 	}
 
-	QueueFamilyIndices SdeDevice::findQueueFamilies(VkPhysicalDevice device) {
+	QueueFamilyIndices SumiDevice::findQueueFamilies(VkPhysicalDevice device) {
 		QueueFamilyIndices indices;
 
 		uint32_t queueFamilyCount = 0;
@@ -352,7 +352,7 @@ namespace sde {
 		return indices;
 	}
 
-	SwapChainSupportDetails SdeDevice::querySwapChainSupport(VkPhysicalDevice device) {
+	SwapChainSupportDetails SumiDevice::querySwapChainSupport(VkPhysicalDevice device) {
 		SwapChainSupportDetails details;
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface_, &details.capabilities);
 
@@ -378,7 +378,7 @@ namespace sde {
 		return details;
 	}
 
-	VkFormat SdeDevice::findSupportedFormat(
+	VkFormat SumiDevice::findSupportedFormat(
 		const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
 		for (VkFormat format : candidates) {
 			VkFormatProperties props;
@@ -395,7 +395,7 @@ namespace sde {
 		throw std::runtime_error("failed to find supported format!");
 	}
 
-	uint32_t SdeDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+	uint32_t SumiDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
 		VkPhysicalDeviceMemoryProperties memProperties;
 		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
@@ -408,7 +408,7 @@ namespace sde {
 		throw std::runtime_error("failed to find suitable memory type!");
 	}
 
-	void SdeDevice::createBuffer(
+	void SumiDevice::createBuffer(
 		VkDeviceSize size,
 		VkBufferUsageFlags usage,
 		VkMemoryPropertyFlags properties,
@@ -439,7 +439,7 @@ namespace sde {
 		vkBindBufferMemory(device_, buffer, bufferMemory, 0);
 	}
 
-	VkCommandBuffer SdeDevice::beginSingleTimeCommands() {
+	VkCommandBuffer SumiDevice::beginSingleTimeCommands() {
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -457,7 +457,7 @@ namespace sde {
 		return commandBuffer;
 	}
 
-	void SdeDevice::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
+	void SumiDevice::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 		vkEndCommandBuffer(commandBuffer);
 
 		VkSubmitInfo submitInfo{};
@@ -471,7 +471,7 @@ namespace sde {
 		vkFreeCommandBuffers(device_, commandPool, 1, &commandBuffer);
 	}
 
-	void SdeDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+	void SumiDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 		VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
 		VkBufferCopy copyRegion{};
@@ -483,7 +483,7 @@ namespace sde {
 		endSingleTimeCommands(commandBuffer);
 	}
 
-	void SdeDevice::copyBufferToImage(
+	void SumiDevice::copyBufferToImage(
 		VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t layerCount) {
 		VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -510,7 +510,7 @@ namespace sde {
 		endSingleTimeCommands(commandBuffer);
 	}
 
-	void SdeDevice::createImageWithInfo(
+	void SumiDevice::createImageWithInfo(
 		const VkImageCreateInfo& imageInfo,
 		VkMemoryPropertyFlags properties,
 		VkImage& image,
