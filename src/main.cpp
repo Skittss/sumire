@@ -1,11 +1,11 @@
-#include "sumirenderer.hpp"
+#include "sumire.hpp"
 
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
 
 int main() {
-	sumire::SumiRenderer sumi{};
+	sumire::Sumire sumi{};
 
 	try {
 		sumi.run();
