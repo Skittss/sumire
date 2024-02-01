@@ -4,6 +4,7 @@
 #include "sumi_device.hpp"
 #include "sumi_model.hpp"
 #include "sumi_object.hpp"
+#include "sumi_camera.hpp"
 
 #include <memory>
 #include <vector>
@@ -18,8 +19,7 @@ namespace sumire {
 		SumiRenderSystem(const SumiRenderSystem&) = delete;
 		SumiRenderSystem& operator=(const SumiRenderSystem&) = delete;
 
-		void renderObjects(VkCommandBuffer commandBuffer, std::vector<SumiObject> &objects);
-
+		void renderObjects(VkCommandBuffer commandBuffer, std::vector<SumiObject> &objects, const SumiCamera& camera);
 
 	private:
 		void createPipelineLayout();

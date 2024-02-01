@@ -19,7 +19,9 @@ namespace sumire {
 		SumiRenderer& operator=(const SumiRenderer&) = delete;
 
         VkRenderPass getSwapChainRenderPass() const { return sumiSwapChain->getRenderPass(); }
+        float getAspect() const { return sumiSwapChain->extentAspectRatio(); }
         bool isFrameInProgress() const { return isFrameStarted; }
+        
         VkCommandBuffer getCurrentCommandBuffer() const { 
             assert(isFrameStarted && "Failed to get command buffer from a frame not in flight.");
             return commandBuffers[currentFrameIdx];

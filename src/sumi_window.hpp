@@ -20,6 +20,7 @@ namespace sumire {
 		VkExtent2D getExtent() { return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }
 		bool wasWindowResized() { return fbResizeFlag; }
 		void resetWindowResizedFlag() { fbResizeFlag = false; }
+		GLFWwindow *getGLFWwindow() const { return window; }
 
 		void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
 

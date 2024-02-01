@@ -61,17 +61,16 @@ namespace sumire {
 			pipelineConfig);
 	}
 
-	void SumiRenderSystem::renderObjects(VkCommandBuffer commandBuffer, std::vector<SumiObject> &objects) {
+	void SumiRenderSystem::renderObjects(VkCommandBuffer commandBuffer, std::vector<SumiObject> &objects, const SumiCamera& camera) {
 		sumiPipeline->bind(commandBuffer);
+
+		auto cameraMatrix = camera.getProjectionMatrix() * camera.getViewMatrix();
 
 		for (auto& obj: objects) {
 
-            obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.0003f, glm::two_pi<float>());
-            obj.transform.rotation.x = glm::mod(obj.transform.rotation.x + 0.0003f, glm::two_pi<float>());
-
 			SimplePushConstantData push{};
 			push.colour = obj.colour;
-			push.transform = obj.transform.mat4();
+			push.transform = cameraMatrix * obj.transform.mat4();
 
 			vkCmdPushConstants(
 				commandBuffer, 
