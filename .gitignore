@@ -6,3 +6,6 @@ shaders/*.spv
 
 models/*
 !models/placeholder.txt
+
+external/*
+!external/placeholder.txt

@@ -57,10 +57,10 @@ endif()
 #include_directories(external)
  
 # If TINYOBJ_PATH not specified in .env.cmake, try fetching from git repo
-#if (NOT TINYOBJ_PATH)
-#  message(STATUS "TINYOBJ_PATH not specified in .env.cmake, using external/tinyobjloader")
-#  set(TINYOBJ_PATH external/tinyobjloader)
-#endif()
+if (NOT TINYOBJ_PATH)
+  message(STATUS "TINYOBJ_PATH not specified in .env.cmake, using external/tinyobjloader")
+  set(TINYOBJ_PATH external/tinyobjloader)
+endif()
  
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp) # find cpp files (nested) -> store in ${SOURCES}
  
@@ -86,7 +86,7 @@ if (WIN32)
   target_include_directories(${PROJECT_NAME} PUBLIC
     ${PROJECT_SOURCE_DIR}/src
     ${Vulkan_INCLUDE_DIRS}
-#    ${TINYOBJ_PATH}
+    ${TINYOBJ_PATH}
     ${GLFW_INCLUDE_DIRS}
     ${GLM_PATH}
     )
@@ -102,7 +102,7 @@ elseif (UNIX)
     message(STATUS "CREATING BUILD FOR UNIX")
     target_include_directories(${PROJECT_NAME} PUBLIC
       ${PROJECT_SOURCE_DIR}/src
-#      ${TINYOBJ_PATH}
+      ${TINYOBJ_PATH}
     )
     target_link_libraries(${PROJECT_NAME} glfw ${Vulkan_LIBRARIES})
 endif()

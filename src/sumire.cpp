@@ -59,63 +59,13 @@ namespace sumire {
 		vkDeviceWaitIdle(sumiDevice.device());
 	}
 
-	std::unique_ptr<SumiModel> createCubeModel(SumiDevice& device, glm::vec3 offset) {
-		SumiModel::Data modelData{};
-		modelData.vertices = {
-			// left face (white)
-			{{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
-			{{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
-			{{-.5f, -.5f, .5f}, {.9f, .9f, .9f}},
-			{{-.5f, .5f, -.5f}, {.9f, .9f, .9f}},
-
-			// right face (yellow)
-			{{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
-			{{.5f, .5f, .5f}, {.8f, .8f, .1f}},
-			{{.5f, -.5f, .5f}, {.8f, .8f, .1f}},
-			{{.5f, .5f, -.5f}, {.8f, .8f, .1f}},
-
-			// top face (orange, remember y axis points down)
-			{{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
-			{{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
-			{{-.5f, -.5f, .5f}, {.9f, .6f, .1f}},
-			{{.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
-
-			// bottom face (red)
-			{{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
-			{{.5f, .5f, .5f}, {.8f, .1f, .1f}},
-			{{-.5f, .5f, .5f}, {.8f, .1f, .1f}},
-			{{.5f, .5f, -.5f}, {.8f, .1f, .1f}},
-
-			// nose face (blue)
-			{{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
-			{{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
-			{{-.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
-			{{.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
-
-			// tail face (green)
-			{{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
-			{{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
-			{{-.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
-			{{.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
-		};
-
-		for (auto& v : modelData.vertices) {
-			v.position += offset;
-		}
-
-		modelData.indices = {0,  1,  2,  0,  3,  1,  4,  5,  6,  4,  7,  5,  8,  9,  10, 8,  11, 9,
-							 12, 13, 14, 12, 15, 13, 16, 17, 18, 16, 19, 17, 20, 21, 22, 20, 23, 21};
-
-		return std::make_unique<SumiModel>(device, modelData);
-	}
-
 	void Sumire::loadObjects() {
-		std::shared_ptr<SumiModel> cubeModel = createCubeModel(sumiDevice, {0.0f, 0.0f, 0.0f});
-		auto cube = SumiObject::createObject();
-		cube.model = cubeModel;
-		cube.transform.translation = {0.0f, 0.0f, 0.0f};
-		cube.transform.scale = {0.5f, 0.5f, 0.5f};
+		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/bunny.obj");
+		auto renderObj = SumiObject::createObject();
+		renderObj.model = cubeModel;
+		renderObj.transform.translation = {0.0f, 0.0f, 0.0f};
+		renderObj.transform.scale = {0.5f, 0.5f, 0.5f};
 
-		objects.push_back(std::move(cube));
+		objects.push_back(std::move(renderObj));
 	}
 }
