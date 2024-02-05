@@ -3,3 +3,6 @@ build/*
 .vscode
 
 shaders/*.spv
+
+models/*
+!models/placeholder.txt
