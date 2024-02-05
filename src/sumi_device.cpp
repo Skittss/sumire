@@ -472,6 +472,7 @@ namespace sumire {
 	}
 
 	void SumiDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+		// To avoid this single time wait, use a memory barrier instead.
 		VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
 		VkBufferCopy copyRegion{};

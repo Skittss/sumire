@@ -22,7 +22,12 @@ namespace sumire {
 			static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 		};
 
-		SumiModel(SumiDevice& device, const std::vector<Vertex>& vertices);
+		struct Data {
+			std::vector<Vertex> vertices{};
+			std::vector<uint32_t> indices{};
+		};
+
+		SumiModel(SumiDevice& device, const SumiModel::Data &data);
 		~SumiModel();
 
 		SumiModel(const SumiModel&) = delete;
@@ -33,10 +38,19 @@ namespace sumire {
 
 	private:
 		void createVertexBuffers(const std::vector<Vertex>& vertices);
+		void createIndexBuffer(const std::vector<uint32_t>& indices);
 
 		SumiDevice& sumiDevice;
+
+		// Vertex Buffer params
 		VkBuffer vertexBuffer;
 		VkDeviceMemory vertexBufferMemory;
 		uint32_t vertexCount;
+
+		// Index Buffer params
+		bool useIndexBuffer = true;
+		VkBuffer indexBuffer;
+		VkDeviceMemory indexBufferMemory;
+		uint32_t indexCount;
 	};
 }
