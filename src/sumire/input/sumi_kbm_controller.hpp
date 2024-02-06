@@ -1,7 +1,7 @@
 #pragma once
 
-#include "sumi_object.hpp"
-#include "sumi_window.hpp"
+#include <sumire/core/sumi_object.hpp>
+#include <sumire/core/sumi_window.hpp>
 
 namespace sumire {
 

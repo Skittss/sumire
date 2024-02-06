@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sumi_device.hpp"
+#include <sumire/core/sumi_device.hpp>
 
 #include <string>
 #include <vector>

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "sumi_window.hpp"
-#include "sumi_swap_chain.hpp"
-#include "sumi_device.hpp"
-#include "sumi_model.hpp"
+#include <sumire/core/sumi_window.hpp>
+#include <sumire/core/sumi_swap_chain.hpp>
+#include <sumire/core/sumi_device.hpp>
+#include <sumire/core/sumi_model.hpp>
 
 #include <memory>
 #include <vector>

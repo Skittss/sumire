@@ -1,4 +1,4 @@
-#include "sumi_window.hpp"
+#include <sumire/core/sumi_window.hpp>
 
 #include <stdexcept>
 

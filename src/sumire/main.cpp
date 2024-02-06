@@ -1,4 +1,4 @@
-#include "sumire.hpp"
+#include <sumire/core/sumire.hpp>
 
 #include <cstdlib>
 #include <iostream>

@@ -1,6 +1,6 @@
-#include "sumi_model.hpp"
+#include <sumire/core/sumi_model.hpp>
 
-#include "math_utils.hpp"
+#include <sumire/math/math_utils.hpp>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>

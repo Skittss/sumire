@@ -1,4 +1,4 @@
-#include "sumi_renderer.hpp"
+#include <sumire/core/sumi_renderer.hpp>
 
 #include <stdexcept>
 #include <array>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sumi_device.hpp"
+#include <sumire/core/sumi_device.hpp>
 
 // vulkan headers
 #include <vulkan/vulkan.h>

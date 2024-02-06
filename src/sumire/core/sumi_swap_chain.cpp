@@ -1,4 +1,4 @@
-#include "sumi_swap_chain.hpp"
+#include <sumire/core/sumi_swap_chain.hpp>
 
 #include <array>
 #include <cstdlib>

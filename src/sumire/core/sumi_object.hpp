@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sumi_model.hpp"
+#include <sumire/core/sumi_model.hpp>
 
 #include <glm/gtc/matrix_transform.hpp>
 

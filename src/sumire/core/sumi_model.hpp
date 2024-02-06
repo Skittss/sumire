@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sumi_device.hpp"
+#include <sumire/core/sumi_device.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -48,6 +48,7 @@ namespace sumire {
 		SumiModel& operator=(const SumiModel&) = delete;
 
 		static std::unique_ptr<SumiModel> createFromFile(SumiDevice &device, const std::string &filepath);
+		void loadModel(const std::string &filepath, SumiModel::Data &data);
 
 		void bind(VkCommandBuffer commandbuffer);
 		void draw(VkCommandBuffer commandbuffer);

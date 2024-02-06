@@ -1,6 +1,6 @@
-#include "sumire.hpp"
-#include "sumi_render_system.hpp"
-#include "sumi_kbm_controller.hpp"
+#include <sumire/core/sumire.hpp>
+#include <sumire/core/sumi_render_system.hpp>
+#include <sumire/input/sumi_kbm_controller.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

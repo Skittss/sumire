@@ -1,4 +1,4 @@
-#include "sumi_kbm_controller.hpp"
+#include <sumire/input/sumi_kbm_controller.hpp>
 
 namespace sumire {
 
