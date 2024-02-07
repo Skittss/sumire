@@ -1,6 +1,7 @@
 #include <sumire/core/sumire.hpp>
 #include <sumire/core/sumi_render_system.hpp>
 #include <sumire/input/sumi_kbm_controller.hpp>
+#include <sumire/core/sumi_buffer.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -13,6 +14,11 @@
 
 namespace sumire {
 
+	struct GlobalUBO {
+		glm::mat4 projectionView{1.0f};
+		glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
+	};
+
 	Sumire::Sumire() {
 		loadObjects();
 	}
@@ -20,6 +26,17 @@ namespace sumire {
 	Sumire::~Sumire() {}
 
 	void Sumire::run() {
+
+		SumiBuffer uniformBuffer{
+			sumiDevice,
+			sizeof(GlobalUBO),
+			SumiSwapChain::MAX_FRAMES_IN_FLIGHT,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+			sumiDevice.properties.limits.minUniformBufferOffsetAlignment
+		};
+		uniformBuffer.map(); //enable writing to buffer memory
+
 		SumiRenderSystem renderSystem{sumiDevice, sumiRenderer.getSwapChainRenderPass()};
 		SumiCamera camera{};
 		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
@@ -48,8 +65,23 @@ namespace sumire {
 			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 10.0f);
 
 			if (auto commandBuffer = sumiRenderer.beginFrame()) {
+
+				int frameIdx = sumiRenderer.getFrameIdx();
+				GlobalUBO ubo{};
+				ubo.projectionView = camera.getProjectionMatrix() * camera.getViewMatrix();
+
+				uniformBuffer.writeToIndex(&ubo, frameIdx);
+				uniformBuffer.flushIndex(frameIdx);
+
+				FrameInfo frameInfo{
+					frameIdx,
+					frameTime,
+					commandBuffer,
+					camera
+				};
+
 				sumiRenderer.beginSwapChainRenderPass(commandBuffer);
-				renderSystem.renderObjects(commandBuffer, objects, camera);
+				renderSystem.renderObjects(frameInfo, objects);
 				sumiRenderer.endSwapChainRenderPass(commandBuffer);
 				sumiRenderer.endFrame();
 			}
@@ -60,11 +92,11 @@ namespace sumire {
 	}
 
 	void Sumire::loadObjects() {
-		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/bunny.obj");
+		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/smooth_vase.obj");
 		auto renderObj = SumiObject::createObject();
 		renderObj.model = cubeModel;
 		renderObj.transform.translation = {0.0f, 0.0f, 0.0f};
-		renderObj.transform.scale = {0.5f, 0.5f, 0.5f};
+		renderObj.transform.scale = 0.5f;
 
 		objects.push_back(std::move(renderObj));
 	}

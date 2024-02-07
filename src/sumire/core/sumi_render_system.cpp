@@ -12,7 +12,7 @@ namespace sumire {
 
 	struct SimplePushConstantData {
 		glm::mat4 transform;
-        alignas(16) glm::vec3 colour; // Deal with device reading push constants not tightly packed
+		glm::mat4 modelMatrix;
 	};
 
 	SumiRenderSystem::SumiRenderSystem(SumiDevice& device, VkRenderPass renderPass) : sumiDevice{device} {
@@ -61,19 +61,20 @@ namespace sumire {
 			pipelineConfig);
 	}
 
-	void SumiRenderSystem::renderObjects(VkCommandBuffer commandBuffer, std::vector<SumiObject> &objects, const SumiCamera& camera) {
-		sumiPipeline->bind(commandBuffer);
+	void SumiRenderSystem::renderObjects(FrameInfo &frameInfo, std::vector<SumiObject> &objects) {
+		sumiPipeline->bind(frameInfo.commandBuffer);
 
-		auto cameraMatrix = camera.getProjectionMatrix() * camera.getViewMatrix();
+		auto cameraMatrix = frameInfo.camera.getProjectionMatrix() * frameInfo.camera.getViewMatrix();
 
 		for (auto& obj: objects) {
 
 			SimplePushConstantData push{};
-			push.colour = obj.colour;
-			push.transform = cameraMatrix * obj.transform.mat4();
+			auto modelMatrix = obj.transform.mat4();
+			push.transform = cameraMatrix * modelMatrix;
+			push.modelMatrix = modelMatrix;
 
 			vkCmdPushConstants(
-				commandBuffer, 
+				frameInfo.commandBuffer, 
 				pipelineLayout,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 				0,
@@ -81,8 +82,8 @@ namespace sumire {
 				&push
 			);
 			
-			obj.model->bind(commandBuffer);
-			obj.model->draw(commandBuffer);
+			obj.model->bind(frameInfo.commandBuffer);
+			obj.model->draw(frameInfo.commandBuffer);
 		}
 	}
 }

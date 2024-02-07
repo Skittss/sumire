@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sumire/core/sumi_device.hpp>
+#include <sumire/core/sumi_buffer.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -60,14 +61,13 @@ namespace sumire {
 		SumiDevice& sumiDevice;
 
 		// Vertex Buffer params
-		VkBuffer vertexBuffer;
-		VkDeviceMemory vertexBufferMemory;
+
+		std::unique_ptr<SumiBuffer> vertexBuffer;
 		uint32_t vertexCount;
 
 		// Index Buffer params
 		bool useIndexBuffer = true;
-		VkBuffer indexBuffer;
-		VkDeviceMemory indexBufferMemory;
+		std::unique_ptr<SumiBuffer> indexBuffer;
 		uint32_t indexCount;
 	};
 }

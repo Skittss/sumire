@@ -10,7 +10,7 @@ namespace sumire {
 
     struct Transform3DComponent {
         glm::vec3 translation{};
-        glm::vec3 scale{1.0f, 1.0f, 1.0f};
+        float scale{1.0f};
         glm::vec3 rotation{};
 
         glm::mat4 mat4() {
@@ -22,7 +22,7 @@ namespace sumire {
             transform = glm::rotate(transform, rotation.x, {1.0, 0.0, 0.0});
             transform = glm::rotate(transform, rotation.z, {0.0, 0.0, 1.0});
 
-            transform = glm::scale(transform, scale);
+            transform = glm::scale(transform, glm::vec3(scale));
             return transform;
         }
     };
