@@ -27,15 +27,18 @@ namespace sumire {
 
 	void Sumire::run() {
 
-		SumiBuffer uniformBuffer{
-			sumiDevice,
-			sizeof(GlobalUBO),
-			SumiSwapChain::MAX_FRAMES_IN_FLIGHT,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			sumiDevice.properties.limits.minUniformBufferOffsetAlignment
-		};
-		uniformBuffer.map(); //enable writing to buffer memory
+		// Make UBOs
+		std::vector<std::unique_ptr<SumiBuffer>> uniformBuffers(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < uniformBuffers.size(); i++) {
+			uniformBuffers[i] = std::make_unique<SumiBuffer>(
+				sumiDevice,
+				sizeof(GlobalUBO),
+				1,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+			);
+			uniformBuffers[i]->map(); //enable writing to buffer memory
+		}
 
 		SumiRenderSystem renderSystem{sumiDevice, sumiRenderer.getSwapChainRenderPass()};
 		SumiCamera camera{};
@@ -70,9 +73,9 @@ namespace sumire {
 				GlobalUBO ubo{};
 				ubo.projectionView = camera.getProjectionMatrix() * camera.getViewMatrix();
 
-				uniformBuffer.writeToIndex(&ubo, frameIdx);
-				uniformBuffer.flushIndex(frameIdx);
-
+				uniformBuffers[frameIdx]->writeToBuffer(&ubo);
+				uniformBuffers[frameIdx]->flush();
+				
 				FrameInfo frameInfo{
 					frameIdx,
 					frameTime,
