@@ -20,10 +20,17 @@ namespace sumire {
 	};
 
 	Sumire::Sumire() {
+		globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
+			.setMaxSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.build();
+
 		loadObjects();
 	}
 
-	Sumire::~Sumire() {}
+	Sumire::~Sumire() {
+		globalDescriptorPool = nullptr; // Clean up pools before device etc are cleaned up.
+	}
 
 	void Sumire::run() {
 
@@ -40,7 +47,21 @@ namespace sumire {
 			uniformBuffers[i]->map(); //enable writing to buffer memory
 		}
 
-		SumiRenderSystem renderSystem{sumiDevice, sumiRenderer.getSwapChainRenderPass()};
+		auto globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.build();
+
+		std::vector<VkDescriptorSet> globalDescriptorSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < globalDescriptorSets.size(); i++) {
+			auto bufferInfo = uniformBuffers[i]->descriptorInfo();
+			SumiDescriptorWriter(*globalDescriptorSetLayout, *globalDescriptorPool)
+				.writeBuffer(0, &bufferInfo)
+				.build(globalDescriptorSets[i]);
+		}
+
+		SumiRenderSystem renderSystem{
+			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()
+		};
 		SumiCamera camera{};
 		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
 
@@ -70,18 +91,19 @@ namespace sumire {
 			if (auto commandBuffer = sumiRenderer.beginFrame()) {
 
 				int frameIdx = sumiRenderer.getFrameIdx();
-				GlobalUBO ubo{};
-				ubo.projectionView = camera.getProjectionMatrix() * camera.getViewMatrix();
 
-				uniformBuffers[frameIdx]->writeToBuffer(&ubo);
-				uniformBuffers[frameIdx]->flush();
-				
 				FrameInfo frameInfo{
 					frameIdx,
 					frameTime,
 					commandBuffer,
-					camera
+					camera,
+					globalDescriptorSets[frameIdx]
 				};
+
+				GlobalUBO ubo{};
+				ubo.projectionView = camera.getProjectionMatrix() * camera.getViewMatrix();
+				uniformBuffers[frameIdx]->writeToBuffer(&ubo);
+				uniformBuffers[frameIdx]->flush();
 
 				sumiRenderer.beginSwapChainRenderPass(commandBuffer);
 				renderSystem.renderObjects(frameInfo, objects);

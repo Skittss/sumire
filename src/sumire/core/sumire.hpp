@@ -5,6 +5,7 @@
 #include <sumire/core/sumi_model.hpp>
 #include <sumire/core/sumi_object.hpp>
 #include <sumire/core/sumi_renderer.hpp>
+#include <sumire/core/sumi_descriptors.hpp>
 
 #include <memory>
 #include <vector>
@@ -31,6 +32,7 @@ namespace sumire {
 		SumiDevice sumiDevice{ sumiWindow };
 		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice };
 
+		std::unique_ptr<SumiDescriptorPool> globalDescriptorPool{};
 		std::vector<SumiObject> objects;
 	};
 }

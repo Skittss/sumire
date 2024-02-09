@@ -14,7 +14,9 @@ namespace sumire {
 
 	class SumiRenderSystem {
 	public:
-		SumiRenderSystem(SumiDevice& device, VkRenderPass renderPass);
+		SumiRenderSystem(
+			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
+		);
 		~SumiRenderSystem();
 
 		SumiRenderSystem(const SumiRenderSystem&) = delete;
@@ -23,7 +25,7 @@ namespace sumire {
 		void renderObjects(FrameInfo &frameInfo, std::vector<SumiObject> &objects);
 
 	private:
-		void createPipelineLayout();
+		void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
 		void createPipeline(VkRenderPass renderPass);
 
 		SumiDevice& sumiDevice;

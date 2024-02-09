@@ -11,6 +11,7 @@ namespace sumire {
         float frameTime;
         VkCommandBuffer commandBuffer;
         SumiCamera &camera;
+        VkDescriptorSet globalDescriptorSet;
     };
     
 }

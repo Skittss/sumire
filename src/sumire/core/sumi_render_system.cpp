@@ -15,8 +15,11 @@ namespace sumire {
 		glm::mat4 modelMatrix;
 	};
 
-	SumiRenderSystem::SumiRenderSystem(SumiDevice& device, VkRenderPass renderPass) : sumiDevice{device} {
-		createPipelineLayout();
+	SumiRenderSystem::SumiRenderSystem(
+			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
+		) : sumiDevice{device} {
+			
+		createPipelineLayout(globalDescriptorSetLayout);
 		createPipeline(renderPass);
 	}
 
@@ -24,17 +27,19 @@ namespace sumire {
 		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
 	}
 
-	void SumiRenderSystem::createPipelineLayout() {
+	void SumiRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
 
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		pushConstantRange.offset = 0;
 		pushConstantRange.size = sizeof(SimplePushConstantData);
 		
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalDescriptorSetLayout};
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0;
-		pipelineLayoutInfo.pSetLayouts = nullptr;
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
@@ -64,13 +69,20 @@ namespace sumire {
 	void SumiRenderSystem::renderObjects(FrameInfo &frameInfo, std::vector<SumiObject> &objects) {
 		sumiPipeline->bind(frameInfo.commandBuffer);
 
-		auto cameraMatrix = frameInfo.camera.getProjectionMatrix() * frameInfo.camera.getViewMatrix();
+		vkCmdBindDescriptorSets(
+			frameInfo.commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipelineLayout,
+			0, 1,
+			&frameInfo.globalDescriptorSet,
+			0, nullptr
+		);
 
 		for (auto& obj: objects) {
 
 			SimplePushConstantData push{};
 			auto modelMatrix = obj.transform.mat4();
-			push.transform = cameraMatrix * modelMatrix;
+			push.transform = modelMatrix;
 			push.modelMatrix = modelMatrix;
 
 			vkCmdPushConstants(
