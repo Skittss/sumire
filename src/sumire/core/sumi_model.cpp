@@ -42,7 +42,7 @@ namespace sumire {
 
 	std::unique_ptr<SumiModel> SumiModel::createFromFile(SumiDevice &device, const std::string &filepath) {
 		Data data{};
-		data.loadModel(filepath);
+		loadModel(filepath, data);
 
 		// TODO: Remove this output and iostream include.
 		std::cout << "Loaded Model <" << filepath << "> (Vertex count: " << data.vertices.size() << ")" << std::endl;
@@ -149,15 +149,20 @@ namespace sumire {
 		return attributeDescriptions;
 	}
 
-	void SumiModel::Data::loadModel(const std::string &filepath) {
-
+	void SumiModel::loadModel(const std::string &filepath, SumiModel::Data &data) {
 		std::filesystem::path fp = filepath;
 		std::filesystem::path ext = fp.extension();
 
-		if (ext != ".obj") {
+		if (ext == ".obj") 
+			loadOBJ(filepath, data);
+		else if (ext == ".gltf") 
+			loadGLTF(filepath, data);
+		else 
 			throw std::runtime_error("Attempted to load unsupported model type: <" + ext.u8string() + ">");
-		}
 
+	}
+
+	void SumiModel::loadOBJ(const std::string &filepath, SumiModel::Data &data) {
 		// .Obj loading
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
@@ -168,8 +173,8 @@ namespace sumire {
 			throw std::runtime_error(warn + err);
 		}
 
-		vertices.clear();
-		indices.clear();
+		data.vertices.clear();
+		data.indices.clear();
 
 		std::unordered_map<Vertex, uint32_t> uniqueVertices{}; // map for calculating index buffer from obj
 
@@ -209,13 +214,15 @@ namespace sumire {
 
 				// Update index buffer map
 				if (uniqueVertices.count(vertex) == 0) {
-					uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-					vertices.push_back(vertex);
+					uniqueVertices[vertex] = static_cast<uint32_t>(data.vertices.size());
+					data.vertices.push_back(vertex);
 				}
-				indices.push_back(uniqueVertices[vertex]);
+				data.indices.push_back(uniqueVertices[vertex]);
 			}
 		}
-
 	}
 
+	void SumiModel::loadGLTF(const std::string &filepath, SumiModel::Data &data) {
+		
+	}
 }

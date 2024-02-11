@@ -49,7 +49,6 @@ namespace sumire {
 		SumiModel& operator=(const SumiModel&) = delete;
 
 		static std::unique_ptr<SumiModel> createFromFile(SumiDevice &device, const std::string &filepath);
-		void loadModel(const std::string &filepath, SumiModel::Data &data);
 
 		void bind(VkCommandBuffer commandbuffer);
 		void draw(VkCommandBuffer commandbuffer);
@@ -57,6 +56,11 @@ namespace sumire {
 	private:
 		void createVertexBuffers(const std::vector<Vertex> &vertices);
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
+
+		static void loadModel(const std::string &filepath, SumiModel::Data &data);
+		// TODO: Loading may need separate classes for models in the future.
+		static void loadOBJ(const std::string &filepath, SumiModel::Data &data);
+		static void loadGLTF(const std::string &filepath, SumiModel::Data &data);
 
 		SumiDevice& sumiDevice;
 
