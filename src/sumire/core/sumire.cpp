@@ -117,7 +117,7 @@ namespace sumire {
 	}
 
 	void Sumire::loadObjects() {
-		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/smooth_vase.obj");
+		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/clorinde.obj");
 		auto renderObj = SumiObject::createObject();
 		renderObj.model = cubeModel;
 		renderObj.transform.translation = {0.0f, 0.0f, 0.0f};

@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.11.0)
  
 set(NAME sumire)
  
+# Compiler choice
 message(STATUS "using ${CMAKE_GENERATOR}")
 if (CMAKE_GENERATOR STREQUAL "MinGW Makefiles")
 	if (NOT MINGW_PATH) 
@@ -17,13 +18,13 @@ endif()
  
 project(${NAME} VERSION 0.1.0)
  
-# 1. Set VULKAN_SDK_PATH in .env.cmake to target specific vulkan version
+# Target vulkan
 if (DEFINED VULKAN_SDK_PATH)
-	set(Vulkan_INCLUDE_DIRS "${VULKAN_SDK_PATH}/Include") # 1.1 Make sure this include path is correct
-	set(Vulkan_LIBRARIES "${VULKAN_SDK_PATH}/Lib") # 1.2 Make sure lib path is correct
+	set(Vulkan_INCLUDE_DIRS "${VULKAN_SDK_PATH}/Include")
+	set(Vulkan_LIBRARIES "${VULKAN_SDK_PATH}/Lib")
 	set(Vulkan_FOUND "True")
 else()
-	find_package(Vulkan REQUIRED) # throws error if could not find Vulkan
+	find_package(Vulkan REQUIRED)
 	message(STATUS "Found Vulkan: $ENV{VULKAN_SDK}")
 endif()
 if (NOT Vulkan_FOUND)
@@ -33,15 +34,15 @@ else()
 endif()
  
  
-# 2. Set GLFW_PATH in .env.cmake to target specific glfw
+# Target GLFW
 if (DEFINED GLFW_PATH)
 	message(STATUS "Using GLFW path specified in .env")
 	set(GLFW_INCLUDE_DIRS "${GLFW_PATH}/include")
 	if (MSVC)
-	set(GLFW_LIB "${GLFW_PATH}/lib-vc2019") # 2.1 Update lib-vc2019 to use same version as your visual studio
+		set(GLFW_LIB "${GLFW_PATH}/lib-vc2019") # MAKE SURE THIS MATCHES YOUR MSVC VERSION!!
 	elseif (CMAKE_GENERATOR STREQUAL "MinGW Makefiles")
 		message(STATUS "USING MINGW")
-		set(GLFW_LIB "${GLFW_PATH}/lib-mingw-w64") # 2.1 make sure matches glfw mingw subdirectory
+		set(GLFW_LIB "${GLFW_PATH}/lib-mingw-w64") # MAKE SURE THIS MATCHES YOUR GLFW MIN-GW SUBDIRECTORY!!
 	endif()
 else()
 	find_package(glfw3 3.3 REQUIRED)
@@ -60,6 +61,11 @@ endif()
 if (NOT TINYOBJ_PATH)
 	message(STATUS "TINYOBJ_PATH not specified in .env.cmake, using external/tinyobjloader")
 	set(TINYOBJ_PATH external/tinyobjloader)
+endif()
+
+if (NOT TINYGLTF_PATH)
+	message(STATUS "TINYGLTF_PATH not specified in .env.cmake, using external/tinygltf")
+	set(TINYGLTF_PATH external/tinygltf)
 endif()
  
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp) # find cpp files (nested) -> store in ${SOURCES}
@@ -87,13 +93,14 @@ if (WIN32)
 		PUBLIC
 			${Vulkan_INCLUDE_DIRS}
 			${TINYOBJ_PATH}
+			${TINYGLTF_PATH}
 			${GLFW_INCLUDE_DIRS}
 			${GLM_PATH}
 		PRIVATE 
 			${PROJECT_SOURCE_DIR}/src
 	)
  
-  # Link libraries to probject
+	# Link libraries to probject
 	target_link_directories(${PROJECT_NAME} PUBLIC
 		${Vulkan_LIBRARIES}
 		${GLFW_LIB}
@@ -105,6 +112,7 @@ elseif (UNIX)
 	target_include_directories(${PROJECT_NAME} 
 	PUBLIC
 		${TINYOBJ_PATH}
+		${TINYGLTF_PATH}
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src
 	)

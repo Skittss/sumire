@@ -5,6 +5,12 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define TINYGLTF_NOEXCEPTION // No exceptions (for now?)
+#include <tiny_gltf.h>
+
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -223,6 +229,19 @@ namespace sumire {
 	}
 
 	void SumiModel::loadGLTF(const std::string &filepath, SumiModel::Data &data) {
-		
+		tinygltf::Model gltf_model;
+		tinygltf::TinyGLTF loader;
+		std::string err;
+		std::string warn;
+
+		if (!loader.LoadASCIIFromFile(&gltf_model, &err, &warn, filepath.c_str())) {
+			throw std::runtime_error(warn + err);
+		}
+
+		data.vertices.clear();
+		data.indices.clear();
+
+		// Nodes and meshes
+		std::cout << "Loaded GLTF successfully" << std::endl;
 	}
 }
