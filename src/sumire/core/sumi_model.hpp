@@ -7,6 +7,8 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
+#include <tiny_gltf.h>
+
 #include <memory>
 #include <vector>
 
@@ -58,11 +60,19 @@ namespace sumire {
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
 
 		static void loadModel(const std::string &filepath, SumiModel::Data &data);
-		// TODO: Loading may need separate classes for models in the future.
-		static void loadOBJ(const std::string &filepath, SumiModel::Data &data);
-		static void loadGLTF(const std::string &filepath, SumiModel::Data &data);
 
-		SumiDevice& sumiDevice;
+		// TODO: Loading may need separate classes for models in the future.
+		// OBJ
+		static void loadOBJ(const std::string &filepath, SumiModel::Data &data);
+
+		// .gltf
+		static void loadGLTF(const std::string &filepath, SumiModel::Data &data);
+		static void getGLTFnodeProperties(
+			const tinygltf::Node &node, const tinygltf::Model &model, uint32_t &vertexCount, uint32_t &indexCount
+		);
+		static void loadGLTFnode(const tinygltf::Node &node, uint32_t nodeIdx, const tinygltf::Model &model);
+
+		SumiDevice &sumiDevice;
 
 		// Vertex Buffer params
 

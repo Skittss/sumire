@@ -1,7 +1,3 @@
-#include <sumire/core/sumi_model.hpp>
-
-#include <sumire/math/math_utils.hpp>
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
@@ -9,7 +5,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION // No exceptions (for now?)
-#include <tiny_gltf.h>
+
+#include <sumire/core/sumi_model.hpp>
+#include <sumire/math/math_utils.hpp>
 
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
 #define GLM_ENABLE_EXPERIMENTAL
@@ -241,7 +239,46 @@ namespace sumire {
 		data.vertices.clear();
 		data.indices.clear();
 
+		// default gltf scene
+		if (gltf_model.defaultScene < 0)
+			std::cerr << "WARN: Model <" << filepath << "> has no default scene - here be dragons!" << std::endl;
+
+		const int default_scene_idx = std::max(gltf_model.defaultScene, 0);
+		const tinygltf::Scene &scene = gltf_model.scenes[default_scene_idx];
+
+		// Mesh information
+		uint32_t vertexCount = 0;
+		uint32_t indexCount = 0;
+		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
+			getGLTFnodeProperties(gltf_model.nodes[scene.nodes[i]], gltf_model, vertexCount, indexCount);
+		}
+
+		std::cout << "DEBUG: v cnt " << vertexCount << " i cnt "  << indexCount << std::endl;
+
 		// Nodes and meshes
 		std::cout << "Loaded GLTF successfully" << std::endl;
+	}
+
+	void SumiModel::getGLTFnodeProperties(
+		const tinygltf::Node &node, const tinygltf::Model &model, uint32_t &vertexCount, uint32_t &indexCount
+	) {
+
+		// Recursion through node tree
+		if (node.children.size() > 0) {
+			for (uint32_t i = 0; i < node.children.size(); i++) {
+				getGLTFnodeProperties(model.nodes[node.children[i]], model, vertexCount, indexCount);
+			}
+		}
+
+		if (node.mesh > -1) {
+			const tinygltf::Mesh mesh = model.meshes[node.mesh];
+			for (uint32_t i = 0; i < mesh.primitives.size(); i++) {
+				auto primitive = mesh.primitives[i];
+				vertexCount += model.accessors[primitive.attributes.find("POSITION")->second].count;
+				if (primitive.indices > -1) {
+					indexCount += model.accessors[primitive.indices].count;
+				}
+			}
+		}
 	}
 }
