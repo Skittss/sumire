@@ -1,10 +1,5 @@
 #include <sumire/gui/sumi_imgui.hpp>
 
-// imgui
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_vulkan.h>
-
 #include <stdexcept>
 
 namespace sumire {
@@ -21,6 +16,8 @@ namespace sumire {
         ImGui::DestroyContext();
         vkDestroyDescriptorPool(sumiDevice.device(), imguiDescriptorPool, nullptr);
     }
+
+    ImGuiIO& SumiImgui::getIO() { return ImGui::GetIO(); }
 
     void SumiImgui::initImgui(SumiDevice &device, GLFWwindow *window, SumiRenderer &renderer) {
 
@@ -54,9 +51,9 @@ namespace sumire {
         ImGui::CreateContext();
         ImGui::StyleColorsDark();
 
-        ImGuiIO &io = ImGui::GetIO(); (void)io;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+        auto io = getIO();
+        //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
         ImGui_ImplGlfw_InitForVulkan(window, true);
 

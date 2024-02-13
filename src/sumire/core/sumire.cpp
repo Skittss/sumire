@@ -96,7 +96,13 @@ namespace sumire {
 			gui.drawStatWindow();
 			gui.endFrame();
 
-			cameraController.moveWalk(sumiWindow.getGLFWwindow(), frameTime, viewerObj);
+			// Handle input.
+			// TODO: move components to member variables and call this from a function
+			auto guiIO = gui.getIO();
+			if (!(guiIO.WantCaptureKeyboard && guiIO.WantTextInput)) {
+				cameraController.moveWalk(sumiWindow.getGLFWwindow(), frameTime, viewerObj);
+			}
+
 			camera.setViewYXZ(viewerObj.transform.translation, viewerObj.transform.rotation);
 
 			// TODO: We should not set the aspect every frame instead on change
