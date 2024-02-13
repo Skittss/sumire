@@ -39,8 +39,11 @@ namespace sumire {
 		SumiDevice(SumiDevice&&) = delete;
 		SumiDevice& operator=(SumiDevice&&) = delete;
 
+		// TODO: These get functions are all over the place name-wise and should be const.
 		VkCommandPool getCommandPool() { return commandPool; }
 		VkDevice device() { return device_; }
+		VkPhysicalDevice getPhysicalDevice() { return physicalDevice; }
+		VkInstance getInstance() { return instance; }
 		VkSurfaceKHR surface() { return surface_; }
 		VkQueue graphicsQueue() { return graphicsQueue_; }
 		VkQueue presentQueue() { return presentQueue_; }

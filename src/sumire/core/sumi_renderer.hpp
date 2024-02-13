@@ -20,6 +20,8 @@ namespace sumire {
 
         VkRenderPass getSwapChainRenderPass() const { return sumiSwapChain->getRenderPass(); }
         float getAspect() const { return sumiSwapChain->extentAspectRatio(); }
+        VkFormat getSwapChainImageFormat () const { return sumiSwapChain->getSwapChainImageFormat(); }
+
         bool isFrameInProgress() const { return isFrameStarted; }
         
         VkCommandBuffer getCurrentCommandBuffer() const { 

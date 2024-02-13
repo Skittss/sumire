@@ -1,8 +1,12 @@
 #include <sumire/core/sumire.hpp>
 #include <sumire/core/sumi_render_system.hpp>
-#include <sumire/input/sumi_kbm_controller.hpp>
 #include <sumire/core/sumi_buffer.hpp>
 
+#include <sumire/input/sumi_kbm_controller.hpp>
+
+#include <sumire/gui/sumi_imgui.hpp>
+
+// glm
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -68,10 +72,17 @@ namespace sumire {
 		auto viewerObj = SumiObject::createObject();
 		SumiKBMcontroller cameraController{};
 
+		// GUI
+		SumiImgui gui{sumiDevice, sumiWindow, sumiRenderer};
+
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
+		// Draw loop
 		while (!sumiWindow.shouldClose()) {
 			glfwPollEvents();
+			// TODO:
+			//  Prevent inputs from passthrough to application when ImGui wants to consume them...
+			//  i.e. check io.WantCaptureMouse, etc.
 
 			auto newTime = std::chrono::high_resolution_clock::now();
 			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
@@ -79,6 +90,11 @@ namespace sumire {
 
 			const float MAX_FRAME_TIME = 0.2f; // 5fps
 			frameTime = glm::min(frameTime, MAX_FRAME_TIME);
+
+			// Render GUI
+			gui.beginFrame();
+			gui.drawStatWindow();
+			gui.endFrame();
 
 			cameraController.moveWalk(sumiWindow.getGLFWwindow(), frameTime, viewerObj);
 			camera.setViewYXZ(viewerObj.transform.translation, viewerObj.transform.rotation);
@@ -107,12 +123,15 @@ namespace sumire {
 
 				sumiRenderer.beginSwapChainRenderPass(commandBuffer);
 				renderSystem.renderObjects(frameInfo, objects);
+				gui.renderToCmdBuffer(commandBuffer);
 				sumiRenderer.endSwapChainRenderPass(commandBuffer);
+
 				sumiRenderer.endFrame();
 			}
 		}
 
 		// Prevent cleanup from happening while GPU resources are in use on close.
+		//  TODO: can this error?
 		vkDeviceWaitIdle(sumiDevice.device());
 	}
 

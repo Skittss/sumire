@@ -26,6 +26,7 @@ namespace sumire {
 		Sumire& operator=(const Sumire&) = delete;
 
 	private:
+
 		void loadObjects();
 
 		SumiWindow sumiWindow{ WIDTH, HEIGHT, "Sumire" };

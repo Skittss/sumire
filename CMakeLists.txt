@@ -57,20 +57,28 @@ endif()
  
 #include_directories(external)
  
-# If TINYOBJ_PATH not specified in .env.cmake, try fetching from git repo
+# TINY OBJ LOADER
 if (NOT TINYOBJ_PATH)
 	message(STATUS "TINYOBJ_PATH not specified in .env.cmake, using external/tinyobjloader")
 	set(TINYOBJ_PATH external/tinyobjloader)
 endif()
 
+# TINY GLTF LOADER
 if (NOT TINYGLTF_PATH)
 	message(STATUS "TINYGLTF_PATH not specified in .env.cmake, using external/tinygltf")
 	set(TINYGLTF_PATH external/tinygltf)
 endif()
- 
+
+# IMGUI
+if (NOT IMGUI_PATH)
+	message(STATUS "IMGUI_PATH not specified in .env.cmake, using external/imgui")
+	set(IMGUI_PATH external/imgui)
+endif()
+
+file(GLOB_RECURSE IMGUI_SOURCES ${IMGUI_PATH}/*.cpp)
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp) # find cpp files (nested) -> store in ${SOURCES}
  
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${IMGUI_SOURCES})
  
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # c++ 17 standard
  
@@ -94,6 +102,7 @@ if (WIN32)
 			${Vulkan_INCLUDE_DIRS}
 			${TINYOBJ_PATH}
 			${TINYGLTF_PATH}
+			${IMGUI_PATH}
 			${GLFW_INCLUDE_DIRS}
 			${GLM_PATH}
 		PRIVATE 
@@ -107,6 +116,7 @@ if (WIN32)
 	)
  
 	target_link_libraries(${PROJECT_NAME} glfw3 vulkan-1)
+
 elseif (UNIX)
 	message(STATUS "CREATING BUILD FOR UNIX")
 	target_include_directories(${PROJECT_NAME} 
@@ -117,6 +127,7 @@ elseif (UNIX)
 		${PROJECT_SOURCE_DIR}/src
 	)
 	target_link_libraries(${PROJECT_NAME} glfw ${Vulkan_LIBRARIES})
+
 endif()
  
  
