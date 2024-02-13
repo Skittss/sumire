@@ -8,4 +8,6 @@ models/*
 !models/placeholder.txt
 
 external/*
-!external/placeholder.txt
+!external/tinygltf
+!external/tinyobjloader
+!external/imgui
