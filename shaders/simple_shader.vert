@@ -10,13 +10,18 @@ layout(location = 1) out vec3 fragWorldPos;
 layout(location = 2) out vec3 fragWorldNorm;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	mat4 projectionViewMatrix;
 	vec3 ambientCol;
 	vec3 lightDir;
 	vec3 lightPos;
 	vec3 lightCol;
 	float lightIntensity;
 } ubo;
+
+layout(set = 0, binding = 1) uniform Camera {
+	mat4 projectionMatrix;
+	mat4 viewMatrix;
+	mat4 projectionViewMatrix;
+};
 
 layout(push_constant) uniform Push {
 	mat4 transform; 
@@ -25,7 +30,7 @@ layout(push_constant) uniform Push {
 
 void main() {
 	vec4 vertexWorldPos = push.modelMatrix * vec4(position, 1.0);
-	gl_Position = ubo.projectionViewMatrix * vertexWorldPos;
+	gl_Position = projectionViewMatrix * vertexWorldPos;
 
 	fragWorldNorm = normalize(mat3(push.modelMatrix) * normal);
 	fragWorldPos = vertexWorldPos.xyz;

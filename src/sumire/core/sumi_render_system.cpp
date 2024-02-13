@@ -80,6 +80,8 @@ namespace sumire {
 
 		for (auto& kv: frameInfo.objects) {
 			auto& obj = kv.second;
+			
+			// Only render objects with a mesh
 			if (obj.model == nullptr) continue;
 
 			SimplePushConstantData push{};

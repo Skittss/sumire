@@ -19,7 +19,6 @@
 namespace sumire {
 
 	struct GlobalUBO {
-		alignas(16) glm::mat4 projectionView{1.0f};
 		alignas(16) glm::vec3 ambientCol{0.02f};
 		alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
 		alignas(16) glm::vec3 lightPos{-1.0f};
@@ -48,7 +47,8 @@ namespace sumire {
 	Sumire::Sumire() {
 		globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
 			.setMaxSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
-			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // global
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // camera
 			.build();
 
 		loadObjects();
@@ -60,28 +60,47 @@ namespace sumire {
 
 	void Sumire::run() {
 
-		// Make UBOs
-		std::vector<std::unique_ptr<SumiBuffer>> uniformBuffers(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		for (int i = 0; i < uniformBuffers.size(); i++) {
-			uniformBuffers[i] = std::make_unique<SumiBuffer>(
+		// --------------------- GLOBAL DESCRIPTORS (SET 0)
+		// Uniform Buffers
+		std::vector<std::unique_ptr<SumiBuffer>> globalUniformBuffers(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		std::vector<std::unique_ptr<SumiBuffer>> cameraUniformBuffers(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
+			
+			// Global uniforms
+			globalUniformBuffers[i] = std::make_unique<SumiBuffer>(
 				sumiDevice,
 				sizeof(GlobalUBO),
 				1,
 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
 			);
-			uniformBuffers[i]->map(); //enable writing to buffer memory
+			globalUniformBuffers[i]->map(); //enable writing to buffer memory
+
+			// Camera uniforms
+			cameraUniformBuffers[i] = std::make_unique<SumiBuffer>(
+				sumiDevice,
+				sizeof(CameraUBO),
+				1,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+			);
+			cameraUniformBuffers[i]->map(); //enable writing to buffer memory
 		}
 
+		// Layout
 		auto globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+			.addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
 			.build();
 
+		// 
 		std::vector<VkDescriptorSet> globalDescriptorSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 		for (int i = 0; i < globalDescriptorSets.size(); i++) {
-			auto bufferInfo = uniformBuffers[i]->descriptorInfo();
+			auto globalBufferInfo = globalUniformBuffers[i]->descriptorInfo();
+			auto cameraBufferInfo = cameraUniformBuffers[i]->descriptorInfo();
 			SumiDescriptorWriter(*globalDescriptorSetLayout, *globalDescriptorPool)
-				.writeBuffer(0, &bufferInfo)
+				.writeBuffer(0, &globalBufferInfo)
+				.writeBuffer(1, &cameraBufferInfo)
 				.build(globalDescriptorSets[i]);
 		}
 
@@ -145,10 +164,17 @@ namespace sumire {
 					objects
 				};
 
-				GlobalUBO ubo{};
-				ubo.projectionView = camera.getProjectionMatrix() * camera.getViewMatrix();
-				uniformBuffers[frameIdx]->writeToBuffer(&ubo);
-				uniformBuffers[frameIdx]->flush();
+				// Populate uniform buffers with data
+				CameraUBO cameraUbo{};
+				cameraUbo.projectionMatrix     = camera.getProjectionMatrix();
+				cameraUbo.viewMatrix           = camera.getViewMatrix();
+				cameraUbo.projectionViewMatrix = cameraUbo.projectionMatrix * cameraUbo.viewMatrix;
+				cameraUniformBuffers[frameIdx]->writeToBuffer(&cameraUbo);
+				cameraUniformBuffers[frameIdx]->flush();
+
+				GlobalUBO globalUbo{};
+				globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
+				globalUniformBuffers[frameIdx]->flush();
 
 				sumiRenderer.beginSwapChainRenderPass(commandBuffer);
 				renderSystem.renderObjects(frameInfo);
@@ -171,7 +197,6 @@ namespace sumire {
 		grid.transform.translation = {0.0f, 0.0f, 0.0f};
 		grid.transform.scale = 1.0f;
 		objects.emplace(grid.getId(), std::move(grid));
-
 
 		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/clorinde.obj");
 		auto renderObj = SumiObject::createObject();

@@ -7,13 +7,18 @@ layout (location = 2) in vec3 fragWorldNorm;
 layout (location = 0) out vec4 col;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	mat4 projectionViewMatrix;
 	vec3 ambientCol;
 	vec3 lightDir;
 	vec3 lightPos;
 	vec3 lightCol;
 	float lightIntensity;
 } ubo;
+
+layout(set = 0, binding = 1) uniform Camera {
+	mat4 projectionMatrix;
+	mat4 viewMatrix;
+	mat4 projectionViewMatrix;
+};
 
 layout(push_constant) uniform Push {
 	mat4 transform; 
