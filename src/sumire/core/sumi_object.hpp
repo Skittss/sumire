@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <memory>
+#include <unordered_map>
 
 namespace sumire {
 
@@ -30,6 +31,7 @@ namespace sumire {
     class SumiObject {
     public:
         using id_t = unsigned int;
+        using Map = std::unordered_map<id_t, SumiObject>;
 
         static SumiObject createObject() {
             static id_t currentId = 0;

@@ -22,7 +22,7 @@ namespace sumire {
 		SumiRenderSystem(const SumiRenderSystem&) = delete;
 		SumiRenderSystem& operator=(const SumiRenderSystem&) = delete;
 
-		void renderObjects(FrameInfo &frameInfo, std::vector<SumiObject> &objects);
+		void renderObjects(FrameInfo &frameInfo);
 
 	private:
 		void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);

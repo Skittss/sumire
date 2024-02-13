@@ -66,7 +66,7 @@ namespace sumire {
 			pipelineConfig);
 	}
 
-	void SumiRenderSystem::renderObjects(FrameInfo &frameInfo, std::vector<SumiObject> &objects) {
+	void SumiRenderSystem::renderObjects(FrameInfo &frameInfo) {
 		sumiPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
@@ -78,7 +78,9 @@ namespace sumire {
 			0, nullptr
 		);
 
-		for (auto& obj: objects) {
+		for (auto& kv: frameInfo.objects) {
+			auto& obj = kv.second;
+			if (obj.model == nullptr) continue;
 
 			SimplePushConstantData push{};
 			auto modelMatrix = obj.transform.mat4();

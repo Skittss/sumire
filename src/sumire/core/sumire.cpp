@@ -19,8 +19,30 @@
 namespace sumire {
 
 	struct GlobalUBO {
-		glm::mat4 projectionView{1.0f};
-		glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
+		alignas(16) glm::mat4 projectionView{1.0f};
+		alignas(16) glm::vec3 ambientCol{0.02f};
+		alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
+		alignas(16) glm::vec3 lightPos{-1.0f};
+		alignas(16) glm::vec3 lightCol{ 1.0f};
+		alignas(4)  float lightIntesnity = 1.0f;
+	};
+	
+	struct CameraUBO {
+		alignas(16) glm::mat4 projectionMatrix{1.0f};
+		alignas(16) glm::mat4 viewMatrix{1.0f};
+		alignas(16) glm::mat4 projectionViewMatrix{1.0f};
+	};
+
+	struct DirectionalLightUBO {
+		alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
+		alignas(16) glm::vec3 lightCol{ 1.0f};
+		alignas(4)  float lightIntesnity = 1.0f;
+	};
+
+	struct PointLightUBO {
+		alignas(16) glm::vec3 lightPos{-1.0f};
+		alignas(16) glm::vec3 lightCol{ 1.0f};
+		alignas(4)  float lightIntesnity = 1.0f;
 	};
 
 	Sumire::Sumire() {
@@ -52,7 +74,7 @@ namespace sumire {
 		}
 
 		auto globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
 			.build();
 
 		std::vector<VkDescriptorSet> globalDescriptorSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -108,7 +130,7 @@ namespace sumire {
 			// TODO: We should not set the aspect every frame instead on change
 			float aspect = sumiRenderer.getAspect();
 			//camera.setOrthographicProjection(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
-			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 10.0f);
+			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 1000.0f);
 
 			if (auto commandBuffer = sumiRenderer.beginFrame()) {
 
@@ -119,7 +141,8 @@ namespace sumire {
 					frameTime,
 					commandBuffer,
 					camera,
-					globalDescriptorSets[frameIdx]
+					globalDescriptorSets[frameIdx],
+					objects
 				};
 
 				GlobalUBO ubo{};
@@ -128,7 +151,7 @@ namespace sumire {
 				uniformBuffers[frameIdx]->flush();
 
 				sumiRenderer.beginSwapChainRenderPass(commandBuffer);
-				renderSystem.renderObjects(frameInfo, objects);
+				renderSystem.renderObjects(frameInfo);
 				gui.renderToCmdBuffer(commandBuffer);
 				sumiRenderer.endSwapChainRenderPass(commandBuffer);
 
@@ -142,12 +165,19 @@ namespace sumire {
 	}
 
 	void Sumire::loadObjects() {
+		std::shared_ptr<SumiModel> quad = SumiModel::createFromFile(sumiDevice, "../models/primitives/quad.obj");
+		auto grid = SumiObject::createObject();
+		grid.model = quad;
+		grid.transform.translation = {0.0f, 0.0f, 0.0f};
+		grid.transform.scale = 1.0f;
+		objects.emplace(grid.getId(), std::move(grid));
+
+
 		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/clorinde.obj");
 		auto renderObj = SumiObject::createObject();
 		renderObj.model = cubeModel;
 		renderObj.transform.translation = {0.0f, 0.0f, 0.0f};
 		renderObj.transform.scale = 0.5f;
-
-		objects.push_back(std::move(renderObj));
+		objects.emplace(renderObj.getId(), std::move(renderObj));
 	}
 }

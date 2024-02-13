@@ -6,6 +6,7 @@ shaders/*.spv
 
 models/*
 !models/placeholder.txt
+!models/primitives
 
 external/*
 !external/tinygltf

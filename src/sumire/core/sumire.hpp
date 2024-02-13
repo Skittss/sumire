@@ -34,6 +34,6 @@ namespace sumire {
 		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice };
 
 		std::unique_ptr<SumiDescriptorPool> globalDescriptorPool{};
-		std::vector<SumiObject> objects;
+		SumiObject::Map objects;
 	};
 }
