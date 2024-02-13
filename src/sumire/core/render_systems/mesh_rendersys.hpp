@@ -12,15 +12,15 @@
 
 namespace sumire {
 
-	class SumiMeshRenderSys {
+	class MeshRenderSys {
 	public:
-		SumiMeshRenderSys(
+		MeshRenderSys(
 			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
 		);
-		~SumiMeshRenderSys();
+		~MeshRenderSys();
 
-		SumiMeshRenderSys(const SumiMeshRenderSys&) = delete;
-		SumiMeshRenderSys& operator=(const SumiMeshRenderSys&) = delete;
+		MeshRenderSys(const MeshRenderSys&) = delete;
+		MeshRenderSys& operator=(const MeshRenderSys&) = delete;
 
 		void renderObjects(FrameInfo &frameInfo);
 

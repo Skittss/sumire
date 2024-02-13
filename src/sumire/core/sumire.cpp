@@ -1,6 +1,7 @@
 #include <sumire/core/sumire.hpp>
 #include <sumire/core/sumi_buffer.hpp>
-#include <sumire/core/render_systems/sumi_mesh_rendersys.hpp>
+#include <sumire/core/render_systems/mesh_rendersys.hpp>
+#include <sumire/core/render_systems/point_light_rendersys.hpp>
 
 #include <sumire/input/sumi_kbm_controller.hpp>
 
@@ -104,9 +105,12 @@ namespace sumire {
 				.build(globalDescriptorSets[i]);
 		}
 
-		SumiMeshRenderSys renderSystem{
-			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()
-		};
+		MeshRenderSys renderSystem{
+			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
+
+		PointLightRenderSys pointLightSystem{
+			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
+
 		SumiCamera camera{};
 		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
 
@@ -177,8 +181,13 @@ namespace sumire {
 				globalUniformBuffers[frameIdx]->flush();
 
 				sumiRenderer.beginSwapChainRenderPass(commandBuffer);
+
 				renderSystem.renderObjects(frameInfo);
+				pointLightSystem.render(frameInfo);
+
+				// GUI should *ALWAYS* render last.
 				gui.renderToCmdBuffer(commandBuffer);
+				
 				sumiRenderer.endSwapChainRenderPass(commandBuffer);
 
 				sumiRenderer.endFrame();

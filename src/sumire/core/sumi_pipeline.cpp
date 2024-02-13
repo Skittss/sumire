@@ -82,8 +82,9 @@ namespace sumire {
 		shaderStages[1].pNext = nullptr;
 		shaderStages[1].pSpecializationInfo = nullptr;
 
-		auto bindingDescriptions = SumiModel::Vertex::getBindingDescriptions();
-		auto attributeDescriptions = SumiModel::Vertex::getAttributeDescriptions();
+		auto& bindingDescriptions   = configInfo.bindingDescriptions;
+		auto& attributeDescriptions = configInfo.attributeDescriptions;
+
 		// How to interpret input vertex buffer data
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -218,6 +219,9 @@ namespace sumire {
 		configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
 		configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
 		configInfo.dynamicStateInfo.flags = 0;
+
+		configInfo.bindingDescriptions = SumiModel::Vertex::getBindingDescriptions();
+		configInfo.attributeDescriptions = SumiModel::Vertex::getAttributeDescriptions();
 	}
 
 }

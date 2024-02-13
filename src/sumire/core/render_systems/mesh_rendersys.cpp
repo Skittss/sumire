@@ -1,4 +1,4 @@
-#include <sumire/core/render_systems/sumi_mesh_rendersys.hpp>
+#include <sumire/core/render_systems/mesh_rendersys.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -14,7 +14,7 @@ namespace sumire {
 		glm::mat4 modelMatrix;
 	};
 
-	SumiMeshRenderSys::SumiMeshRenderSys(
+	MeshRenderSys::MeshRenderSys(
 			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
 		) : sumiDevice{device} {
 			
@@ -22,11 +22,11 @@ namespace sumire {
 		createPipeline(renderPass);
 	}
 
-	SumiMeshRenderSys::~SumiMeshRenderSys() {
+	MeshRenderSys::~MeshRenderSys() {
 		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
 	}
 
-	void SumiMeshRenderSys::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
+	void MeshRenderSys::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
 
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -51,7 +51,7 @@ namespace sumire {
 		}
 	}
 
-	void SumiMeshRenderSys::createPipeline(VkRenderPass renderPass) {
+	void MeshRenderSys::createPipeline(VkRenderPass renderPass) {
 		assert(pipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
 
 		PipelineConfigInfo pipelineConfig{};
@@ -60,12 +60,12 @@ namespace sumire {
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		sumiPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,
-			"shaders/simple_shader.vert.spv",
-			"shaders/simple_shader.frag.spv",
+			"shaders/simple_mesh.vert.spv",
+			"shaders/simple_mesh.frag.spv",
 			pipelineConfig);
 	}
 
-	void SumiMeshRenderSys::renderObjects(FrameInfo &frameInfo) {
+	void MeshRenderSys::renderObjects(FrameInfo &frameInfo) {
 		sumiPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
