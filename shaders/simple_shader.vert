@@ -23,16 +23,15 @@ layout(set = 0, binding = 1) uniform Camera {
 	mat4 projectionViewMatrix;
 };
 
-layout(push_constant) uniform Push {
-	mat4 transform; 
+layout(push_constant) uniform Model {
 	mat4 modelMatrix;
-} push;
+};
 
 void main() {
-	vec4 vertexWorldPos = push.modelMatrix * vec4(position, 1.0);
+	vec4 vertexWorldPos = modelMatrix * vec4(position, 1.0);
 	gl_Position = projectionViewMatrix * vertexWorldPos;
 
-	fragWorldNorm = normalize(mat3(push.modelMatrix) * normal);
+	fragWorldNorm = normalize(mat3(modelMatrix) * normal);
 	fragWorldPos = vertexWorldPos.xyz;
 	fragColor = col;
 }

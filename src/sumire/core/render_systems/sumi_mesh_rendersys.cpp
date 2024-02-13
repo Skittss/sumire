@@ -1,4 +1,4 @@
-#include <sumire/core/sumi_render_system.hpp>
+#include <sumire/core/render_systems/sumi_mesh_rendersys.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -10,12 +10,11 @@
 
 namespace sumire {
 
-	struct SimplePushConstantData {
-		glm::mat4 transform;
+	struct ModelPushConstantData {
 		glm::mat4 modelMatrix;
 	};
 
-	SumiRenderSystem::SumiRenderSystem(
+	SumiMeshRenderSys::SumiMeshRenderSys(
 			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
 		) : sumiDevice{device} {
 			
@@ -23,16 +22,16 @@ namespace sumire {
 		createPipeline(renderPass);
 	}
 
-	SumiRenderSystem::~SumiRenderSystem() {
+	SumiMeshRenderSys::~SumiMeshRenderSys() {
 		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
 	}
 
-	void SumiRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
+	void SumiMeshRenderSys::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
 
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(SimplePushConstantData);
+		pushConstantRange.size = sizeof(ModelPushConstantData);
 		
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalDescriptorSetLayout};
 
@@ -52,7 +51,7 @@ namespace sumire {
 		}
 	}
 
-	void SumiRenderSystem::createPipeline(VkRenderPass renderPass) {
+	void SumiMeshRenderSys::createPipeline(VkRenderPass renderPass) {
 		assert(pipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
 
 		PipelineConfigInfo pipelineConfig{};
@@ -66,7 +65,7 @@ namespace sumire {
 			pipelineConfig);
 	}
 
-	void SumiRenderSystem::renderObjects(FrameInfo &frameInfo) {
+	void SumiMeshRenderSys::renderObjects(FrameInfo &frameInfo) {
 		sumiPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
@@ -84,9 +83,8 @@ namespace sumire {
 			// Only render objects with a mesh
 			if (obj.model == nullptr) continue;
 
-			SimplePushConstantData push{};
+			ModelPushConstantData push{};
 			auto modelMatrix = obj.transform.mat4();
-			push.transform = modelMatrix;
 			push.modelMatrix = modelMatrix;
 
 			vkCmdPushConstants(
@@ -94,7 +92,7 @@ namespace sumire {
 				pipelineLayout,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 				0,
-				sizeof(SimplePushConstantData),
+				sizeof(ModelPushConstantData),
 				&push
 			);
 			

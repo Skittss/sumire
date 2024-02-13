@@ -1,6 +1,6 @@
 #include <sumire/core/sumire.hpp>
-#include <sumire/core/sumi_render_system.hpp>
 #include <sumire/core/sumi_buffer.hpp>
+#include <sumire/core/render_systems/sumi_mesh_rendersys.hpp>
 
 #include <sumire/input/sumi_kbm_controller.hpp>
 
@@ -104,7 +104,7 @@ namespace sumire {
 				.build(globalDescriptorSets[i]);
 		}
 
-		SumiRenderSystem renderSystem{
+		SumiMeshRenderSys renderSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
 		SumiCamera camera{};

@@ -21,9 +21,8 @@ layout(set = 0, binding = 1) uniform Camera {
 };
 
 layout(push_constant) uniform Push {
-	mat4 transform; 
 	mat4 modelMatrix;
-} push;
+};
 
 void main() {
 	vec3 pointLightDir = ubo.lightPos - fragWorldPos.xyz;
