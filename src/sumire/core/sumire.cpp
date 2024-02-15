@@ -113,8 +113,6 @@ namespace sumire {
 
 		SumiCamera camera{};
 		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
-
-		auto viewerObj = SumiObject::createObject();
 		SumiKBMcontroller cameraController{};
 
 		// GUI
@@ -136,37 +134,43 @@ namespace sumire {
 			const float MAX_FRAME_TIME = 0.2f; // 5fps
 			frameTime = glm::min(frameTime, MAX_FRAME_TIME);
 
-			// Render GUI
-			gui.beginFrame();
-			gui.drawStatWindow();
-			gui.endFrame();
-
 			// Handle input.
 			// TODO: move components to member variables and call this from a function
 			auto guiIO = gui.getIO();
 			if (!(guiIO.WantCaptureKeyboard && guiIO.WantTextInput)) {
-				cameraController.moveWalk(sumiWindow.getGLFWwindow(), frameTime, viewerObj);
+				cameraController.moveWalk(sumiWindow.getGLFWwindow(), frameTime, camera.transform);
 			}
 
-			camera.setViewYXZ(viewerObj.transform.translation, viewerObj.transform.rotation);
+			camera.setViewYXZ(camera.transform.translation, camera.transform.rotation);
 
 			// TODO: We should not set the aspect every frame instead on change
 			float aspect = sumiRenderer.getAspect();
 			//camera.setOrthographicProjection(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
-			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 1000.0f);
+			camera.setPerspectiveProjection(glm::radians(50.0f), aspect);
+
+			// Set up FrameInfo for GUI, and add remaining props later;
+			FrameInfo frameInfo{
+				-1,        // frameIdx
+				frameTime,
+				nullptr,   // commandBuffer
+				camera,
+				nullptr,   // globalDescriptorSet
+				objects
+			};
+
+			// Render GUI
+			gui.beginFrame();
+			gui.drawStatWindow(frameInfo);
+			gui.endFrame();
 
 			if (auto commandBuffer = sumiRenderer.beginFrame()) {
 
 				int frameIdx = sumiRenderer.getFrameIdx();
 
-				FrameInfo frameInfo{
-					frameIdx,
-					frameTime,
-					commandBuffer,
-					camera,
-					globalDescriptorSets[frameIdx],
-					objects
-				};
+				// Fill in rest of frame-specific frameinfo props
+				frameInfo.frameIdx = frameIdx;
+				frameInfo.commandBuffer = commandBuffer;
+				frameInfo.globalDescriptorSet = globalDescriptorSets[frameIdx];
 
 				// Populate uniform buffers with data
 				CameraUBO cameraUbo{};

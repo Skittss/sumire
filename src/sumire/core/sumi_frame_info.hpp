@@ -15,5 +15,5 @@ namespace sumire {
         VkDescriptorSet globalDescriptorSet;
         SumiObject::Map &objects;
     };
-    
+
 }

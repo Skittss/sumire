@@ -2,7 +2,7 @@
 
 namespace sumire {
 
-    void SumiKBMcontroller::moveWalk(GLFWwindow* window, float dt, SumiObject& object) {
+    void SumiKBMcontroller::moveWalk(GLFWwindow* window, float dt, Transform3DComponent &transform) {
 
         glm::vec3 rotate{0};
         if (glfwGetKey(window, keybinds.lookRight) == GLFW_PRESS) rotate.y += 1.0f;
@@ -11,13 +11,13 @@ namespace sumire {
         if (glfwGetKey(window, keybinds.lookDown ) == GLFW_PRESS) rotate.x -= 1.0f;
 
         if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) {
-            object.transform.rotation += lookSensitivity * dt * glm::normalize(rotate);
+            transform.rotation += lookSensitivity * dt * glm::normalize(rotate);
         }
 
-        object.transform.rotation.x = glm::clamp(object.transform.rotation.x, -1.5f, 1.5f);
-        object.transform.rotation.y = glm::mod(object.transform.rotation.y, glm::two_pi<float>());
+        transform.rotation.x = glm::clamp(transform.rotation.x, -1.5f, 1.5f);
+        transform.rotation.y = glm::mod(transform.rotation.y, glm::two_pi<float>());
 
-        float yaw = object.transform.rotation.y;
+        float yaw = transform.rotation.y;
         const glm::vec3 forward{sin(yaw), 0.0f, cos(yaw)};
         const glm::vec3 right{forward.z, 0.0f, -forward.x};
         const glm::vec3 up{0.0f, -1.0f, 0.0f}; 
@@ -31,7 +31,7 @@ namespace sumire {
         if (glfwGetKey(window, keybinds.moveDown    ) == GLFW_PRESS) moveDir -= up;
 
         if (glm::dot(moveDir, moveDir) > std::numeric_limits<float>::epsilon()) {
-            object.transform.translation += moveSensitivity * dt * glm::normalize(moveDir);
+            transform.translation += moveSensitivity * dt * glm::normalize(moveDir);
         }
 
     }

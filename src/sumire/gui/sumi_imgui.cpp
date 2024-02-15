@@ -81,12 +81,44 @@ namespace sumire {
         ImGui::NewFrame();
     }
 
-    void SumiImgui::drawStatWindow() {
-        ImGui::ShowDemoWindow();
-        //ImGui::Begin("Statistics", &showStatsWindow);
+    void SumiImgui::drawStatWindow(FrameInfo &frameInfo) {
+        //ImGui::ShowDemoWindow();
+        ImGui::Begin("Sumire Scene Viewer");
+        ImGui::Text("Sumire Build v0.0.1");
+        ImGui::Spacing();
+        if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::TreeNode("Camera")) {
+
+                ImGui::SeparatorText("Transform");
+                float cameraPos[3] = {
+                    frameInfo.camera.transform.translation.x, 
+                    frameInfo.camera.transform.translation.y, 
+                    frameInfo.camera.transform.translation.z
+                };
+                ImGui::InputFloat3("translation", cameraPos);
+                frameInfo.camera.transform.translation = {cameraPos[0], cameraPos[1], cameraPos[2]};
+                ImGui::InputFloat3("rotation", cameraPos);
+                ImGui::Spacing();
+                ImGui::SeparatorText("Properties");
+                int tmp = 1;
+                ImGui::DragInt("FOV", &tmp, 1, 0);
+                ImGui::Spacing();
+
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNode("Objects")) {
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNode("Lights")) {
+                ImGui::TreePop();
+            }
+
+        }
         //ImGui::Text("Test window");
         //ImGui::Text("FPS: %.1f", 1.0);
-        //ImGui::End();
+        ImGui::End();
     }
 
     void SumiImgui::endFrame() {

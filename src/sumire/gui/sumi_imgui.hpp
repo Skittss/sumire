@@ -8,6 +8,7 @@
 #include <sumire/core/sumi_window.hpp>
 #include <sumire/core/sumi_device.hpp>
 #include <sumire/core/sumi_renderer.hpp>
+#include <sumire/core/sumi_frame_info.hpp>
 
 namespace sumire {
 
@@ -20,7 +21,7 @@ namespace sumire {
             SumiImgui& operator=(const SumiImgui&) = delete;
 
             void beginFrame();
-            void drawStatWindow();
+            void drawStatWindow(FrameInfo &frameInfo);
             void endFrame();
             void renderToCmdBuffer(VkCommandBuffer &buffer);
 
@@ -28,8 +29,6 @@ namespace sumire {
 
         private:
             void initImgui(SumiDevice &device, GLFWwindow *window, SumiRenderer &renderer);
-
-            bool showStatsWindow{true};
 
             SumiDevice &sumiDevice;
             VkDescriptorPool imguiDescriptorPool;

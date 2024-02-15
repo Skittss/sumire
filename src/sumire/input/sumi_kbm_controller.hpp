@@ -20,7 +20,7 @@ namespace sumire {
             int lookDown = GLFW_KEY_DOWN;
         };
 
-        void moveWalk(GLFWwindow* window, float dt, SumiObject& object);
+        void moveWalk(GLFWwindow* window, float dt, Transform3DComponent& transform);
 
         WalkKeybinds keybinds{};
         float moveSensitivity{3.0f};
