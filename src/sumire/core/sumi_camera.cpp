@@ -7,8 +7,51 @@
 
 namespace sumire {
 
-    SumiCamera::SumiCamera() {};
+    // Default camera for different types:
+    //   Perspective:   50 fovy
+    //   Orthographic: -1.0 top, 1.0 bot
+    SumiCamera::SumiCamera(float aspect, SmCameraType cameraType) {
+        camType = cameraType;
+        setDefaultProjectionParams(aspect);
+        FORCE_calculateProjectionMatrix();
+    };
+
+    // Creates a perspective camera
+    SumiCamera::SumiCamera(float fovy, float aspect) {
+        camType = CAM_TYPE_PERSPECTIVE;
+        setDefaultProjectionParams(aspect);
+        persp_fovy = fovy;
+        persp_aspect = aspect;
+        FORCE_calculateProjectionMatrix();
+    };
+
+    // Creates an orthographic camera
+    SumiCamera::SumiCamera(float l, float r, float top, float bot, float aspect) {
+        camType = CAM_TYPE_ORTHOGRAPHIC;
+        setDefaultProjectionParams(aspect);
+        ortho_l = l;
+        ortho_r = r;
+        ortho_top = top;
+        ortho_bot = bot;
+        FORCE_calculateProjectionMatrix();
+    };
+
     SumiCamera::~SumiCamera() {};
+
+    void SumiCamera::setDefaultProjectionParams(float aspect, bool recomputeProjMatrix) {
+        // Perspective
+        persp_fovy = glm::radians(50.0f);
+        persp_aspect = aspect;
+
+        // Orthographic
+        ortho_l = -aspect; 
+        ortho_r =  aspect;
+        ortho_top = -1.0f;
+        ortho_bot =  1.0f;
+
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
 
     void SumiCamera::setOrthographicProjection(float l, float r, float top, float bot) {
         camType = CAM_TYPE_ORTHOGRAPHIC;
@@ -40,18 +83,68 @@ namespace sumire {
         projectionMatrix[3][2] = -(farPlane * nearPlane) / (farPlane - nearPlane);
     }
 
-    glm::vec3 SumiCamera::getPosition() const {
-        return {viewMatrix[3][0], viewMatrix[3][1], viewMatrix[3][2]};
-    }
-
-    void SumiCamera::setNear(float dist) {
+    void SumiCamera::setNear(float dist, bool recomputeProjMatrix) {
+        if (nearPlane == dist) return;
+        
         nearPlane = dist;
-        calculateProjectionMatrix();
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
     }
 
-    void SumiCamera::setFar(float dist) {
+    void SumiCamera::setFar(float dist, bool recomputeProjMatrix) {
+        if (farPlane == dist) return;
+
         farPlane = dist;
-        calculateProjectionMatrix();
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
+
+    void SumiCamera::setFovy(float fovy, bool recomputeProjMatrix) {
+        if (persp_fovy == fovy) return;
+
+        persp_fovy = fovy;
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
+
+    void SumiCamera::setAspect(float aspect, bool recomputeProjMatrix) {
+        if (persp_aspect == aspect) return;
+
+        persp_aspect = aspect;
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
+    
+    void SumiCamera::setOrthoLeft(float orthoLeft, bool recomputeProjMatrix) {
+        if (ortho_l == orthoLeft) return;
+
+        ortho_l = orthoLeft;
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
+
+    void SumiCamera::setOrthoRight(float orthoRight, bool recomputeProjMatrix) {
+        if (ortho_r == orthoRight) return;
+
+        ortho_r = orthoRight;
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
+
+    void SumiCamera::setOrthoTop(float orthoTop, bool recomputeProjMatrix) {
+        if (ortho_top == orthoTop) return;
+
+        ortho_top = orthoTop;
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
+
+    void SumiCamera::setOrthoBot(float orthoBot, bool recomputeProjMatrix) {
+        if (ortho_bot == orthoBot) return;
+
+        ortho_bot = orthoBot;
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
     }
 
     void SumiCamera::setViewDirection(glm::vec3 pos, glm::vec3 dir, glm::vec3 up) {
@@ -104,10 +197,34 @@ namespace sumire {
         viewMatrix[3][2] = -glm::dot(w, pos);
     }
 
+    void SumiCamera::setCameraType(SmCameraType projType, bool recomputeProjMatrix) {
+        if (camType == projType) return;
+
+        camType = projType;
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
+
+    // Calculates the camera's projection matrix if it needs updating.
     void SumiCamera::calculateProjectionMatrix() {
+        // Only computes when a member variable has been changed. (checked by this flag)
+        if (!projMatrixNeedsUpdate) return;
+
         if (camType == CAM_TYPE_PERSPECTIVE)
-            setPerspectiveProjection(fovy, aspect);
+            setPerspectiveProjection(persp_fovy, persp_aspect);
         else 
-            setOrthographicProjection(ortho_l, ortho_r, top, bot);
+            setOrthographicProjection(ortho_l, ortho_r, ortho_top, ortho_bot);
+
+        projMatrixNeedsUpdate = false;
+    }
+
+    // Forces calculation of the camera's projection matrix even if it does not need an update (flag not set);
+    void SumiCamera::FORCE_calculateProjectionMatrix() {
+        if (camType == CAM_TYPE_PERSPECTIVE)
+            setPerspectiveProjection(persp_fovy, persp_aspect);
+        else 
+            setOrthographicProjection(ortho_l, ortho_r, ortho_top, ortho_bot);
+
+        projMatrixNeedsUpdate = false;
     }
 }

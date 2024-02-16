@@ -111,12 +111,13 @@ namespace sumire {
 		PointLightRenderSys pointLightSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
-		SumiCamera camera{};
+		SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
+		camera.transform.translation = {0.0f, -0.5f, -3.0f};
 		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
 		SumiKBMcontroller cameraController{};
 
 		// GUI
-		SumiImgui gui{sumiDevice, sumiWindow, sumiRenderer};
+		SumiImgui gui{sumiRenderer};
 
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
@@ -143,10 +144,13 @@ namespace sumire {
 
 			camera.setViewYXZ(camera.transform.translation, camera.transform.rotation);
 
-			// TODO: We should not set the aspect every frame instead on change
-			float aspect = sumiRenderer.getAspect();
+			if (sumiRenderer.wasSwapChainRecreated()) {
+				float aspect = sumiRenderer.getAspect();
+				camera.setAspect(aspect, true);
+				sumiRenderer.resetScRecreatedFlag();
+			}
 			//camera.setOrthographicProjection(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
-			camera.setPerspectiveProjection(glm::radians(50.0f), aspect);
+			//camera.setPerspectiveProjection(glm::radians(50.0f), aspect);
 
 			// Set up FrameInfo for GUI, and add remaining props later;
 			FrameInfo frameInfo{

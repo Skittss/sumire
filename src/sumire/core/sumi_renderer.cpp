@@ -36,6 +36,9 @@ namespace sumire {
                 throw std::runtime_error("Swap chain image / depth format has changed!");
             }
 		}
+
+		scRecreatedFlag = true;
+
 		// TODO: If new render pass is compatible, we needn't create a new pipeline.
 		//createPipeline();
 	}

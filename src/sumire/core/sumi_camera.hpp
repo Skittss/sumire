@@ -9,15 +9,19 @@
 namespace sumire {
 
     enum SmCameraType {
-        CAM_TYPE_ORTHOGRAPHIC = 0,
-        CAM_TYPE_PERSPECTIVE  = 1,
+        CAM_TYPE_PERSPECTIVE  = 0,
+        CAM_TYPE_ORTHOGRAPHIC = 1
     };
 
     class SumiCamera {
     public:
 
-        SumiCamera();
+        SumiCamera(float aspectRatio, SmCameraType cameraType);
+        SumiCamera(float fovy, float aspect);
+        SumiCamera(float l, float r, float top, float bot, float aspect);
         ~SumiCamera();
+
+        void setDefaultProjectionParams(float aspect, bool recomputeProjMatrix = false);
 
         void setOrthographicProjection(float l, float r, float top, float bot);
         void setPerspectiveProjection(float fovy, float aspect);
@@ -38,8 +42,22 @@ namespace sumire {
         
         glm::vec3 getUpVector() const;
 
-        void setNear(float dist);
-        void setFar(float dist);
+        void setNear(float dist, bool recomputeProjMatrix = false);
+        void setFar(float dist, bool recomputeProjMatrix = false);
+
+        float getFovy() const { return persp_fovy; }
+        void setFovy(float fovy, bool recomputeProjMatrix = false);
+        float getAspect() const { return persp_aspect; }
+        void setAspect(float aspect, bool recomputeProjMatrix = false);
+
+        float getOrthoLeft() const { return ortho_l; }
+        void setOrthoLeft(float orthoLeft, bool recomputeProjMatrix = false);
+        float getOrthoRight() const { return ortho_r; }
+        void setOrthoRight(float orthoRight, bool recomputeProjMatrix = false);
+        float getOrthoTop() const { return ortho_top; }
+        void setOrthoTop(float orthoTop, bool recomputeProjMatrix = false);
+        float getOrthoBot() const { return ortho_bot; }
+        void setOrthoBot(float orthoBot, bool recomputeProjMatrix = false);
 
         void setViewDirection(glm::vec3 pos, glm::vec3 dir, glm::vec3 up = glm::vec3{0.0f, -1.0f, 0.0f});
         void setViewTarget(glm::vec3 pos, glm::vec3 target, glm::vec3 up = glm::vec3{0.0f, -1.0f, 0.0f});
@@ -48,7 +66,12 @@ namespace sumire {
         const glm::mat4& getProjectionMatrix() const { return projectionMatrix; }
         const glm::mat4& getViewMatrix() const { return viewMatrix; }
 
+        void setCameraType(SmCameraType projType, bool recomputeProjMatrix = false);
+        void calculateProjectionMatrix();
+        void FORCE_calculateProjectionMatrix();
+
         Transform3DComponent transform;
+        bool projMatrixNeedsUpdate{true};
 
     private:
         glm::mat4 projectionMatrix{1.0f};
@@ -62,17 +85,15 @@ namespace sumire {
         float farPlane{1000.0f};
 
         // perspective proj. params
-        float fovy;
-        float aspect;
+        float persp_fovy;
+        float persp_aspect;
 
         // orthographic proj. params
         float ortho_l;
         float ortho_r;
-        float top;
-        float bot;
+        float ortho_top;
+        float ortho_bot;
 
-        // update funcs
-        void calculateProjectionMatrix();
     };
     
 }

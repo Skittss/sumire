@@ -18,9 +18,15 @@ namespace sumire {
 		SumiRenderer(const SumiRenderer&) = delete;
 		SumiRenderer& operator=(const SumiRenderer&) = delete;
 
+        SumiWindow& getWindow() const { return sumiWindow; }
+        SumiDevice& getDevice() const { return sumiDevice; }
+
         VkRenderPass getSwapChainRenderPass() const { return sumiSwapChain->getRenderPass(); }
         float getAspect() const { return sumiSwapChain->extentAspectRatio(); }
         VkFormat getSwapChainImageFormat () const { return sumiSwapChain->getSwapChainImageFormat(); }
+
+        bool wasSwapChainRecreated() const { return scRecreatedFlag; }
+        void resetScRecreatedFlag() { scRecreatedFlag = false; }
 
         bool isFrameInProgress() const { return isFrameStarted; }
         
@@ -43,6 +49,8 @@ namespace sumire {
 		void createCommandBuffers();
 		void freeCommandBuffers();
 		void recreateSwapChain();
+
+        bool scRecreatedFlag{false};
 
 		SumiWindow& sumiWindow;
 		SumiDevice& sumiDevice;

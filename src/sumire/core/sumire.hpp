@@ -14,8 +14,8 @@ namespace sumire {
 
 	class Sumire {
 	public:
-		static constexpr int WIDTH = 1280;
-		static constexpr int HEIGHT = 720;
+		static constexpr int WIDTH  = 1920;
+		static constexpr int HEIGHT = 1080;
 
 		void run();
 

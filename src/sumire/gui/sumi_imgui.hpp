@@ -15,7 +15,7 @@ namespace sumire {
 
     class SumiImgui {
         public:
-            SumiImgui(SumiDevice &device, const SumiWindow& window, SumiRenderer &renderer);
+            SumiImgui(SumiRenderer &renderer);
             ~SumiImgui();
 
             SumiImgui(const SumiImgui&) = delete;
@@ -30,11 +30,13 @@ namespace sumire {
             ImGuiIO& getIO();
 
         private:
-            void initImgui(SumiDevice &device, GLFWwindow *window, SumiRenderer &renderer);
+            void initImgui();
             void drawTransformUI(Transform3DComponent &transform);
 
-            SumiDevice &sumiDevice;
+            SumiRenderer &sumiRenderer;
             VkDescriptorPool imguiDescriptorPool;
+
+            int resetProjParamsCounter{0};
     };
 
 }
