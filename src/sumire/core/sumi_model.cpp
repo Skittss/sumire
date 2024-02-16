@@ -45,12 +45,15 @@ namespace sumire {
 	SumiModel::~SumiModel() {}
 
 	std::unique_ptr<SumiModel> SumiModel::createFromFile(SumiDevice &device, const std::string &filepath) {
+		std::filesystem::path fp = filepath;
 		Data data{};
 		loadModel(filepath, data);
 
 		// TODO: Remove this output and iostream include.
 		std::cout << "Loaded Model <" << filepath << "> (Vertex count: " << data.vertices.size() << ")" << std::endl;
-		return std::make_unique<SumiModel>(device, data);
+		auto modelPtr = std::make_unique<SumiModel>(device, data);
+		modelPtr->displayName = fp.filename().u8string();
+		return modelPtr;
 	}
 
 	void SumiModel::createVertexBuffers(const std::vector<Vertex>& vertices) {

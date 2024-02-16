@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace sumire {
 
@@ -40,8 +41,6 @@ namespace sumire {
 		struct Data {
 			std::vector<Vertex> vertices{};
 			std::vector<uint32_t> indices{};
-
-			void loadModel(const std::string &filepath);
 		};
 
 		SumiModel(SumiDevice &device, const SumiModel::Data &data);
@@ -54,6 +53,8 @@ namespace sumire {
 
 		void bind(VkCommandBuffer commandbuffer);
 		void draw(VkCommandBuffer commandbuffer);
+
+		std::string displayName{"Unnamed"};
 
 	private:
 		void createVertexBuffers(const std::vector<Vertex> &vertices);

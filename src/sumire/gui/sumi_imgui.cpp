@@ -1,6 +1,7 @@
 #include <sumire/gui/sumi_imgui.hpp>
 
 #include <stdexcept>
+#include <string>
 
 namespace sumire {
 
@@ -81,6 +82,14 @@ namespace sumire {
         ImGui::NewFrame();
     }
 
+    void SumiImgui::endFrame() {
+        ImGui::Render();
+    }
+
+    void SumiImgui::renderToCmdBuffer(VkCommandBuffer &buffer) {
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer);
+    }
+    
     void SumiImgui::drawStatWindow(FrameInfo &frameInfo) {
         //ImGui::ShowDemoWindow();
         ImGui::Begin("Sumire Scene Viewer");
@@ -95,19 +104,27 @@ namespace sumire {
                     frameInfo.camera.transform.translation.y, 
                     frameInfo.camera.transform.translation.z
                 };
-                ImGui::InputFloat3("translation", cameraPos);
-                frameInfo.camera.transform.translation = {cameraPos[0], cameraPos[1], cameraPos[2]};
-                ImGui::InputFloat3("rotation", cameraPos);
-                ImGui::Spacing();
+                drawTransformUI(frameInfo.camera.transform);
                 ImGui::SeparatorText("Properties");
-                int tmp = 1;
-                ImGui::DragInt("FOV", &tmp, 1, 0);
+                static int tmp = 1;
+                ImGui::DragInt("FOV", &tmp, 1, 1, 360, "%d", ImGuiSliderFlags_AlwaysClamp);
+                // set camera fov
                 ImGui::Spacing();
 
                 ImGui::TreePop();
             }
 
             if (ImGui::TreeNode("Objects")) {
+                for (auto& kv : frameInfo.objects) {
+                    auto& obj = kv.second;
+                    const char *nodeStrId = std::to_string(kv.first).c_str();
+                    if (ImGui::TreeNode(nodeStrId, obj.model->displayName.c_str())) {
+                        drawTransformUI(obj.transform);
+
+                        ImGui::TreePop();
+                    }
+                }
+
                 ImGui::TreePop();
             }
 
@@ -116,17 +133,21 @@ namespace sumire {
             }
 
         }
-        //ImGui::Text("Test window");
         //ImGui::Text("FPS: %.1f", 1.0);
         ImGui::End();
     }
 
-    void SumiImgui::endFrame() {
-        ImGui::Render();
+    void SumiImgui::drawTransformUI(Transform3DComponent &transform) {
+        ImGui::SeparatorText("Transform");
+        float pos[3] = {
+            transform.translation.x, 
+            transform.translation.y, 
+            transform.translation.z
+        };
+        ImGui::InputFloat3("translation", pos);
+        transform.translation = {pos[0], pos[1], pos[2]};
+        ImGui::InputFloat3("rotation", pos);
+        ImGui::Spacing();
     }
 
-    void SumiImgui::renderToCmdBuffer(VkCommandBuffer &buffer) {
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer);
-    }
-    
 }
