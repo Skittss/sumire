@@ -97,13 +97,6 @@ namespace sumire {
         ImGui::Spacing();
         if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::TreeNode("Camera")) {
-
-                ImGui::SeparatorText("Transform");
-                float cameraPos[3] = {
-                    frameInfo.camera.transform.translation.x, 
-                    frameInfo.camera.transform.translation.y, 
-                    frameInfo.camera.transform.translation.z
-                };
                 drawTransformUI(frameInfo.camera.transform);
                 ImGui::SeparatorText("Properties");
                 static int tmp = 1;
