@@ -13,24 +13,24 @@
 namespace sumire {
 
 	class MeshRenderSys {
-	public:
-		MeshRenderSys(
-			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
-		);
-		~MeshRenderSys();
+		public:
+			MeshRenderSys(
+				SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
+			);
+			~MeshRenderSys();
 
-		MeshRenderSys(const MeshRenderSys&) = delete;
-		MeshRenderSys& operator=(const MeshRenderSys&) = delete;
+			MeshRenderSys(const MeshRenderSys&) = delete;
+			MeshRenderSys& operator=(const MeshRenderSys&) = delete;
 
-		void renderObjects(FrameInfo &frameInfo);
+			void renderObjects(FrameInfo &frameInfo);
 
-	private:
-		void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
-		void createPipeline(VkRenderPass renderPass);
+		private:
+			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
+			void createPipeline(VkRenderPass renderPass);
 
-		SumiDevice& sumiDevice;
+			SumiDevice& sumiDevice;
 
-		std::unique_ptr<SumiPipeline> sumiPipeline;
-		VkPipelineLayout pipelineLayout;
-	};
+			std::unique_ptr<SumiPipeline> sumiPipeline;
+			VkPipelineLayout pipelineLayout;
+		};
 }

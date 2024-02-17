@@ -7,29 +7,48 @@
 #include <sumire/core/sumi_camera.hpp>
 #include <sumire/core/sumi_frame_info.hpp>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+
 #include <memory>
 #include <vector>
 
 namespace sumire {
 
-	class PointLightRenderSys {
+	class GridRendersys {
 		public:
-			PointLightRenderSys(
+		
+			struct GridMinimalVertex {
+				glm::vec3 pos{};
+				glm::vec2 uv{};
+
+				static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
+				static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+			};
+
+			GridRendersys(
 				SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
 			);
-			~PointLightRenderSys();
+			~GridRendersys();
 
-			PointLightRenderSys(const PointLightRenderSys&) = delete;
-			PointLightRenderSys& operator=(const PointLightRenderSys&) = delete;
+			GridRendersys(const GridRendersys&) = delete;
+			GridRendersys& operator=(const GridRendersys&) = delete;
 
 			void render(FrameInfo &frameInfo);
 
 		private:
+			void createGridQuadBuffers();
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
 			void createPipeline(VkRenderPass renderPass);
 
+			void bindGridQuadBuffers(VkCommandBuffer &commandBuffer);
+
 			SumiDevice& sumiDevice;
 
+			std::unique_ptr<SumiBuffer> quadVertexBuffer;
+			std::unique_ptr<SumiBuffer> quadIndexBuffer;
+			
 			std::unique_ptr<SumiPipeline> sumiPipeline;
 			VkPipelineLayout pipelineLayout;
 		};

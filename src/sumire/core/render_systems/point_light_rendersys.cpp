@@ -23,6 +23,7 @@ namespace sumire {
 	}
 
 	PointLightRenderSys::~PointLightRenderSys() {
+		// TODO: Destroy pipeline at this line??
 		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
 	}
 
@@ -47,12 +48,12 @@ namespace sumire {
 				&pipelineLayoutInfo,
 				nullptr, 
 				&pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create pipeline layout");
+			throw std::runtime_error("<PointLightRenderSys>: Failed to create pipeline layout.");
 		}
 	}
 
 	void PointLightRenderSys::createPipeline(VkRenderPass renderPass) {
-		assert(pipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
+		assert(pipelineLayout != nullptr && "<PointLightRenderSys>: Cannot create pipeline before pipeline layout.");
 
 		PipelineConfigInfo pipelineConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);

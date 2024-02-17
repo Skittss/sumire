@@ -1,10 +1,15 @@
 #include <sumire/core/sumire.hpp>
 #include <sumire/core/sumi_buffer.hpp>
+
+// Render systems
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
+#include <sumire/core/render_systems/grid_rendersys.hpp>
 
+// input
 #include <sumire/input/sumi_kbm_controller.hpp>
 
+// GUI layer
 #include <sumire/gui/sumi_imgui.hpp>
 
 // glm
@@ -111,6 +116,9 @@ namespace sumire {
 		PointLightRenderSys pointLightSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
+		GridRendersys gridRenderSystem{
+			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
+
 		SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
 		camera.transform.translation = {0.0f, -0.5f, -3.0f};
 		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
@@ -192,6 +200,7 @@ namespace sumire {
 
 				renderSystem.renderObjects(frameInfo);
 				pointLightSystem.render(frameInfo);
+				gridRenderSystem.render(frameInfo);
 
 				// GUI should *ALWAYS* render last.
 				gui.renderToCmdBuffer(commandBuffer);
@@ -208,12 +217,13 @@ namespace sumire {
 	}
 
 	void Sumire::loadObjects() {
+		// TODO: Obselete; remove as replaced by grid rendersys.
 		std::shared_ptr<SumiModel> quad = SumiModel::createFromFile(sumiDevice, "../models/primitives/quad.obj");
 		auto grid = SumiObject::createObject();
 		grid.model = quad;
 		grid.transform.translation = {0.0f, 0.0f, 0.0f};
 		grid.transform.scale = 1.0f;
-		objects.emplace(grid.getId(), std::move(grid));
+		//objects.emplace(grid.getId(), std::move(grid));
 
 		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/clorinde.obj");
 		auto renderObj = SumiObject::createObject();
