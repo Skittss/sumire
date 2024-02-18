@@ -29,25 +29,25 @@ namespace sumire {
 		alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
 		alignas(16) glm::vec3 lightPos{-1.0f};
 		alignas(16) glm::vec3 lightCol{ 1.0f};
-		alignas(4)  float lightIntesnity = 1.0f;
+		float lightIntesnity = 1.0f;
 	};
 	
 	struct CameraUBO {
-		alignas(16) glm::mat4 projectionMatrix{1.0f};
-		alignas(16) glm::mat4 viewMatrix{1.0f};
-		alignas(16) glm::mat4 projectionViewMatrix{1.0f};
+		glm::mat4 projectionMatrix{1.0f};
+		glm::mat4 viewMatrix{1.0f};
+		glm::mat4 projectionViewMatrix{1.0f};
 	};
 
 	struct DirectionalLightUBO {
 		alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
 		alignas(16) glm::vec3 lightCol{ 1.0f};
-		alignas(4)  float lightIntesnity = 1.0f;
+		float lightIntesnity = 1.0f;
 	};
 
 	struct PointLightUBO {
 		alignas(16) glm::vec3 lightPos{-1.0f};
 		alignas(16) glm::vec3 lightCol{ 1.0f};
-		alignas(4)  float lightIntesnity = 1.0f;
+		float lightIntesnity = 1.0f;
 	};
 
 	Sumire::Sumire() {

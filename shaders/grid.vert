@@ -3,7 +3,8 @@
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec2 uv;
 
-layout(location = 0) out vec2 uvOut;
+layout(location = 0) out vec3 nearPt;
+layout(location = 1) out vec3 farPt;
 
 layout(set = 0, binding = 1) uniform Camera {
 	mat4 projectionMatrix;
@@ -16,6 +17,14 @@ layout(push_constant) uniform Model {
 };
 
 void main() {
-    uvOut = uv;
-    gl_Position = projectionViewMatrix * modelMatrix * vec4(pos, 1.0);
+
+	mat4 invViewProj = inverse(viewMatrix) * inverse(projectionMatrix);
+
+	vec4 near = invViewProj * vec4(pos.x, pos.y, 0.0, 1.0);
+	nearPt = near.xyz / near.w;
+
+	vec4 far  = invViewProj * vec4(pos.x, pos.y, 1.0, 1.0);
+	farPt  = far.xyz / far.w;
+
+	gl_Position = vec4(pos, 1.0);
 }

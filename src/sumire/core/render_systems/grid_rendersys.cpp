@@ -8,12 +8,12 @@
 namespace sumire {
 
 	struct GridVertPushConstantData {
-		alignas(16) glm::mat4 modelMatrix;
+		glm::mat4 modelMatrix;
 	};
 
 	struct GridFragPushConstantData {
-		alignas(8) glm::vec2 gridOrigin;
-		alignas(4) float majorLineThickness;
+		alignas(16) glm::vec3 cameraPos;
+		float majorLineThickness;
 	};
 
 	GridRendersys::GridRendersys(
@@ -29,15 +29,21 @@ namespace sumire {
 		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
 	}
 
-	// Creates vertex and index buffers for a {-0.5, 0.5} -> {0.5 -> 0.5} XZ quad.
+	// Creates vertex and index buffers for a {-1.0, -1.0} -> {1.0, 1.0} XZ quad.
 	void GridRendersys::createGridQuadBuffers() {
 
-		// XZ quad from {-0.5, 0.5} -> {0.5 -> 0.5}
+		// XY quad from {-0.5, 0.5} -> {0.5 -> 0.5}
+		// GridMinimalVertex vertices[4] = {
+		// 	{{-0.5f, 0.0f, -0.5f}, {0.0f, 0.0f}}, // pos, uv
+		// 	{{ 0.5f, 0.0f, -0.5f}, {1.0f, 0.0f}},
+		// 	{{-0.5f, 0.0f,  0.5f}, {0.0f, 1.0f}},
+		// 	{{ 0.5f, 0.0f,  0.5f}, {1.0f, 1.0f}},
+		// };
 		GridMinimalVertex vertices[4] = {
-			{{-0.5f, 0.0f, -0.5f}, {0.0f, 0.0f}}, // pos, uv
-			{{ 0.5f, 0.0f, -0.5f}, {1.0f, 0.0f}},
-			{{-0.5f, 0.0f,  0.5f}, {0.0f, 1.0f}},
-			{{ 0.5f, 0.0f,  0.5f}, {1.0f, 1.0f}},
+			{{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f}}, // pos, uv
+			{{ 1.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
+			{{-1.0f,  1.0f, 0.0f}, {0.0f, 1.0f}},
+			{{ 1.0f,  1.0f, 0.0f}, {1.0f, 1.0f}},
 		};
 		uint32_t indices[6] = {0, 1, 2, 1, 2, 3};
 
@@ -149,6 +155,7 @@ namespace sumire {
 
 		PipelineConfigInfo pipelineConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
+		SumiPipeline::enableAlphaBlending(pipelineConfig); // use alpha blending
 		pipelineConfig.attributeDescriptions = GridMinimalVertex::getAttributeDescriptions();
 		pipelineConfig.bindingDescriptions = GridMinimalVertex::getBindingDescriptions();
 		pipelineConfig.renderPass = renderPass;
@@ -158,6 +165,7 @@ namespace sumire {
 			"shaders/grid.vert.spv",
 			"shaders/grid.frag.spv",
 			pipelineConfig);
+
 	}
 
 	void GridRendersys::bindGridQuadBuffers(VkCommandBuffer &commandBuffer) {
@@ -194,7 +202,7 @@ namespace sumire {
 		);
 
 		GridFragPushConstantData fragPush{};
-		fragPush.gridOrigin = {0.0f, 0.0f};
+		fragPush.cameraPos = frameInfo.camera.transform.translation;
 		fragPush.majorLineThickness = 0.02f;
 
 		vkCmdPushConstants(
@@ -209,8 +217,5 @@ namespace sumire {
 		// bind & draw grid quad
 		bindGridQuadBuffers(frameInfo.commandBuffer);
 		vkCmdDrawIndexed(frameInfo.commandBuffer, 6, 1, 0, 0, 0);
-
-		vkCmdDraw(frameInfo.commandBuffer, 6, 1, 0, 0);
-
 	}
 }
