@@ -24,6 +24,19 @@ namespace sumire {
 
     ImGuiIO& SumiImgui::getIO() { return ImGui::GetIO(); }
 
+    GridRendersys::GridUBOdata SumiImgui::getGridUboData() {
+        GridRendersys::GridUBOdata ubo{};
+        ubo.opacity = gridOpacity;
+        ubo.tileSize = gridTileSize;
+        ubo.fogNear = gridFogNear;
+        ubo.fogFar = gridFogFar;
+        ubo.minorLineCol = glm::vec3{gridMinorLineCol.x, gridMinorLineCol.y, gridMinorLineCol.z};
+        ubo.xCol = glm::vec3{gridXaxisCol.x, gridXaxisCol.y, gridXaxisCol.z};
+        ubo.zCol = glm::vec3{gridZaxisCol.x, gridZaxisCol.y, gridZaxisCol.z};
+        
+        return ubo;
+    }
+
     void SumiImgui::initImgui() {
 
         // Create descriptor pool for ImGui
@@ -98,7 +111,46 @@ namespace sumire {
         ImGui::ShowDemoWindow();
         ImGui::Begin("Sumire Scene Viewer");
         ImGui::Text("Sumire Build v0.0.1");
+
         ImGui::Spacing();
+        drawConfigUI();
+
+        ImGui::Spacing();
+        drawSceneUI(frameInfo);
+
+        //ImGui::Text("FPS: %.1f", 1.0);
+        ImGui::End();
+    }
+
+    void SumiImgui::drawConfigUI() {
+        if (ImGui::CollapsingHeader("Config")) {
+
+            ImGui::SeparatorText("UI");
+            if (ImGui::TreeNode("Grid")) {
+                ImGui::SeparatorText("Visibility");
+                ImGui::Checkbox("Show", &showGrid);
+                ImGui::DragFloat("Opacity", &gridOpacity, 0.01f, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::Spacing();
+                //ImGui::DragFloat("Fog Near", &gridFogNear, 0.1f, 0.0, 100.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Fog Far", &gridFogFar, 0.1f, 0.0, 100.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+
+                ImGui::Spacing();
+                ImGui::SeparatorText("Size");
+                ImGui::DragFloat("Tile size", &gridTileSize, 1.0f, 0.0, 50.0, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+
+                ImGui::Spacing();
+                ImGui::SeparatorText("Gridline Colours");
+                const ImGuiColorEditFlags colorPickerFlags = ImGuiColorEditFlags_AlphaPreview;
+                ImGui::ColorEdit3("Minor", (float*)&gridMinorLineCol, colorPickerFlags);
+                ImGui::ColorEdit3("X Axis", (float*)&gridXaxisCol, colorPickerFlags);
+                ImGui::ColorEdit3("Z Axis", (float*)&gridZaxisCol, colorPickerFlags);
+                ImGui::TreePop();
+            }
+            
+        }
+    }
+
+    void SumiImgui::drawSceneUI(FrameInfo &frameInfo) {
         if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::TreeNode("Camera")) {
                 
@@ -171,6 +223,8 @@ namespace sumire {
             }
 
             if (ImGui::TreeNode("Objects")) {
+
+                ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
                 for (auto& kv : frameInfo.objects) {
                     auto& obj = kv.second;
                     const char *nodeStrId = std::to_string(kv.first).c_str();
@@ -182,16 +236,15 @@ namespace sumire {
                     }
                 }
 
+                ImGui::PopItemWidth();
+
                 ImGui::TreePop();
             }
 
             if (ImGui::TreeNode("Lights")) {
                 ImGui::TreePop();
             }
-
         }
-        //ImGui::Text("FPS: %.1f", 1.0);
-        ImGui::End();
     }
 
     void SumiImgui::drawTransformUI(Transform3DComponent &transform) {
@@ -216,6 +269,9 @@ namespace sumire {
             glm::radians(rot[1]), 
             glm::radians(rot[2])
         };
+        float scale = transform.scale;
+        ImGui::InputFloat("scale", &scale);
+        transform.scale = scale;
 
         ImGui::Spacing();
     }

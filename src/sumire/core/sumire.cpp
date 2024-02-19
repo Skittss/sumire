@@ -200,7 +200,11 @@ namespace sumire {
 
 				renderSystem.renderObjects(frameInfo);
 				pointLightSystem.render(frameInfo);
-				gridRenderSystem.render(frameInfo);
+				
+				if (gui.showGrid && gui.gridOpacity > 0.0f) {
+					auto gridUbo = gui.getGridUboData();
+					gridRenderSystem.render(frameInfo, gridUbo);
+				}
 
 				// GUI should *ALWAYS* render last.
 				gui.renderToCmdBuffer(commandBuffer);
@@ -217,19 +221,12 @@ namespace sumire {
 	}
 
 	void Sumire::loadObjects() {
-		// TODO: Obselete; remove as replaced by grid rendersys.
-		std::shared_ptr<SumiModel> quad = SumiModel::createFromFile(sumiDevice, "../models/primitives/quad.obj");
-		auto grid = SumiObject::createObject();
-		grid.model = quad;
-		grid.transform.translation = {0.0f, 0.0f, 0.0f};
-		grid.transform.scale = 1.0f;
-		//objects.emplace(grid.getId(), std::move(grid));
 
 		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/clorinde.obj");
 		auto renderObj = SumiObject::createObject();
 		renderObj.model = cubeModel;
 		renderObj.transform.translation = {0.0f, 0.0f, 0.0f};
-		renderObj.transform.scale = 0.5f;
+		renderObj.transform.scale = 1.0f;
 		objects.emplace(renderObj.getId(), std::move(renderObj));
 	}
 }

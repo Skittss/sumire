@@ -1,9 +1,10 @@
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 
+#include <sumire/core/sumi_swap_chain.hpp>
+
 #include <stdexcept>
 #include <array>
 #include <cassert>
-#include "grid_rendersys.hpp"
 
 namespace sumire {
 
@@ -25,20 +26,16 @@ namespace sumire {
 	}
 
 	GridRendersys::~GridRendersys() {
-		// TODO: Destroy pipeline at this line??
 		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
+		gridUniformBuffers.clear();
+		gridDescriptorPool = nullptr;
+		quadVertexBuffer = nullptr;
+		quadIndexBuffer = nullptr;
 	}
 
 	// Creates vertex and index buffers for a {-1.0, -1.0} -> {1.0, 1.0} XZ quad.
 	void GridRendersys::createGridQuadBuffers() {
 
-		// XY quad from {-0.5, 0.5} -> {0.5 -> 0.5}
-		// GridMinimalVertex vertices[4] = {
-		// 	{{-0.5f, 0.0f, -0.5f}, {0.0f, 0.0f}}, // pos, uv
-		// 	{{ 0.5f, 0.0f, -0.5f}, {1.0f, 0.0f}},
-		// 	{{-0.5f, 0.0f,  0.5f}, {0.0f, 1.0f}},
-		// 	{{ 0.5f, 0.0f,  0.5f}, {1.0f, 1.0f}},
-		// };
 		GridMinimalVertex vertices[4] = {
 			{{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f}}, // pos, uv
 			{{ 1.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
@@ -100,6 +97,7 @@ namespace sumire {
 
 	void GridRendersys::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
 
+		// Push Constants
         VkPushConstantRange vertPushConstantRange{};
 		vertPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		vertPushConstantRange.offset = 0;
@@ -114,8 +112,45 @@ namespace sumire {
 			vertPushConstantRange,
 			fragPushConstantRange
 		};
+
+		// Grid Uniform Descriptor Pool
+		gridDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
+			.setMaxSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.build();
+
+		// Grid Uniform Buffers
+		gridUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
+
+			gridUniformBuffers[i] = std::make_unique<SumiBuffer>(
+				sumiDevice,
+				sizeof(GridUBOdata),
+				1,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+			);
+			gridUniformBuffers[i]->map();
+		}
+
+		// Grid Descriptor Set Layout
+		auto gridDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.build();
+
+		// Grid Descriptor Set
+		gridDescriptorSets = std::vector<VkDescriptorSet>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < gridDescriptorSets.size(); i++) {
+			auto gridBufferInfo = gridUniformBuffers[i]->descriptorInfo();
+			SumiDescriptorWriter(*gridDescriptorSetLayout, *gridDescriptorPool)
+				.writeBuffer(0, &gridBufferInfo)
+				.build(gridDescriptorSets[i]);
+		}
 		
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalDescriptorSetLayout};
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{
+			globalDescriptorSetLayout,
+			gridDescriptorSetLayout->getDescriptorSetLayout()
+		};
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -175,18 +210,26 @@ namespace sumire {
 		vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	}
 
-	void GridRendersys::render(FrameInfo &frameInfo) {
+	void GridRendersys::render(FrameInfo &frameInfo, GridRendersys::GridUBOdata &uniforms) {
 		sumiPipeline->bind(frameInfo.commandBuffer);
+
+		std::vector<VkDescriptorSet> frameDescriptorSets{
+			frameInfo.globalDescriptorSet,
+			gridDescriptorSets[frameInfo.frameIdx]
+		};
 
 		// descriptors
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			pipelineLayout,
-			0, 1,
-			&frameInfo.globalDescriptorSet,
+			0, 2,
+			frameDescriptorSets.data(),
 			0, nullptr
 		);
+
+		gridUniformBuffers[frameInfo.frameIdx]->writeToBuffer(&uniforms);
+		gridUniformBuffers[frameInfo.frameIdx]->flush();
 
 		// push constants
 		GridVertPushConstantData vertPush{};
