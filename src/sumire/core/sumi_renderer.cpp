@@ -2,7 +2,6 @@
 
 #include <stdexcept>
 #include <array>
-#include <cassert>
 
 namespace sumire {
 
