@@ -221,12 +221,18 @@ namespace sumire {
 	}
 
 	void Sumire::loadObjects() {
-
-		std::shared_ptr<SumiModel> cubeModel = SumiModel::createFromFile(sumiDevice, "../models/clorinde.obj");
+		std::shared_ptr<SumiModel> testOBJmodel = SumiModel::createFromFile(sumiDevice, "../models/obj/clorinde.obj");
 		auto renderObj = SumiObject::createObject();
-		renderObj.model = cubeModel;
-		renderObj.transform.translation = {0.0f, 0.0f, 0.0f};
+		renderObj.model = testOBJmodel;
+		renderObj.transform.translation = {-2.0f, 0.0f, 0.0f};
 		renderObj.transform.scale = 1.0f;
 		objects.emplace(renderObj.getId(), std::move(renderObj));
+
+		std::shared_ptr<SumiModel> testGLTFmodel = SumiModel::createFromFile(sumiDevice, "../models/gltf/doomslayer_glb/scene.glb");
+		auto renderGltf = SumiObject::createObject();
+		renderGltf.model = testGLTFmodel;
+		renderGltf.transform.translation = {0.0f, 0.0f, 0.0f};
+		renderGltf.transform.scale = 1.0f;
+		objects.emplace(renderGltf.getId(), std::move(renderGltf));
 	}
 }

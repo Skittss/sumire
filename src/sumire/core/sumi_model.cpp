@@ -12,6 +12,7 @@
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <cassert>
 #include <cstring>
@@ -40,9 +41,13 @@ namespace sumire {
 	SumiModel::SumiModel(SumiDevice& device, const SumiModel::Data& data) : sumiDevice{ device } {
 		createVertexBuffers(data.vertices);
 		createIndexBuffer(data.indices);
+		nodes = data.nodes;
+		flatNodes = data.flatNodes;
 	}
 
-	SumiModel::~SumiModel() {}
+	SumiModel::~SumiModel() {
+		nodes.clear();
+	}
 
 	std::unique_ptr<SumiModel> SumiModel::createFromFile(SumiDevice &device, const std::string &filepath) {
 		std::filesystem::path fp = filepath;
@@ -129,11 +134,24 @@ namespace sumire {
 		}
 	}
 
+	void SumiModel::drawNode(std::shared_ptr<Node> node, VkCommandBuffer commandBuffer) {
+		// Draw this node's primitives
+		if (node->mesh) {
+			for (auto& primitive : node->mesh->primitives) {
+				// TODO: Case if primitive does not use indices.
+				vkCmdDrawIndexed(commandBuffer, primitive->indexCount, 1, primitive->firstIndex, 0, 0);
+			}
+		}
+
+		// Draw children
+		for (auto& child : node->children) {
+			drawNode(child, commandBuffer);
+		}
+	}
+
 	void SumiModel::draw(VkCommandBuffer commandBuffer) {
-		if (useIndexBuffer) {
-			vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
-		} else {
-			vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
+		for (auto& node : nodes) {
+			drawNode(node, commandBuffer);
 		}
 	}
 
@@ -163,8 +181,10 @@ namespace sumire {
 		if (ext == ".obj") 
 			loadOBJ(filepath, data);
 		else if (ext == ".gltf") 
-			loadGLTF(filepath, data);
-		else 
+			loadGLTF(filepath, data, false);
+		else if (ext == ".glb")
+			loadGLTF(filepath, data, true);
+		else
 			throw std::runtime_error("Attempted to load unsupported model type: <" + ext.u8string() + ">");
 
 	}
@@ -182,6 +202,12 @@ namespace sumire {
 
 		data.vertices.clear();
 		data.indices.clear();
+
+		std::shared_ptr<Node> mainNode = std::make_shared<Node>();
+		mainNode->idx = 0;
+		mainNode->parent = nullptr;
+		mainNode->name = "mesh";
+		mainNode->mesh = std::make_shared<Mesh>();
 
 		std::unordered_map<Vertex, uint32_t> uniqueVertices{}; // map for calculating index buffer from obj
 
@@ -227,18 +253,43 @@ namespace sumire {
 				data.indices.push_back(uniqueVertices[vertex]);
 			}
 		}
+
+		std::shared_ptr<Primitive> mainPrimitive = std::make_shared<Primitive>(0, data.indices.size(), data.vertices.size());
+		mainNode->mesh->primitives.push_back(std::move(mainPrimitive));
+
+		data.nodes.push_back(mainNode);
+		data.flatNodes.push_back(mainNode);
 	}
 
-	void SumiModel::loadGLTF(const std::string &filepath, SumiModel::Data &data) {
+	void SumiModel::loadGLTF(const std::string &filepath, SumiModel::Data &data, bool isBinaryFile) {
 		tinygltf::Model gltf_model;
 		tinygltf::TinyGLTF loader;
 		std::string err;
 		std::string warn;
 
-		if (!loader.LoadASCIIFromFile(&gltf_model, &err, &warn, filepath.c_str())) {
+		// Load file in using tinygltf
+		bool loadSuccess = false;
+		switch (isBinaryFile) {
+			// Load GLB (Binary)
+			case true: {
+				loadSuccess = loader.LoadBinaryFromFile(&gltf_model, &err, &warn, filepath.c_str());
+			}
+			break;
+			// Load GLTF (Ascii)
+			case false: {
+				loadSuccess = loader.LoadASCIIFromFile(&gltf_model, &err, &warn, filepath.c_str());
+			}
+			break;
+		}
+
+		if (!loadSuccess) {
 			throw std::runtime_error(warn + err);
 		}
 
+		// Clear model data struct
+		data.nodes.clear();
+		data.flatNodes.clear();
+		
 		data.vertices.clear();
 		data.indices.clear();
 
@@ -256,10 +307,11 @@ namespace sumire {
 			getGLTFnodeProperties(gltf_model.nodes[scene.nodes[i]], gltf_model, vertexCount, indexCount);
 		}
 
-		std::cout << "DEBUG: v cnt " << vertexCount << " i cnt "  << indexCount << std::endl;
-
-		// Nodes and meshes
-		std::cout << "Loaded GLTF successfully" << std::endl;
+		// Mesh buffers
+		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
+			const tinygltf::Node node = gltf_model.nodes[scene.nodes[i]];
+			loadGLTFnode(nullptr, node, scene.nodes[i], gltf_model, data);
+		}
 	}
 
 	void SumiModel::getGLTFnodeProperties(
@@ -283,5 +335,168 @@ namespace sumire {
 				}
 			}
 		}
+	}
+
+	void SumiModel::loadGLTFnode(std::shared_ptr<Node> parent, const tinygltf::Node &node, uint32_t nodeIdx, const tinygltf::Model &model, SumiModel::Data &data) {
+
+		std::shared_ptr<Node> createNode = std::make_shared<Node>();
+		createNode->idx = nodeIdx;
+		createNode->name = node.name;
+
+		// TODO: Generate local transform for node
+
+		// Load node children if exists
+		if (node.children.size() > 0) {
+			for (size_t i = 0; i < node.children.size(); i++) {
+				loadGLTFnode(createNode, model.nodes[node.children[i]], node.children[i], model, data);
+			}
+		}
+
+		// Load mesh if node has it
+		if (node.mesh > -1) {
+			const tinygltf::Mesh mesh = model.meshes[node.mesh];
+			std::shared_ptr createMesh = std::make_shared<Mesh>();
+			
+			for (size_t i = 0; i < mesh.primitives.size(); i++) {
+
+				uint32_t vertexCount = 0;
+				uint32_t indexCount = 0;
+				uint32_t vertexStart = static_cast<uint32_t>(data.vertices.size());
+				uint32_t indexStart = static_cast<uint32_t>(data.indices.size());
+
+				const tinygltf::Primitive &primitive = mesh.primitives[i];
+				bool hasIndices = primitive.indices > -1;
+
+				// Vertices
+				{
+					// Buffer pointers & data strides
+					const float *bufferPos = nullptr;
+					const float *bufferNorm = nullptr;
+					const float *bufferTexCoord0 = nullptr;
+					const float *bufferTexCoord1 = nullptr;
+					const float *bufferColor0 = nullptr;
+					int stridePos;
+					int strideNorm;
+					int strideTexCoord0;
+					int strideTexCoord1;
+					int strideColor0;
+
+					// Pos
+					auto positionEntry = primitive.attributes.find("POSITION");
+					// Must have position
+					assert(positionEntry != primitive.attributes.end());
+
+					const tinygltf::Accessor& posAccessor = model.accessors[positionEntry->second];
+					vertexCount = static_cast<uint32_t>(posAccessor.count);
+
+					const tinygltf::BufferView& posBufferView = model.bufferViews[posAccessor.bufferView];
+					const tinygltf::Buffer& posBuffer = model.buffers[posBufferView.buffer];
+					bufferPos = reinterpret_cast<const float *>(&(posBuffer.data[posAccessor.byteOffset + posBufferView.byteOffset]));
+					stridePos = posAccessor.ByteStride(posBufferView) ? (posAccessor.ByteStride(posBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC3);
+
+					// Normals
+					auto normEntry = primitive.attributes.find("NORMAL");
+					if (normEntry != primitive.attributes.end()) {
+						const tinygltf::Accessor& normAccessor = model.accessors[normEntry->second];
+						const tinygltf::BufferView& normBufferView = model.bufferViews[normAccessor.bufferView];
+						const tinygltf::Buffer& normBuffer = model.buffers[normBufferView.buffer];
+						bufferNorm = reinterpret_cast<const float *>(&(normBuffer.data[normAccessor.byteOffset + normBufferView.byteOffset]));
+						strideNorm = normAccessor.ByteStride(normBufferView) ? (normAccessor.ByteStride(normBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC3); 
+					}
+
+					// UVs
+					// TODO: I think this can be arbitrarily large depending on the materials the model uses?
+					//       Query no. of textures first and loop here if this is the case.
+					auto texCoordEntry = primitive.attributes.find("TEXCOORD_0");
+					if (texCoordEntry != primitive.attributes.end()) {
+						const tinygltf::Accessor& texCoordAccessor = model.accessors[texCoordEntry->second];
+						const tinygltf::BufferView& texCoordBufferView = model.bufferViews[texCoordAccessor.bufferView];
+						const tinygltf::Buffer& texCoordBuffer = model.buffers[texCoordBufferView.buffer];
+						bufferTexCoord0 = reinterpret_cast<const float *>(&(texCoordBuffer.data[texCoordAccessor.byteOffset + texCoordBufferView.byteOffset]));
+						strideTexCoord0 = texCoordAccessor.ByteStride(texCoordBufferView) ? (texCoordAccessor.ByteStride(texCoordBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC2); 
+					}
+
+					// Vertex Colours
+					auto colorEntry = primitive.attributes.find("COLOR_0");
+					if (colorEntry != primitive.attributes.end()) {
+						const tinygltf::Accessor& colorAccessor = model.accessors[colorEntry->second];
+						const tinygltf::BufferView& colorBufferView = model.bufferViews[colorAccessor.bufferView];
+						const tinygltf::Buffer& colorBuffer = model.buffers[colorBufferView.buffer];
+						bufferColor0 = reinterpret_cast<const float *>(&(colorBuffer.data[colorAccessor.byteOffset + colorBufferView.byteOffset]));
+						strideColor0 = colorAccessor.ByteStride(colorBufferView) ? (colorAccessor.ByteStride(colorBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC3); 
+					}
+
+					// Populate Vertex structs
+					for (uint32_t vIdx = 0; vIdx < vertexCount; vIdx++) {
+						Vertex v{};
+						v.position = glm::make_vec3(&bufferPos[vIdx * stridePos]);
+						v.normal = glm::normalize(bufferNorm ? glm::make_vec3(&bufferNorm[vIdx * strideNorm]) : glm::vec3(0.0f));
+						v.uv = bufferTexCoord0 ? glm::make_vec2(&bufferTexCoord0[vIdx * strideTexCoord0]) : glm::vec3(0.0f);
+						v.color = bufferColor0 ? glm::make_vec3(&bufferColor0[vIdx * strideColor0]) : glm::vec3(1.0f);
+						// TODO: Keeping track of current vertex no. and indexing straight to the array would again be faster than
+						//       push_back.
+						data.vertices.push_back(v);
+					}
+				}
+
+				// Indices
+				if (hasIndices) {
+					const tinygltf::Accessor& idxAccessor = model.accessors[primitive.indices > -1 ? primitive.indices : 0];
+					indexCount = static_cast<uint32_t>(idxAccessor.count);
+
+					const tinygltf::BufferView& idxBufferView = model.bufferViews[idxAccessor.bufferView];
+					const tinygltf::Buffer& idxBuffer = model.buffers[idxBufferView.buffer];
+					
+					// Raw idx data to cast
+					const void *idxBufferData = &(idxBuffer.data[idxAccessor.byteOffset + idxBufferView.byteOffset]);
+
+					// TODO: Raw indexing of the indices array would be considerably faster for index buffer
+					//       here than push_back.
+					switch (idxAccessor.componentType) {
+						case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: {
+							const uint32_t *castData = static_cast<const uint32_t *>(idxBufferData);
+							for (uint32_t idx = 0; idx < indexCount; idx++) {
+								data.indices.push_back(castData[idx] + vertexStart);
+							}
+						}
+						break;
+						case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+							const uint16_t *castData = static_cast<const uint16_t *>(idxBufferData);
+							for (uint32_t idx = 0; idx < indexCount; idx++) {
+								data.indices.push_back(static_cast<uint32_t>(castData[idx]) + vertexStart);
+							}
+						}
+						break;
+						case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+							const uint8_t *castData = static_cast<const uint8_t *>(idxBufferData);
+							for (uint32_t idx = 0; idx < indexCount; idx++) {
+								data.indices.push_back(static_cast<uint32_t>(castData[idx]) + vertexStart);
+							}
+						}
+						break;
+						default:
+							throw std::runtime_error("Attempted to load model indices with an unsupported data type. Supported: uint32, uint16, uint8");
+					}
+
+				}
+
+				// Assign primitive to mesh
+				std::shared_ptr<Primitive> createPrimitive = std::make_shared<Primitive>(indexStart, indexCount, vertexCount);
+				createMesh->primitives.push_back(std::move(createPrimitive));
+
+			}
+			// Assign mesh to node
+			createNode->mesh = std::move(createMesh);
+		}
+
+		// Update node tree
+		if (parent) 
+			parent->children.push_back(createNode);
+		else
+			data.nodes.push_back(createNode);
+		
+		// Flattened node tree for skinning
+		data.flatNodes.push_back(createNode);
+
 	}
 }
