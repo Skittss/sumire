@@ -18,6 +18,7 @@ layout(set = 0, binding = 1) uniform Camera {
 	mat4 projectionViewMatrix;
 };
 
+// TODO: Use one triangle instead of quad.
 void main() {
     float d = sqrt(dot(fragOffset, fragOffset));
     if (d > 1.0) discard;
