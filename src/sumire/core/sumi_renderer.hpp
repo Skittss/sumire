@@ -3,7 +3,6 @@
 #include <sumire/core/sumi_window.hpp>
 #include <sumire/core/sumi_swap_chain.hpp>
 #include <sumire/core/sumi_device.hpp>
-#include <sumire/core/sumi_model.hpp>
 
 #include <memory>
 #include <vector>
