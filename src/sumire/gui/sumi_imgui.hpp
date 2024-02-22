@@ -49,7 +49,7 @@ namespace sumire {
             void initImgui();
             void drawConfigUI();
             void drawSceneUI(FrameInfo &frameInfo);
-            void drawTransformUI(Transform3DComponent &transform);
+            void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 
             SumiRenderer &sumiRenderer;
             VkDescriptorPool imguiDescriptorPool;

@@ -225,14 +225,21 @@ namespace sumire {
 		auto renderObj = SumiObject::createObject();
 		renderObj.model = testOBJmodel;
 		renderObj.transform.translation = {-2.0f, 0.0f, 0.0f};
-		renderObj.transform.scale = 1.0f;
+		renderObj.transform.scale = glm::vec3{1.0f};
 		objects.emplace(renderObj.getId(), std::move(renderObj));
 
 		std::shared_ptr<SumiModel> testGLTFmodel = SumiModel::createFromFile(sumiDevice, "../models/gltf/doomslayer_glb/scene.glb");
 		auto renderGltf = SumiObject::createObject();
 		renderGltf.model = testGLTFmodel;
 		renderGltf.transform.translation = {0.0f, 0.0f, 0.0f};
-		renderGltf.transform.scale = 1.0f;
+		renderGltf.transform.scale = glm::vec3{1.0f};
 		objects.emplace(renderGltf.getId(), std::move(renderGltf));
+
+		std::shared_ptr<SumiModel> testGLBmodel = SumiModel::createFromFile(sumiDevice, "../models/gltf/2b/2b.glb");
+		auto renderGlb = SumiObject::createObject();
+		renderGlb.model = testGLBmodel;
+		renderGlb.transform.translation = {2.0f, 0.0f, 0.0f};
+		renderGlb.transform.scale = glm::vec3{1.0f};
+		objects.emplace(renderGlb.getId(), std::move(renderGlb));
 	}
 }

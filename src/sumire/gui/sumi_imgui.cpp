@@ -156,7 +156,7 @@ namespace sumire {
                 
                 ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
                 // Transform UI
-                drawTransformUI(frameInfo.camera.transform);
+                drawTransformUI(frameInfo.camera.transform, false);
                 
                 ImGui::SeparatorText("Projection");
 
@@ -247,7 +247,7 @@ namespace sumire {
         }
     }
 
-    void SumiImgui::drawTransformUI(Transform3DComponent &transform) {
+    void SumiImgui::drawTransformUI(Transform3DComponent &transform, bool includeScale) {
         ImGui::SeparatorText("Transform");
 
         float pos[3] = {
@@ -269,9 +269,31 @@ namespace sumire {
             glm::radians(rot[1]), 
             glm::radians(rot[2])
         };
-        float scale = transform.scale;
-        ImGui::InputFloat("scale", &scale);
-        transform.scale = scale;
+        
+        if (includeScale) {
+            ImGui::Spacing();
+
+            static bool perAxisScale = false;
+            ImGui::Checkbox("Per-axis scale?", &perAxisScale);
+
+            if (perAxisScale) {
+
+                float scale[3] = {
+                    transform.scale.x,
+                    transform.scale.y,
+                    transform.scale.z
+                };
+                ImGui::InputFloat3("scale", scale);
+                transform.scale = {scale[0], scale[1], scale[2]};
+
+            } else {
+
+                float scale = (transform.scale.x + transform.scale.y + transform.scale.z) / 3.0;
+                ImGui::DragFloat("scale", &scale, 0.1f);
+                transform.scale = glm::vec3{scale};
+
+            }
+        }
 
         ImGui::Spacing();
     }
