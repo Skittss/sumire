@@ -6,6 +6,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/ext/quaternion_float.hpp>
 
 #include <tiny_gltf.h>
 
@@ -18,6 +19,11 @@ namespace sumire {
 	class SumiModel {
 
 	public:
+
+		struct Texture {
+			uint32_t width;
+			uint32_t height;
+		};
 
 		struct Primitive {
 			uint32_t firstIndex;
@@ -40,13 +46,22 @@ namespace sumire {
 			uint32_t idx;
 			std::shared_ptr<Node> parent;
 			std::vector<std::shared_ptr<Node>> children;
-			glm::mat4 matrix;
 			std::string name;
 			std::shared_ptr<Mesh> mesh;
+
+			// Node transform properties
+			glm::mat4 matrix;
+			glm::vec3 translation{};
+			glm::quat rotation{};
+			glm::vec3 scale{1.0f};
+
+			glm::mat4 getLocalTransform();
+			glm::mat4 getGlobalTransform();
 
 			~Node() {
 				parent = nullptr;
 				children.clear();
+				mesh = nullptr;
 			}
 		};
 
@@ -70,12 +85,18 @@ namespace sumire {
 		};
 
 		struct Data {
+
+			// Scene tree
 			std::vector<std::shared_ptr<Node>> nodes{};
 			// TODO: This flat list is useful for gltf only?
 			std::vector<std::shared_ptr<Node>> flatNodes{};
 
+			// Mesh data
 			std::vector<Vertex> vertices{};
 			std::vector<uint32_t> indices{};
+
+			// Textures
+			std::vector<std::shared_ptr<Texture>> textures;
 		};
 
 		SumiModel(SumiDevice &device, const SumiModel::Data &data);
@@ -92,26 +113,24 @@ namespace sumire {
 		std::string displayName{"Unnamed"};
 
 	private:
-
 		void drawNode(std::shared_ptr<Node> node, VkCommandBuffer commandBuffer);
 
 		void createVertexBuffers(const std::vector<Vertex> &vertices);
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
 
+		// Loading Entry point
 		static void loadModel(const std::string &filepath, SumiModel::Data &data);
 
-		// TODO: Loading may need separate classes for models in the future.
-		// OBJ
+		// .obj loading
 		static void loadOBJ(const std::string &filepath, SumiModel::Data &data);
 
-		// .gltf
+		// .gltf loading
 		static void loadGLTF(const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
+		static void loadGLTFtextures(tinygltf::Model &model, SumiModel::Data &data);
 		static void getGLTFnodeProperties(
 			const tinygltf::Node &node, const tinygltf::Model &model, uint32_t &vertexCount, uint32_t &indexCount
 		);
 		static void loadGLTFnode(std::shared_ptr<Node> parent, const tinygltf::Node &node, uint32_t nodeIdx, const tinygltf::Model &model, SumiModel::Data &data);
-
-		SumiDevice &sumiDevice;
 
 		// Mesh tree
 		std::vector<std::shared_ptr<Node>> nodes;
@@ -127,7 +146,6 @@ namespace sumire {
 		std::unique_ptr<SumiBuffer> indexBuffer;
 		uint32_t indexCount;
 
-		// Textures
-		//std::unique_ptr<
+		SumiDevice &sumiDevice;
 	};
 }

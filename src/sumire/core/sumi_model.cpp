@@ -7,6 +7,7 @@
 #define TINYGLTF_NOEXCEPTION // No exceptions (for now?)
 
 #include <sumire/core/sumi_model.hpp>
+
 #include <sumire/math/math_utils.hpp>
 
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
@@ -300,6 +301,9 @@ namespace sumire {
 		const int default_scene_idx = std::max(gltf_model.defaultScene, 0);
 		const tinygltf::Scene &scene = gltf_model.scenes[default_scene_idx];
 
+		// Textures
+
+
 		// Mesh information
 		uint32_t vertexCount = 0;
 		uint32_t indexCount = 0;
@@ -311,6 +315,20 @@ namespace sumire {
 		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
 			const tinygltf::Node node = gltf_model.nodes[scene.nodes[i]];
 			loadGLTFnode(nullptr, node, scene.nodes[i], gltf_model, data);
+		}
+	}
+
+	void SumiModel::loadGLTFtextures(tinygltf::Model &model, SumiModel::Data &data) {
+		for (tinygltf::Texture &texture : model.textures) {
+			tinygltf::Image image = model.images[texture.source];
+			if (texture.sampler > -1) {
+				
+			} else {
+				// Use default sampler
+			}
+
+			std::shared_ptr<Texture> t = std::make_shared<Texture>();
+			data.textures.push_back(std::move(t));
 		}
 	}
 
@@ -342,8 +360,21 @@ namespace sumire {
 		std::shared_ptr<Node> createNode = std::make_shared<Node>();
 		createNode->idx = nodeIdx;
 		createNode->name = node.name;
+		createNode->matrix = glm::mat4(1.0f);
 
-		// TODO: Generate local transform for node
+		// Local transforms specified by either a 4x4 mat or translation, rotation and scale vectors.
+		if (node.matrix.size() == 16) {
+			createNode->matrix = glm::make_mat4x4(node.matrix.data());
+		}
+		if (node.translation.size() == 3) {
+			createNode->translation = glm::make_vec3(node.translation.data());
+		}
+		if (node.rotation.size() == 4) {
+			createNode->rotation = glm::make_quat(node.rotation.data());
+		}
+		if (node.scale.size() == 3) {
+			createNode->scale = glm::make_vec3(node.scale.data());
+		}
 
 		// Load node children if exists
 		if (node.children.size() > 0) {
@@ -383,8 +414,7 @@ namespace sumire {
 
 					// Pos
 					auto positionEntry = primitive.attributes.find("POSITION");
-					// Must have position
-					assert(positionEntry != primitive.attributes.end());
+					assert(positionEntry != primitive.attributes.end()); // Must have position
 
 					const tinygltf::Accessor& posAccessor = model.accessors[positionEntry->second];
 					vertexCount = static_cast<uint32_t>(posAccessor.count);
@@ -497,6 +527,29 @@ namespace sumire {
 		
 		// Flattened node tree for skinning
 		data.flatNodes.push_back(createNode);
-
 	}
+
+	//==============Node========================================================================
+
+	// local transform matrix for a *single* node
+	glm::mat4 SumiModel::Node::getLocalTransform() {
+		// TODO: potentially use sumi_transform3d.hpp here for consistency.
+		return glm::translate(glm::mat4{1.0f}, translation) * glm::mat4(rotation) * glm::scale(glm::mat4{1.0f}, scale) * matrix;
+	}
+
+	// global transform matrix for a node (considering its parents transforms)
+	glm::mat4 SumiModel::Node::getGlobalTransform() {
+
+		glm::mat4 globalMatrix = getLocalTransform();
+		std::shared_ptr<Node> parentNode = parent;
+
+		// Recurse through parents and accumulate transforms
+		while (parentNode) {
+			globalMatrix = parentNode->getLocalTransform() * globalMatrix;
+			parentNode = parentNode->parent;
+		}
+
+		return globalMatrix;
+	}
+
 }
