@@ -3,6 +3,7 @@
 layout (location = 0) in vec3 fragColor;
 layout (location = 1) in vec3 fragWorldPos;
 layout (location = 2) in vec3 fragWorldNorm;
+layout (location = 3) in vec2 fragUv;
 
 layout (location = 0) out vec4 col;
 

@@ -8,6 +8,7 @@ layout(location = 3) in vec2 uv;
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec3 fragWorldPos;
 layout(location = 2) out vec3 fragWorldNorm;
+layout(location = 3) out vec2 fragUv;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
@@ -34,4 +35,5 @@ void main() {
 	fragWorldNorm = normalize(mat3(modelMatrix) * normal);
 	fragWorldPos = vertexWorldPos.xyz;
 	fragColor = col;
+	fragUv = uv;
 }
