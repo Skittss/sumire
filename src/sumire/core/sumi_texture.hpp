@@ -18,23 +18,28 @@ namespace sumire {
                 SumiDevice &device, 
                 VkMemoryPropertyFlags memoryPropertyFlags,
                 VkImageCreateInfo &imageInfo, 
+                VkSamplerCreateInfo &samplerInfo,
                 SumiBuffer &imageStagingBuffer
             );
             ~SumiTexture();
 
             static std::unique_ptr<SumiTexture> createFromFile(
-                SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo, 
+                SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
+                VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
                 const std::string &filepath
             );
             static std::unique_ptr<SumiTexture> createFromRGBA(
-                SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo,
+                SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
+                VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
                 int width, int height, unsigned char *data
             );
             static std::unique_ptr<SumiTexture> createFromRGB(
-                SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo,
+                SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
+                VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
                 int width, int height, unsigned char *data
             );
             static void defaultImageCreateInfo(VkImageCreateInfo &createInfo);
+            static void defaultSamplerCreateInfo(SumiDevice &device, VkSamplerCreateInfo &createInfo);
 
         private:
 
@@ -44,7 +49,7 @@ namespace sumire {
                 SumiBuffer &stagingBuffer
             );
             void createTextureImageView(VkFormat format);
-            void createTextureSampler();
+            void createTextureSampler(VkSamplerCreateInfo &samplerInfo);
 
             SumiDevice &sumiDevice;
 

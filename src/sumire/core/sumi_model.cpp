@@ -8,6 +8,8 @@
 
 #include <sumire/core/sumi_model.hpp>
 
+#include <sumire/util/gltf_vulkan_flag_converters.hpp>
+
 #include <sumire/math/math_utils.hpp>
 
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
@@ -266,7 +268,7 @@ namespace sumire {
 	}
 
 	void SumiModel::loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile) {
-		tinygltf::Model gltf_model;
+		tinygltf::Model gltfModel;
 		tinygltf::TinyGLTF loader;
 		std::string err;
 		std::string warn;
@@ -276,12 +278,12 @@ namespace sumire {
 		switch (isBinaryFile) {
 			// Load GLB (Binary)
 			case true: {
-				loadSuccess = loader.LoadBinaryFromFile(&gltf_model, &err, &warn, filepath.c_str());
+				loadSuccess = loader.LoadBinaryFromFile(&gltfModel, &err, &warn, filepath.c_str());
 			}
 			break;
 			// Load GLTF (Ascii)
 			case false: {
-				loadSuccess = loader.LoadASCIIFromFile(&gltf_model, &err, &warn, filepath.c_str());
+				loadSuccess = loader.LoadASCIIFromFile(&gltfModel, &err, &warn, filepath.c_str());
 			}
 			break;
 		}
@@ -298,42 +300,65 @@ namespace sumire {
 		data.indices.clear();
 
 		// default gltf scene
-		if (gltf_model.defaultScene < 0)
+		if (gltfModel.defaultScene < 0)
 			std::cerr << "WARN: Model <" << filepath << "> has no default scene - here be dragons!" << std::endl;
 
-		const int default_scene_idx = std::max(gltf_model.defaultScene, 0);
-		const tinygltf::Scene &scene = gltf_model.scenes[default_scene_idx];
+		const int default_scene_idx = std::max(gltfModel.defaultScene, 0);
+		const tinygltf::Scene &scene = gltfModel.scenes[default_scene_idx];
 
 		// Textures
-		loadGLTFtextures(device, gltf_model, data);
+		loadGLTFsamplers(device, gltfModel, data);
+		loadGLTFtextures(device, gltfModel, data);
 
 		// Mesh information
 		uint32_t vertexCount = 0;
 		uint32_t indexCount = 0;
 		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
-			getGLTFnodeProperties(gltf_model.nodes[scene.nodes[i]], gltf_model, vertexCount, indexCount);
+			getGLTFnodeProperties(gltfModel.nodes[scene.nodes[i]], gltfModel, vertexCount, indexCount);
 		}
 
 		// Mesh buffers
 		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
-			const tinygltf::Node node = gltf_model.nodes[scene.nodes[i]];
-			loadGLTFnode(nullptr, node, scene.nodes[i], gltf_model, data);
+			const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+			loadGLTFnode(nullptr, node, scene.nodes[i], gltfModel, data);
+		}
+	}
+
+	void SumiModel::loadGLTFsamplers(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data) {
+		
+		VkSamplerCreateInfo defaultSamplerInfo{};
+		SumiTexture::defaultSamplerCreateInfo(device, defaultSamplerInfo);
+
+		for (tinygltf::Sampler sampler : model.samplers) {
+			VkSamplerCreateInfo samplerInfo = defaultSamplerInfo;
+			samplerInfo.minFilter = util::GLTF2VK_FilterMode(sampler.minFilter);
+			samplerInfo.magFilter = util::GLTF2VK_FilterMode(sampler.magFilter);
+			samplerInfo.addressModeU = util::GLTF2VK_SamplerAddressMode(sampler.wrapS);
+			samplerInfo.addressModeV = util::GLTF2VK_SamplerAddressMode(sampler.wrapT);
+			samplerInfo.addressModeW = samplerInfo.addressModeV;
+			data.samplers.push_back(samplerInfo);
 		}
 	}
 
 	void SumiModel::loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data) {
 
+		// Default create infos
 		VkImageCreateInfo imageInfo{};
 		SumiTexture::defaultImageCreateInfo(imageInfo);
+		VkSamplerCreateInfo defaultSamplerInfo{};
+		SumiTexture::defaultSamplerCreateInfo(device, defaultSamplerInfo);
 
 		for (tinygltf::Texture &texture : model.textures) {
 			tinygltf::Image image = model.images[texture.source];
 
+			VkSamplerCreateInfo samplerInfo{};
 			// Sampler selection
 			if (texture.sampler > -1) {
-				
+				// Use sampler from loaded sampler array
+				samplerInfo = data.samplers[texture.sampler];
 			} else {
-				// Use default sampler
+				// Use default
+				samplerInfo = defaultSamplerInfo;
 			}
 
 			// Texture creation
@@ -344,6 +369,7 @@ namespace sumire {
 					device,
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					imageInfo,
+					samplerInfo,
 					image.width, image.height,
 					image.image.data()
 				);
@@ -353,6 +379,7 @@ namespace sumire {
 					device,
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					imageInfo,
+					samplerInfo,
 					image.width, image.height,
 					image.image.data()
 				);

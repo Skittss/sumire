@@ -97,6 +97,7 @@ namespace sumire {
 			std::vector<uint32_t> indices{};
 
 			// Textures
+			std::vector<VkSamplerCreateInfo> samplers;
 			std::vector<std::shared_ptr<SumiTexture>> textures;
 		};
 
@@ -127,6 +128,7 @@ namespace sumire {
 
 		// .gltf loading
 		static void loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
+		static void loadGLTFsamplers(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void getGLTFnodeProperties(
 			const tinygltf::Node &node, const tinygltf::Model &model, uint32_t &vertexCount, uint32_t &indexCount

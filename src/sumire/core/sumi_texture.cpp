@@ -11,12 +11,13 @@ namespace sumire {
 		SumiDevice &device, 
 		VkMemoryPropertyFlags memoryPropertyFlags, 
 		VkImageCreateInfo &imageInfo,
+		VkSamplerCreateInfo &samplerInfo,
 		SumiBuffer &imageStagingBuffer
 	): sumiDevice{ device }, memoryPropertyFlags{ memoryPropertyFlags }
 	{
 		createTextureImage(memoryPropertyFlags, imageInfo, imageStagingBuffer);
 		createTextureImageView(imageInfo.format);
-		createTextureSampler();
+		createTextureSampler(samplerInfo);
     }
 
 	SumiTexture::~SumiTexture() {
@@ -27,7 +28,8 @@ namespace sumire {
 	}
 
 	std::unique_ptr<SumiTexture> SumiTexture::createFromFile(
-		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo, 
+		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
+		VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
 		const std::string &filepath
 	) {
 		int textureWidth, textureHeight, textureChannels;
@@ -55,12 +57,13 @@ namespace sumire {
 		// Cleanup image in system memory from load
 		stbi_image_free(imageData);
 
-		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, stagingBuffer);
+		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, samplerInfo, stagingBuffer);
 	}
 
 	// Creates a RGBA texture from RGBA data.
 	std::unique_ptr<SumiTexture> SumiTexture::createFromRGBA(
-		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo,
+		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
+		VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
 		int width, int height, unsigned char *data
 	) {
 		VkDeviceSize imageSize = width * height * 4;
@@ -79,12 +82,13 @@ namespace sumire {
 		stagingBuffer.map();
 		stagingBuffer.writeToBuffer((void *)data);
 
-		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, stagingBuffer);
+		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, samplerInfo, stagingBuffer);
 	}
 
 	// Creates a RGBA texture from RGB data.
 	std::unique_ptr<SumiTexture> SumiTexture::createFromRGB(
-		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo,
+		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
+		VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
 		int width, int height, unsigned char *data
 	) {		
 		VkDeviceSize imageSize = width * height * 4;
@@ -117,7 +121,7 @@ namespace sumire {
 		stagingBuffer.writeToBuffer((void *)convertedData);
 		delete[] convertedData;
 
-		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, stagingBuffer);
+		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, samplerInfo, stagingBuffer);
 	}
 
 	void SumiTexture::defaultImageCreateInfo(VkImageCreateInfo &createInfo) {
@@ -136,6 +140,31 @@ namespace sumire {
 		createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		createInfo.flags = 0;
+	}
+
+	void SumiTexture::defaultSamplerCreateInfo(SumiDevice &device, VkSamplerCreateInfo &createInfo) {
+		// TODO: It would probably be worth querying these *once* at program start, 
+		//       and creating a const table which can be imported instead of having to re-query.
+		// Query support for certain sampling features (e.g. anisotropy)
+		VkPhysicalDeviceProperties deviceProperties{};
+		vkGetPhysicalDeviceProperties(device.getPhysicalDevice(), &deviceProperties);
+
+		createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		createInfo.magFilter = VK_FILTER_LINEAR;
+		createInfo.minFilter = VK_FILTER_LINEAR;
+		createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		createInfo.anisotropyEnable = VK_TRUE;
+		createInfo.maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
+		createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		createInfo.unnormalizedCoordinates = VK_FALSE;
+		createInfo.compareEnable = VK_FALSE;
+		createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		createInfo.mipLodBias = 0.0f;
+		createInfo.minLod = 0.0f;
+		createInfo.maxLod = 0.0f;
 	}
 
 	void SumiTexture::createTextureImage(
@@ -186,31 +215,7 @@ namespace sumire {
 		}
 	}
 
-	void SumiTexture::createTextureSampler() {
-		// TODO: It would probably be worth querying these *once* at program start, 
-		//       and creating a const table which can be imported instead of having to re-query.
-		// Query support for certain sampling features (e.g. anisotropy)
-		VkPhysicalDeviceProperties deviceProperties{};
-		vkGetPhysicalDeviceProperties(sumiDevice.getPhysicalDevice(), &deviceProperties);
-
-		VkSamplerCreateInfo samplerInfo{};
-		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.anisotropyEnable = VK_TRUE;
-		samplerInfo.maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
-		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-		samplerInfo.unnormalizedCoordinates = VK_FALSE;
-		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		samplerInfo.mipLodBias = 0.0f;
-		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = 0.0f;
-
+	void SumiTexture::createTextureSampler(VkSamplerCreateInfo &samplerInfo) {
 		if (vkCreateSampler(sumiDevice.device(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create texture sampler");
 		}
