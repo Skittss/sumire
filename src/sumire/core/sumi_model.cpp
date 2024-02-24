@@ -44,16 +44,19 @@ namespace sumire {
 		createIndexBuffer(data.indices);
 		nodes = data.nodes;
 		flatNodes = data.flatNodes;
+		textures = data.textures;
 	}
 
 	SumiModel::~SumiModel() {
 		nodes.clear();
+		flatNodes.clear();
+		textures.clear();
 	}
 
 	std::unique_ptr<SumiModel> SumiModel::createFromFile(SumiDevice &device, const std::string &filepath) {
 		std::filesystem::path fp = filepath;
 		Data data{};
-		loadModel(filepath, data);
+		loadModel(device, filepath, data);
 
 		// TODO: Remove this output and iostream include.
 		std::cout << "Loaded Model <" << filepath << "> (Vertex count: " << data.vertices.size() << ")" << std::endl;
@@ -175,16 +178,16 @@ namespace sumire {
 		return attributeDescriptions;
 	}
 
-	void SumiModel::loadModel(const std::string &filepath, SumiModel::Data &data) {
+	void SumiModel::loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data) {
 		std::filesystem::path fp = filepath;
 		std::filesystem::path ext = fp.extension();
 
 		if (ext == ".obj") 
 			loadOBJ(filepath, data);
 		else if (ext == ".gltf") 
-			loadGLTF(filepath, data, false);
+			loadGLTF(device, filepath, data, false);
 		else if (ext == ".glb")
-			loadGLTF(filepath, data, true);
+			loadGLTF(device, filepath, data, true);
 		else
 			throw std::runtime_error("Attempted to load unsupported model type: <" + ext.u8string() + ">");
 
@@ -262,7 +265,7 @@ namespace sumire {
 		data.flatNodes.push_back(mainNode);
 	}
 
-	void SumiModel::loadGLTF(const std::string &filepath, SumiModel::Data &data, bool isBinaryFile) {
+	void SumiModel::loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile) {
 		tinygltf::Model gltf_model;
 		tinygltf::TinyGLTF loader;
 		std::string err;
@@ -302,7 +305,7 @@ namespace sumire {
 		const tinygltf::Scene &scene = gltf_model.scenes[default_scene_idx];
 
 		// Textures
-
+		loadGLTFtextures(device, gltf_model, data);
 
 		// Mesh information
 		uint32_t vertexCount = 0;
@@ -318,17 +321,44 @@ namespace sumire {
 		}
 	}
 
-	void SumiModel::loadGLTFtextures(tinygltf::Model &model, SumiModel::Data &data) {
+	void SumiModel::loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data) {
+
+		VkImageCreateInfo imageInfo{};
+		SumiTexture::defaultImageCreateInfo(imageInfo);
+
 		for (tinygltf::Texture &texture : model.textures) {
 			tinygltf::Image image = model.images[texture.source];
+
+			// Sampler selection
 			if (texture.sampler > -1) {
 				
 			} else {
 				// Use default sampler
 			}
 
-			std::shared_ptr<Texture> t = std::make_shared<Texture>();
-			data.textures.push_back(std::move(t));
+			// Texture creation
+			std::unique_ptr<SumiTexture> tex;
+			if (image.component == 3) {
+				// RGB -> RGBA texture creation.
+				tex = SumiTexture::createFromRGB(
+					device,
+					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					imageInfo,
+					image.width, image.height,
+					image.image.data()
+				);
+			} else {
+				// RGBA -> RGBA texture creation
+				tex = SumiTexture::createFromRGBA(
+					device,
+					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					imageInfo,
+					image.width, image.height,
+					image.image.data()
+				);
+			}
+
+			data.textures.push_back(std::move(tex));
 		}
 	}
 

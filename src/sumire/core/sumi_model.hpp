@@ -2,6 +2,7 @@
 
 #include <sumire/core/sumi_device.hpp>
 #include <sumire/core/sumi_buffer.hpp>
+#include <sumire/core/sumi_texture.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -96,7 +97,7 @@ namespace sumire {
 			std::vector<uint32_t> indices{};
 
 			// Textures
-			std::vector<std::shared_ptr<Texture>> textures;
+			std::vector<std::shared_ptr<SumiTexture>> textures;
 		};
 
 		SumiModel(SumiDevice &device, const SumiModel::Data &data);
@@ -119,14 +120,14 @@ namespace sumire {
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
 
 		// Loading Entry point
-		static void loadModel(const std::string &filepath, SumiModel::Data &data);
+		static void loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
 
 		// .obj loading
 		static void loadOBJ(const std::string &filepath, SumiModel::Data &data);
 
 		// .gltf loading
-		static void loadGLTF(const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
-		static void loadGLTFtextures(tinygltf::Model &model, SumiModel::Data &data);
+		static void loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
+		static void loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void getGLTFnodeProperties(
 			const tinygltf::Node &node, const tinygltf::Model &model, uint32_t &vertexCount, uint32_t &indexCount
 		);
@@ -145,6 +146,9 @@ namespace sumire {
 		bool useIndexBuffer = true;
 		std::unique_ptr<SumiBuffer> indexBuffer;
 		uint32_t indexCount;
+
+		// Textures
+		std::vector<std::shared_ptr<SumiTexture>> textures;
 
 		SumiDevice &sumiDevice;
 	};
