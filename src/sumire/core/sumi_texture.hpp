@@ -10,6 +10,10 @@ namespace sumire {
     class SumiTexture {
         public:
 
+            struct TextureConfigInfo {
+                uint32_t mipmapLevels{1};
+            };
+
             SumiTexture(
                 SumiDevice &device, 
                 VkMemoryPropertyFlags memoryPropertyFlags,
@@ -22,9 +26,13 @@ namespace sumire {
                 SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo, 
                 const std::string &filepath
             );
-            static std::unique_ptr<SumiTexture> createFromData(
+            static std::unique_ptr<SumiTexture> createFromRGBA(
                 SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo,
-                float *data
+                int width, int height, unsigned char *data
+            );
+            static std::unique_ptr<SumiTexture> createFromRGB(
+                SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, VkImageCreateInfo &imageInfo,
+                int width, int height, unsigned char *data
             );
             static void defaultImageCreateInfo(VkImageCreateInfo &createInfo);
 
@@ -35,11 +43,15 @@ namespace sumire {
                 VkImageCreateInfo &imageInfo,
                 SumiBuffer &stagingBuffer
             );
+            void createTextureImageView(VkFormat format);
+            void createTextureSampler();
 
             SumiDevice &sumiDevice;
 
             VkImage image = VK_NULL_HANDLE;
             VkDeviceMemory memory = VK_NULL_HANDLE;
+            VkImageView imageView = VK_NULL_HANDLE;
+            VkSampler sampler = VK_NULL_HANDLE;
 
             VkMemoryPropertyFlags memoryPropertyFlags;
     };
