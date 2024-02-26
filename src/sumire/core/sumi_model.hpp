@@ -2,7 +2,9 @@
 
 #include <sumire/core/sumi_device.hpp>
 #include <sumire/core/sumi_buffer.hpp>
+#include <sumire/core/materials/sumi_material.hpp>
 #include <sumire/core/sumi_texture.hpp>
+#include <sumire/core/sumi_descriptors.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -21,18 +23,15 @@ namespace sumire {
 
 	public:
 
-		struct Texture {
-			uint32_t width;
-			uint32_t height;
-		};
-
 		struct Primitive {
 			uint32_t firstIndex;
 			uint32_t indexCount;
 			uint32_t vertexCount;
+			SumiMaterial *material{nullptr};
 
-			Primitive(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount)
-				: firstIndex(firstIndex), indexCount(indexCount), vertexCount(vertexCount) {}
+			Primitive(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, SumiMaterial *material)
+				: firstIndex{firstIndex}, indexCount{indexCount}, vertexCount{vertexCount},
+				material{material} {}
 		};
 
 		struct Mesh {
@@ -99,6 +98,9 @@ namespace sumire {
 			// Textures
 			std::vector<VkSamplerCreateInfo> samplers;
 			std::vector<std::shared_ptr<SumiTexture>> textures;
+
+			// Materials
+			std::vector<std::unique_ptr<SumiMaterial>> materials;
 		};
 
 		SumiModel(SumiDevice &device, const SumiModel::Data &data);
@@ -119,6 +121,7 @@ namespace sumire {
 
 		void createVertexBuffers(const std::vector<Vertex> &vertices);
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
+		void initDescriptors();
 
 		// Loading Entry point
 		static void loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
@@ -130,6 +133,7 @@ namespace sumire {
 		static void loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
 		static void loadGLTFsamplers(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
+		static void loadGLTFmaterials(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void getGLTFnodeProperties(
 			const tinygltf::Node &node, const tinygltf::Model &model, uint32_t &vertexCount, uint32_t &indexCount
 		);
@@ -151,6 +155,20 @@ namespace sumire {
 
 		// Textures
 		std::vector<std::shared_ptr<SumiTexture>> textures;
+
+		// Materials
+		std::vector<std::unique_ptr<SumiMaterial>> materials;
+
+		// Descriptors
+		std::unique_ptr<SumiDescriptorPool> meshNodeDescriptorPool;
+		std::unique_ptr<SumiDescriptorPool> materialDescriptorPool;
+		std::vector<VkDescriptorSet> meshNodeDescriptorSets;
+		//std::vector<VkDescriptorSet> materialDescriptorSets;
+
+		// Buffers
+		std::vector<std::unique_ptr<SumiBuffer>> meshNodeUniformBuffers;
+		std::vector<std::unique_ptr<SumiBuffer>> materialUniformBuffers;
+		std::unique_ptr<SumiBuffer> materialBuffer;
 
 		SumiDevice &sumiDevice;
 	};

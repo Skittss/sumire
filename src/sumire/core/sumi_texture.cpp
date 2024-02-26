@@ -18,6 +18,7 @@ namespace sumire {
 		createTextureImage(memoryPropertyFlags, imageInfo, imageStagingBuffer);
 		createTextureImageView(imageInfo.format);
 		createTextureSampler(samplerInfo);
+		writeDescriptorInfo();
     }
 
 	SumiTexture::~SumiTexture() {
@@ -219,5 +220,12 @@ namespace sumire {
 		if (vkCreateSampler(sumiDevice.device(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create texture sampler");
 		}
+	}
+
+	void SumiTexture::writeDescriptorInfo() {
+		descriptorInfo = VkDescriptorImageInfo{};
+		descriptorInfo.sampler = sampler;
+		descriptorInfo.imageView = imageView;
+		descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}
 }

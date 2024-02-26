@@ -41,6 +41,8 @@ namespace sumire {
             static void defaultImageCreateInfo(VkImageCreateInfo &createInfo);
             static void defaultSamplerCreateInfo(SumiDevice &device, VkSamplerCreateInfo &createInfo);
 
+            VkDescriptorImageInfo& getDescriptorInfo() { return descriptorInfo; }
+
         private:
 
             void createTextureImage(
@@ -50,15 +52,20 @@ namespace sumire {
             );
             void createTextureImageView(VkFormat format);
             void createTextureSampler(VkSamplerCreateInfo &samplerInfo);
+            void writeDescriptorInfo();
 
             SumiDevice &sumiDevice;
 
+            // Image, Sampler and Memory
             VkImage image = VK_NULL_HANDLE;
             VkDeviceMemory memory = VK_NULL_HANDLE;
             VkImageView imageView = VK_NULL_HANDLE;
             VkSampler sampler = VK_NULL_HANDLE;
 
             VkMemoryPropertyFlags memoryPropertyFlags;
+
+            // Descriptor
+            VkDescriptorImageInfo descriptorInfo;
     };
     
 }

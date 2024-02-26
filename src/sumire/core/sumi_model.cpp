@@ -8,8 +8,8 @@
 
 #include <sumire/core/sumi_model.hpp>
 
+#include <sumire/core/sumi_swap_chain.hpp>
 #include <sumire/util/gltf_vulkan_flag_converters.hpp>
-
 #include <sumire/math/math_utils.hpp>
 
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
@@ -44,9 +44,10 @@ namespace sumire {
 	SumiModel::SumiModel(SumiDevice& device, const SumiModel::Data& data) : sumiDevice{ device } {
 		createVertexBuffers(data.vertices);
 		createIndexBuffer(data.indices);
-		nodes = data.nodes;
-		flatNodes = data.flatNodes;
-		textures = data.textures;
+		nodes = std::move(data.nodes);
+		flatNodes = std::move(data.flatNodes);
+		textures = std::move(data.textures);
+		//materials = std::move(data.materials);
 	}
 
 	SumiModel::~SumiModel() {
@@ -130,7 +131,70 @@ namespace sumire {
 		sumiDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 	}
 
+	void SumiModel::initDescriptors() {
+
+		// == Mesh Nodes ====================================================================
+		// - To push local transform matrices to the shader via UBO
+
+		// Per-Node descriptor pool
+		meshNodeDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
+			.setMaxSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.build();
+
+		// meshNodeUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		// for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
+
+		// 	meshNodeUniformBuffers[i] = std::make_unique<SumiBuffer>(
+		// 		sumiDevice,
+		// 		sizeof(GridUBOdata),
+		// 		1,
+		// 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		// 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+		// 	);
+		// 	meshNodeUniformBuffers[i]->map();
+		// }
+
+		// // Mesh Node Descriptor Set Layout
+		// auto meshNodeDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+		// 	.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		// 	.build();
+
+		// // Model Descriptor Set
+		// meshNodeDescriptorSets = std::vector<VkDescriptorSet>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		// for (int i = 0; i < meshNodeDescriptorSets.size(); i++) {
+		// 	auto meshNodeBufferInfo = meshNodeUniformBuffers[i]->descriptorInfo();
+		// 	SumiDescriptorWriter(*meshNodeDescriptorSetLayout, *meshNodeDescriptorPool)
+		// 		.writeBuffer(0, &meshNodeBufferInfo)
+		// 		.build(meshNodeDescriptorSets[i]);
+		// }
+
+		// == Materials =====================================================================
+		// - To push textures and material factors to the shader via CIS and UBO
+
+		// TODO: Offload this descriptor pool to a material manager class for the whole scene.
+		materialDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
+			.setMaxSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			// Texture samplers
+			.addPoolSize(
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+				materials.size() * SumiMaterial::MAT_TEX_COUNT * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			// Single SSBO for materials
+			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1)
+			.build();
+
+		// Read in Descriptor Set Layout from material class
+		auto materialDescriptorLayout = SumiMaterial::getDescriptorSetLayout(sumiDevice);
+
+		// Per-Material Descriptor Sets for Texture Samplers
+		for (auto& mat : materials) {
+			// Write to images
+			mat->writeDescriptorSet(*materialDescriptorPool, *materialDescriptorLayout);
+		}
+	}
+
 	void SumiModel::bind(VkCommandBuffer commandBuffer) {
+		// Vertex and Index Buffers
 		VkBuffer buffers[] = { vertexBuffer->getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
@@ -260,7 +324,7 @@ namespace sumire {
 			}
 		}
 
-		std::shared_ptr<Primitive> mainPrimitive = std::make_shared<Primitive>(0, data.indices.size(), data.vertices.size());
+		std::shared_ptr<Primitive> mainPrimitive = std::make_shared<Primitive>(0, data.indices.size(), data.vertices.size(), nullptr);
 		mainNode->mesh->primitives.push_back(std::move(mainPrimitive));
 
 		data.nodes.push_back(mainNode);
@@ -309,6 +373,7 @@ namespace sumire {
 		// Textures
 		loadGLTFsamplers(device, gltfModel, data);
 		loadGLTFtextures(device, gltfModel, data);
+		loadGLTFmaterials(device, gltfModel, data);
 
 		// Mesh information
 		uint32_t vertexCount = 0;
@@ -329,7 +394,7 @@ namespace sumire {
 		VkSamplerCreateInfo defaultSamplerInfo{};
 		SumiTexture::defaultSamplerCreateInfo(device, defaultSamplerInfo);
 
-		for (tinygltf::Sampler sampler : model.samplers) {
+		for (tinygltf::Sampler &sampler : model.samplers) {
 			VkSamplerCreateInfo samplerInfo = defaultSamplerInfo;
 			samplerInfo.minFilter = util::GLTF2VK_FilterMode(sampler.minFilter);
 			samplerInfo.magFilter = util::GLTF2VK_FilterMode(sampler.magFilter);
@@ -364,7 +429,7 @@ namespace sumire {
 			// Texture creation
 			std::unique_ptr<SumiTexture> tex;
 			if (image.component == 3) {
-				// RGB -> RGBA texture creation.
+				// RGB (JPG/PNG) -> RGBA (Vk) texture creation.
 				tex = SumiTexture::createFromRGB(
 					device,
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -374,7 +439,7 @@ namespace sumire {
 					image.image.data()
 				);
 			} else {
-				// RGBA -> RGBA texture creation
+				// RGBA (JPG/PNG) -> RGBA (Vk) texture creation.
 				tex = SumiTexture::createFromRGBA(
 					device,
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -387,6 +452,56 @@ namespace sumire {
 
 			data.textures.push_back(std::move(tex));
 		}
+	}
+
+	void SumiModel::loadGLTFmaterials(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data) {
+		for (tinygltf::Material &material : model.materials) {
+			
+			SumiMaterial::MaterialTextureData mat{};
+
+			// Textures
+			// TODO: Include texcoord which specify which UV coords from the primitives are used
+			//       for the respective texture.
+			if (material.pbrMetallicRoughness.baseColorTexture.index > -1) {
+				mat.baseColorTexture = data.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+			}
+			if (material.pbrMetallicRoughness.metallicRoughnessTexture.index > -1) {
+				mat.metallicRoughnessTexture = data.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
+			}
+			if (material.normalTexture.index > -1) {
+				mat.normalTexture = data.textures[material.normalTexture.index];
+			}
+			if (material.emissiveTexture.index > -1) {
+				mat.emissiveTexture = data.textures[material.emissiveTexture.index];
+			}
+			if (material.occlusionTexture.index > -1) {
+				mat.occlusionTexture = data.textures[material.occlusionTexture.index];
+			}
+
+			// Factors
+			mat.baseColorFactors = glm::make_vec4(material.pbrMetallicRoughness.baseColorFactor.data());
+			mat.metallicRoughnessFactors = {
+				material.pbrMetallicRoughness.metallicFactor,
+				material.pbrMetallicRoughness.roughnessFactor
+			};
+			mat.emissiveFactors = glm::make_vec3(material.emissiveFactor.data());
+
+			// Other properties
+			mat.doubleSided = material.doubleSided;
+			if (material.alphaMode == "BLEND") {
+				mat.alphaMode = SumiMaterial::AlphaMode::MODE_BLEND;
+			} else if (material.alphaMode == "MASK") {
+				mat.alphaMode = SumiMaterial::AlphaMode::MODE_MASK;
+				mat.alphaCutoff = material.alphaCutoff;
+			} else {
+				mat.alphaMode = SumiMaterial::AlphaMode::MODE_OPAQUE;
+			}
+			if (!mat.name.empty()) mat.name = material.name;
+
+			data.materials.push_back(SumiMaterial::createMaterial(device, mat));
+		}
+
+		// TODO: Default material to the back of the vector
 	}
 
 	void SumiModel::getGLTFnodeProperties(
@@ -566,11 +681,15 @@ namespace sumire {
 					}
 
 				}
-
+				
 				// Assign primitive to mesh
-				std::shared_ptr<Primitive> createPrimitive = std::make_shared<Primitive>(indexStart, indexCount, vertexCount);
+				std::shared_ptr<Primitive> createPrimitive = std::make_shared<Primitive>(
+					indexStart, 
+					indexCount, 
+					vertexCount, 
+					primitive.material > -1 ? data.materials[primitive.material].get() : data.materials.back().get()
+				);
 				createMesh->primitives.push_back(std::move(createPrimitive));
-
 			}
 			// Assign mesh to node
 			createNode->mesh = std::move(createMesh);
