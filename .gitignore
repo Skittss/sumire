@@ -10,7 +10,7 @@ assets/models/*
 
 assets/textures/*
 !assets/textures/placeholder.txt
-!assets/textures/empty.ktx
+!assets/textures/empty.*
 
 external/*
 !external/tinygltf
