@@ -37,11 +37,24 @@ namespace sumire {
 		struct Mesh {
 			std::vector<std::shared_ptr<Primitive>> primitives;
 
+			struct UniformData {
+				glm::mat4 matrix;
+			} uniforms;
+			
+			// Unform Buffer & Descriptor Set
+			std::unique_ptr<SumiBuffer> uniformBuffer; // Only one buffer as constant between swap-chain images
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+
+			Mesh(SumiDevice &device, glm::mat4 matrix);
+
 			~Mesh() {
 				primitives.clear();
+				uniformBuffer = nullptr;
 			}
 		};
 
+		// TODO: Node is significant enough to maybe warrant its own sub-class
+		//         to hold static members for its descriptor layout, etc.
 		struct Node {
 			uint32_t idx;
 			std::shared_ptr<Node> parent;
@@ -85,7 +98,6 @@ namespace sumire {
 		};
 
 		struct Data {
-
 			// Scene tree
 			std::vector<std::shared_ptr<Node>> nodes{};
 			// TODO: This flat list is useful for gltf only?
@@ -94,16 +106,24 @@ namespace sumire {
 			// Mesh data
 			std::vector<Vertex> vertices{};
 			std::vector<uint32_t> indices{};
+			uint32_t meshCount;
 
 			// Textures
 			std::vector<VkSamplerCreateInfo> samplers;
 			std::vector<std::shared_ptr<SumiTexture>> textures;
 
 			// Materials
-			std::vector<std::unique_ptr<SumiMaterial>> materials;
+			std::vector<std::shared_ptr<SumiMaterial>> materials;
+			
+			~Data() {
+				nodes.clear();
+				flatNodes.clear();
+				textures.clear();
+				materials.clear();
+			}
 		};
 
-		SumiModel(SumiDevice &device, const SumiModel::Data &data);
+		SumiModel(SumiDevice &device, SumiModel::Data data);
 		~SumiModel();
 
 		SumiModel(const SumiModel&) = delete;
@@ -121,13 +141,14 @@ namespace sumire {
 
 		void createVertexBuffers(const std::vector<Vertex> &vertices);
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
+		void createDefaultTextures();
 		void initDescriptors();
 
 		// Loading Entry point
 		static void loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
 
 		// .obj loading
-		static void loadOBJ(const std::string &filepath, SumiModel::Data &data);
+		static void loadOBJ(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
 
 		// .gltf loading
 		static void loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
@@ -135,15 +156,19 @@ namespace sumire {
 		static void loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void loadGLTFmaterials(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void getGLTFnodeProperties(
-			const tinygltf::Node &node, const tinygltf::Model &model, uint32_t &vertexCount, uint32_t &indexCount
+			const tinygltf::Node &node, const tinygltf::Model &model, 
+			uint32_t &vertexCount, uint32_t &indexCount,
+			SumiModel::Data &data
 		);
-		static void loadGLTFnode(std::shared_ptr<Node> parent, const tinygltf::Node &node, uint32_t nodeIdx, const tinygltf::Model &model, SumiModel::Data &data);
+		static void loadGLTFnode(
+			SumiDevice &device, 
+			std::shared_ptr<Node> parent, const tinygltf::Node &node, uint32_t nodeIdx, 
+			const tinygltf::Model &model, 
+			SumiModel::Data &data
+		);
 
-		// Mesh tree
-		std::vector<std::shared_ptr<Node>> nodes;
-		std::vector<std::shared_ptr<Node>> flatNodes;
+		SumiModel::Data modelData;
 
-		// Meshes
 		// Vertex Buffer params
 		std::unique_ptr<SumiBuffer> vertexBuffer;
 		uint32_t vertexCount;
@@ -153,15 +178,10 @@ namespace sumire {
 		std::unique_ptr<SumiBuffer> indexBuffer;
 		uint32_t indexCount;
 
-		// Textures
-		std::vector<std::shared_ptr<SumiTexture>> textures;
-
-		// Materials
-		std::vector<std::unique_ptr<SumiMaterial>> materials;
-
 		// Descriptors
 		std::unique_ptr<SumiDescriptorPool> meshNodeDescriptorPool;
 		std::unique_ptr<SumiDescriptorPool> materialDescriptorPool;
+		std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorSetLayout;
 		std::vector<VkDescriptorSet> meshNodeDescriptorSets;
 		//std::vector<VkDescriptorSet> materialDescriptorSets;
 
@@ -169,6 +189,10 @@ namespace sumire {
 		std::vector<std::unique_ptr<SumiBuffer>> meshNodeUniformBuffers;
 		std::vector<std::unique_ptr<SumiBuffer>> materialUniformBuffers;
 		std::unique_ptr<SumiBuffer> materialBuffer;
+
+		// Default Textures & Materials
+		// TODO: These could be cached
+		std::shared_ptr<SumiTexture> emptyTexture;
 
 		SumiDevice &sumiDevice;
 	};

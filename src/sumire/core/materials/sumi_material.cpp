@@ -12,17 +12,22 @@ namespace sumire {
 
     // Writes the material's texture descriptors to the given set.
     void SumiMaterial::writeDescriptorSet(
-        SumiDescriptorPool &descriptorPool, SumiDescriptorSetLayout &layout
+        SumiDescriptorPool &descriptorPool, 
+        SumiDescriptorSetLayout &layout,
+        SumiTexture *defaultTexture
     ) {
-
-        // TODO: If a texture isn't defined, use a default texture instead 
-        //      (e.g. purple missing squares / full black or white). Needs loading in and managing.
+        // If a texture isn't defined, use a default texture instead 
         std::vector<VkDescriptorImageInfo> imageDescriptors = {
-            texData.baseColorTexture->getDescriptorInfo(),
-            texData.metallicRoughnessTexture->getDescriptorInfo(),
-            texData.normalTexture->getDescriptorInfo(),
-            texData.occlusionTexture->getDescriptorInfo(),
-            texData.emissiveTexture->getDescriptorInfo()
+            texData.baseColorTexture ? 
+                texData.baseColorTexture->getDescriptorInfo() : defaultTexture->getDescriptorInfo(),
+            texData.metallicRoughnessTexture ?
+                texData.metallicRoughnessTexture->getDescriptorInfo() : defaultTexture->getDescriptorInfo(),
+            texData.normalTexture ? 
+                texData.normalTexture->getDescriptorInfo() : defaultTexture->getDescriptorInfo(),
+            texData.occlusionTexture ?
+                texData.occlusionTexture->getDescriptorInfo() : defaultTexture->getDescriptorInfo(),
+            texData.emissiveTexture ?
+                texData.emissiveTexture->getDescriptorInfo()  : defaultTexture->getDescriptorInfo()
         };
 
         assert(SumiMaterial::MAT_TEX_COUNT == imageDescriptors.size() && "Material Descriptor layout does not match texture descriptor count (MAT_TEX_COUNT may need updating)");
@@ -40,12 +45,11 @@ namespace sumire {
         assert(SumiMaterial::MAT_TEX_COUNT == 5 && "Material Descriptor layout does not match texture count (MAT_TEX_COUNT may need updating)");
 
         return SumiDescriptorSetLayout::Builder(device)
-            .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .addBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .addBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .addBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .build();
     }
 

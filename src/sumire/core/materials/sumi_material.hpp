@@ -51,8 +51,6 @@ namespace sumire {
 
             SumiMaterial(const SumiMaterial &) = delete;
             SumiMaterial &operator=(const SumiMaterial &) = delete;
-            SumiMaterial(SumiMaterial&&) = default;
-            SumiMaterial &operator=(SumiMaterial&&) = default;
 
             const id_t getId() { return id; }
 
@@ -63,7 +61,11 @@ namespace sumire {
 
             static std::unique_ptr<SumiDescriptorSetLayout> getDescriptorSetLayout(SumiDevice &device);
 
-            void writeDescriptorSet(SumiDescriptorPool &descriptorPool, SumiDescriptorSetLayout &layout);
+            void writeDescriptorSet(
+                SumiDescriptorPool &descriptorPool, 
+                SumiDescriptorSetLayout &layout,
+                SumiTexture *defaultTexture
+            );
 
         private:
             id_t id;

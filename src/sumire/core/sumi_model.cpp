@@ -41,19 +41,22 @@ namespace std {
 
 namespace sumire {
 
-	SumiModel::SumiModel(SumiDevice& device, const SumiModel::Data& data) : sumiDevice{ device } {
+	// TODO: Can the data copy here be optimised to not copy the large materials and texture arrays?
+	SumiModel::SumiModel(SumiDevice &device, SumiModel::Data data) 
+		: sumiDevice{ device }, modelData{ data }
+	{
 		createVertexBuffers(data.vertices);
 		createIndexBuffer(data.indices);
-		nodes = std::move(data.nodes);
-		flatNodes = std::move(data.flatNodes);
-		textures = std::move(data.textures);
-		//materials = std::move(data.materials);
+		createDefaultTextures();
+		initDescriptors();
 	}
 
 	SumiModel::~SumiModel() {
-		nodes.clear();
-		flatNodes.clear();
-		textures.clear();
+		materialDescriptorPool = nullptr;
+		meshNodeDescriptorSetLayout = nullptr;
+		meshNodeDescriptorPool = nullptr;
+		indexBuffer = nullptr;
+		vertexBuffer = nullptr;
 	}
 
 	std::unique_ptr<SumiModel> SumiModel::createFromFile(SumiDevice &device, const std::string &filepath) {
@@ -61,10 +64,10 @@ namespace sumire {
 		Data data{};
 		loadModel(device, filepath, data);
 
-		// TODO: Remove this output and iostream include.
-		std::cout << "Loaded Model <" << filepath << "> (Vertex count: " << data.vertices.size() << ")" << std::endl;
 		auto modelPtr = std::make_unique<SumiModel>(device, data);
 		modelPtr->displayName = fp.filename().u8string();
+
+		std::cout << "Loaded Model <" << filepath << "> (Vertex count: " << data.vertices.size() << ")" << std::endl;
 		return modelPtr;
 	}
 
@@ -131,6 +134,23 @@ namespace sumire {
 		sumiDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 	}
 
+	void SumiModel::createDefaultTextures() {
+		// Empty texture
+		VkImageCreateInfo imageInfo{};
+		SumiTexture::defaultImageCreateInfo(imageInfo);
+		VkSamplerCreateInfo samplerInfo{};
+		SumiTexture::defaultSamplerCreateInfo(sumiDevice, samplerInfo);
+
+		// TODO: Make this texture compressed (KTX / DDS) if possible
+		emptyTexture = SumiTexture::createFromFile(
+			sumiDevice,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			imageInfo,
+			samplerInfo,
+			"../assets/textures/empty.png"
+		);
+	}
+
 	void SumiModel::initDescriptors() {
 
 		// == Mesh Nodes ====================================================================
@@ -138,47 +158,41 @@ namespace sumire {
 
 		// Per-Node descriptor pool
 		meshNodeDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
-			.setMaxSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
-			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.setMaxSets(
+				modelData.meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			// Local matrices
+			.addPoolSize(
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+				modelData.meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.build();
 
-		// meshNodeUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		// for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
+		// Nodes descriptor set layout
+		meshNodeDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.build();
 
-		// 	meshNodeUniformBuffers[i] = std::make_unique<SumiBuffer>(
-		// 		sumiDevice,
-		// 		sizeof(GridUBOdata),
-		// 		1,
-		// 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		// 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-		// 	);
-		// 	meshNodeUniformBuffers[i]->map();
-		// }
-
-		// // Mesh Node Descriptor Set Layout
-		// auto meshNodeDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-		// 	.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-		// 	.build();
-
-		// // Model Descriptor Set
-		// meshNodeDescriptorSets = std::vector<VkDescriptorSet>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		// for (int i = 0; i < meshNodeDescriptorSets.size(); i++) {
-		// 	auto meshNodeBufferInfo = meshNodeUniformBuffers[i]->descriptorInfo();
-		// 	SumiDescriptorWriter(*meshNodeDescriptorSetLayout, *meshNodeDescriptorPool)
-		// 		.writeBuffer(0, &meshNodeBufferInfo)
-		// 		.build(meshNodeDescriptorSets[i]);
-		// }
+		// Per-Node Descriptor Sets for local matrices
+		//   Iterate flat nodes to skip doing recursion here on children.
+		for (auto &node : modelData.flatNodes) {
+			if (node->mesh) {
+				auto bufferInfo = node->mesh->uniformBuffer->descriptorInfo();
+				SumiDescriptorWriter(*meshNodeDescriptorSetLayout, *meshNodeDescriptorPool)
+					.writeBuffer(0, &bufferInfo)
+					.build(node->mesh->descriptorSet);
+			}
+		}
 
 		// == Materials =====================================================================
 		// - To push textures and material factors to the shader via CIS and UBO
 
 		// TODO: Offload this descriptor pool to a material manager class for the whole scene.
 		materialDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
-			.setMaxSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.setMaxSets(
+				(1 + modelData.materials.size() * SumiMaterial::MAT_TEX_COUNT) * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			// Texture samplers
 			.addPoolSize(
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
-				materials.size() * SumiMaterial::MAT_TEX_COUNT * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+				modelData.materials.size() * SumiMaterial::MAT_TEX_COUNT * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			// Single SSBO for materials
 			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1)
 			.build();
@@ -187,9 +201,9 @@ namespace sumire {
 		auto materialDescriptorLayout = SumiMaterial::getDescriptorSetLayout(sumiDevice);
 
 		// Per-Material Descriptor Sets for Texture Samplers
-		for (auto& mat : materials) {
+		for (auto& mat : modelData.materials) {
 			// Write to images
-			mat->writeDescriptorSet(*materialDescriptorPool, *materialDescriptorLayout);
+			mat->writeDescriptorSet(*materialDescriptorPool, *materialDescriptorLayout, emptyTexture.get());
 		}
 	}
 
@@ -220,7 +234,7 @@ namespace sumire {
 	}
 
 	void SumiModel::draw(VkCommandBuffer commandBuffer) {
-		for (auto& node : nodes) {
+		for (auto& node : modelData.nodes) {
 			drawNode(node, commandBuffer);
 		}
 	}
@@ -249,7 +263,7 @@ namespace sumire {
 		std::filesystem::path ext = fp.extension();
 
 		if (ext == ".obj") 
-			loadOBJ(filepath, data);
+			loadOBJ(device, filepath, data);
 		else if (ext == ".gltf") 
 			loadGLTF(device, filepath, data, false);
 		else if (ext == ".glb")
@@ -259,7 +273,7 @@ namespace sumire {
 
 	}
 
-	void SumiModel::loadOBJ(const std::string &filepath, SumiModel::Data &data) {
+	void SumiModel::loadOBJ(SumiDevice &device, const std::string &filepath, SumiModel::Data &data) {
 		// .Obj loading
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
@@ -277,7 +291,7 @@ namespace sumire {
 		mainNode->idx = 0;
 		mainNode->parent = nullptr;
 		mainNode->name = "mesh";
-		mainNode->mesh = std::make_shared<Mesh>();
+		mainNode->mesh = std::make_shared<Mesh>(device, glm::mat4{1.0});
 
 		std::unordered_map<Vertex, uint32_t> uniqueVertices{}; // map for calculating index buffer from obj
 
@@ -324,8 +338,11 @@ namespace sumire {
 			}
 		}
 
+		// TODO: OBJs currently have no materials causing validation errors.
+		//		 Make a default material and push to material arr.
 		std::shared_ptr<Primitive> mainPrimitive = std::make_shared<Primitive>(0, data.indices.size(), data.vertices.size(), nullptr);
 		mainNode->mesh->primitives.push_back(std::move(mainPrimitive));
+		data.meshCount = 1;
 
 		data.nodes.push_back(mainNode);
 		data.flatNodes.push_back(mainNode);
@@ -379,13 +396,13 @@ namespace sumire {
 		uint32_t vertexCount = 0;
 		uint32_t indexCount = 0;
 		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
-			getGLTFnodeProperties(gltfModel.nodes[scene.nodes[i]], gltfModel, vertexCount, indexCount);
+			getGLTFnodeProperties(gltfModel.nodes[scene.nodes[i]], gltfModel, vertexCount, indexCount, data);
 		}
 
 		// Mesh buffers
 		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
 			const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
-			loadGLTFnode(nullptr, node, scene.nodes[i], gltfModel, data);
+			loadGLTFnode(device, nullptr, node, scene.nodes[i], gltfModel, data);
 		}
 	}
 
@@ -505,13 +522,15 @@ namespace sumire {
 	}
 
 	void SumiModel::getGLTFnodeProperties(
-		const tinygltf::Node &node, const tinygltf::Model &model, uint32_t &vertexCount, uint32_t &indexCount
+		const tinygltf::Node &node, const tinygltf::Model &model, 
+		uint32_t &vertexCount, uint32_t &indexCount,
+		SumiModel::Data &data
 	) {
 
 		// Recursion through node tree
 		if (node.children.size() > 0) {
 			for (uint32_t i = 0; i < node.children.size(); i++) {
-				getGLTFnodeProperties(model.nodes[node.children[i]], model, vertexCount, indexCount);
+				getGLTFnodeProperties(model.nodes[node.children[i]], model, vertexCount, indexCount, data);
 			}
 		}
 
@@ -524,10 +543,16 @@ namespace sumire {
 					indexCount += model.accessors[primitive.indices].count;
 				}
 			}
+			data.meshCount++;
 		}
 	}
 
-	void SumiModel::loadGLTFnode(std::shared_ptr<Node> parent, const tinygltf::Node &node, uint32_t nodeIdx, const tinygltf::Model &model, SumiModel::Data &data) {
+	void SumiModel::loadGLTFnode(
+		SumiDevice &device,
+		std::shared_ptr<Node> parent, const tinygltf::Node &node, uint32_t nodeIdx, 
+		const tinygltf::Model &model, 
+		SumiModel::Data &data
+	) {
 
 		std::shared_ptr<Node> createNode = std::make_shared<Node>();
 		createNode->idx = nodeIdx;
@@ -551,14 +576,14 @@ namespace sumire {
 		// Load node children if exists
 		if (node.children.size() > 0) {
 			for (size_t i = 0; i < node.children.size(); i++) {
-				loadGLTFnode(createNode, model.nodes[node.children[i]], node.children[i], model, data);
+				loadGLTFnode(device, createNode, model.nodes[node.children[i]], node.children[i], model, data);
 			}
 		}
 
 		// Load mesh if node has it
 		if (node.mesh > -1) {
 			const tinygltf::Mesh mesh = model.meshes[node.mesh];
-			std::shared_ptr createMesh = std::make_shared<Mesh>();
+			std::shared_ptr createMesh = std::make_shared<Mesh>(device, createNode->matrix);
 			
 			for (size_t i = 0; i < mesh.primitives.size(); i++) {
 
@@ -726,6 +751,28 @@ namespace sumire {
 		}
 
 		return globalMatrix;
+	}
+
+	//==============Mesh========================================================================
+
+	SumiModel::Mesh::Mesh(SumiDevice &device, glm::mat4 matrix) {
+		// Set uniforms
+		uniforms.matrix = matrix;
+		
+		// Create mesh uniform buffer and descriptor
+		// TODO: Maybe use host coherent here for ease of update
+		uniformBuffer = std::make_unique<SumiBuffer>(
+			device,
+			sizeof(Mesh::UniformData),
+			1,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+		);
+		uniformBuffer->map();
+		uniformBuffer->writeToBuffer(&uniforms); // initial buffer write
+		uniformBuffer->flush();
+
+		// Descriptor is left unanitialized until the model initializes it.
 	}
 
 }
