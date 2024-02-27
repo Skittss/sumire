@@ -221,21 +221,22 @@ namespace sumire {
 	}
 
 	void Sumire::loadObjects() {
-		std::shared_ptr<SumiModel> testOBJmodel = SumiModel::createFromFile(sumiDevice, "../models/obj/clorinde.obj");
+		// TODO: Load objects in asynchronously
+		std::shared_ptr<SumiModel> testOBJmodel = SumiModel::createFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
 		auto renderObj = SumiObject::createObject();
 		renderObj.model = testOBJmodel;
 		renderObj.transform.translation = {-2.0f, 0.0f, 0.0f};
 		renderObj.transform.scale = glm::vec3{1.0f};
 		objects.emplace(renderObj.getId(), std::move(renderObj));
 
-		std::shared_ptr<SumiModel> testGLTFmodel = SumiModel::createFromFile(sumiDevice, "../models/gltf/doomslayer_glb/scene.glb");
+		std::shared_ptr<SumiModel> testGLTFmodel = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/doomslayer_glb/scene.glb");
 		auto renderGltf = SumiObject::createObject();
 		renderGltf.model = testGLTFmodel;
 		renderGltf.transform.translation = {0.0f, 0.0f, 0.0f};
 		renderGltf.transform.scale = glm::vec3{1.0f};
 		objects.emplace(renderGltf.getId(), std::move(renderGltf));
 
-		std::shared_ptr<SumiModel> testGLBmodel = SumiModel::createFromFile(sumiDevice, "../models/gltf/2b/2b.glb");
+		std::shared_ptr<SumiModel> testGLBmodel = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/2b/2b.glb");
 		auto renderGlb = SumiObject::createObject();
 		renderGlb.model = testGLBmodel;
 		renderGlb.transform.translation = {2.0f, 0.0f, 0.0f};

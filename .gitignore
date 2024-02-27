@@ -4,9 +4,13 @@ build/*
 
 shaders/*.spv
 
-models/*
-!models/placeholder.txt
-!models/primitives
+assets/models/*
+!assets/models/placeholder.txt
+!assets/models/primitives
+
+assets/textures/*
+!assets/textures/placeholder.txt
+!assets/textures/empty.ktx
 
 external/*
 !external/tinygltf
