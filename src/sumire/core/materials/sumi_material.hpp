@@ -49,6 +49,7 @@ namespace sumire {
                 glm::vec4 baseColorFactors;
                 glm::vec2 metallicRoughnessFactors;
                 alignas(16) glm::vec3 emissiveFactors;
+                // TODO: texture included flags (e.g. hasBaseColor, etc)
             };
 
             // TODO: This constructor should be private but messes with make_unique().
@@ -74,6 +75,7 @@ namespace sumire {
             );
 
             MaterialShaderData getMaterialShaderData();
+            VkDescriptorSet getDescriptorSet() { return matDescriptorSet; }
 
         private:
             id_t id;

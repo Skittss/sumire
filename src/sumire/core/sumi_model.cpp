@@ -48,13 +48,12 @@ namespace sumire {
 		createVertexBuffers(data.vertices);
 		createIndexBuffer(data.indices);
 		createDefaultTextures();
-		initUniformDescriptors();
+		initDescriptors();
 		createMaterialStorageBuffer();
 	}
 
 	SumiModel::~SumiModel() {
 		materialDescriptorPool = nullptr;
-		meshNodeDescriptorSetLayout = nullptr;
 		meshNodeDescriptorPool = nullptr;
 		indexBuffer = nullptr;
 		vertexBuffer = nullptr;
@@ -68,7 +67,11 @@ namespace sumire {
 		auto modelPtr = std::make_unique<SumiModel>(device, data);
 		modelPtr->displayName = fp.filename().u8string();
 
-		std::cout << "Loaded Model <" << filepath << "> (Vertex count: " << data.vertices.size() << ")" << std::endl;
+		std::cout << "Loaded Model <" << filepath << "> (verts: " << data.vertices.size() 
+				  << ", nodes: " << data.flatNodes.size() 
+				  << ", mat: " << data.materials.size()
+				  << ", tex: " << data.textures.size()
+				  << ")" << std::endl;
 		return modelPtr;
 	}
 
@@ -152,7 +155,7 @@ namespace sumire {
 		);
 	}
 
-	void SumiModel::initUniformDescriptors() {
+	void SumiModel::initDescriptors() {
 
 		// == Mesh Nodes ====================================================================
 		// - To push local transform matrices to the shader via UBO
@@ -168,9 +171,7 @@ namespace sumire {
 			.build();
 
 		// Nodes descriptor set layout
-		meshNodeDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-			.build();
+		auto meshNodeDescriptorSetLayout = SumiModel::meshNodeDescriptorLayout(sumiDevice);
 
 		// Per-Node Descriptor Sets for local matrices
 		//   Iterate flat nodes to skip doing recursion here on children.
@@ -209,15 +210,8 @@ namespace sumire {
 	}
 
 	void SumiModel::createMaterialStorageBuffer() {
-		auto matStorageDescriptorLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
-			.build();
 
-		// Material Storage Buffer Descriptor
-		SumiDescriptorWriter(*matStorageDescriptorLayout, *materialDescriptorPool)
-			.writeBuffer(0, &(materialStorageBuffer->descriptorInfo()))
-			.build(materialStorageDescriptorSet);
-
+		// Gather material info
 		std::vector<SumiMaterial::MaterialShaderData> matShaderData(modelData.materials.size());
 		for (auto& mat : modelData.materials) {
 			matShaderData.push_back(mat->getMaterialShaderData());
@@ -225,6 +219,25 @@ namespace sumire {
 
 		VkDeviceSize bufferSize = matShaderData.size() * sizeof(SumiMaterial::MaterialShaderData);
 
+		// Create Storage Buffer
+		materialStorageBuffer = std::make_unique<SumiBuffer>(
+			sumiDevice,
+			bufferSize,
+			1,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		);
+
+		// Descriptor set layout
+		auto matStorageDescriptorLayout = SumiModel::matStorageDescriptorLayout(sumiDevice);
+
+		// Material Storage Buffer Descriptor
+		auto bufferInfo = materialStorageBuffer->descriptorInfo();
+		SumiDescriptorWriter(*matStorageDescriptorLayout, *materialDescriptorPool)
+			.writeBuffer(0, &bufferInfo)
+			.build(materialStorageDescriptorSet);
+
+		// Stage and write to device local memory
 		SumiBuffer stagingBuffer{
 			sumiDevice,
 			bufferSize,
@@ -235,15 +248,23 @@ namespace sumire {
 		stagingBuffer.map();
 		stagingBuffer.writeToBuffer((void *)matShaderData.data());
 
-		// Storage Buffer
-		materialStorageBuffer = std::make_unique<SumiBuffer>(
-			sumiDevice,
-			bufferSize,
-			1,
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-		);
 		sumiDevice.copyBuffer(stagingBuffer.getBuffer(), materialStorageBuffer->getBuffer(), bufferSize);
+	}
+
+	std::unique_ptr<SumiDescriptorSetLayout> SumiModel::meshNodeDescriptorLayout(SumiDevice &device) {
+		return SumiDescriptorSetLayout::Builder(device)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.build();
+	}
+
+	std::unique_ptr<SumiDescriptorSetLayout> SumiModel::matTextureDescriptorLayout(SumiDevice &device) {
+		return SumiMaterial::getDescriptorSetLayout(device);
+	}
+
+	std::unique_ptr<SumiDescriptorSetLayout> SumiModel::matStorageDescriptorLayout(SumiDevice &device) {
+		return SumiDescriptorSetLayout::Builder(device)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.build();
 	}
 
 	void SumiModel::bind(VkCommandBuffer commandBuffer) {
@@ -257,24 +278,48 @@ namespace sumire {
 		}
 	}
 
-	void SumiModel::drawNode(std::shared_ptr<Node> node, VkCommandBuffer commandBuffer) {
+	void SumiModel::drawNode(std::shared_ptr<Node> node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
 		// Draw this node's primitives
 		if (node->mesh) {
 			for (auto& primitive : node->mesh->primitives) {
-				// TODO: Case if primitive does not use indices.
-				vkCmdDrawIndexed(commandBuffer, primitive->indexCount, 1, primitive->firstIndex, 0, 0);
+
+				// Bind descriptor sets
+				const std::vector<VkDescriptorSet> descriptorSets{
+					primitive->material->getDescriptorSet(),
+					node->mesh->descriptorSet,
+					materialStorageDescriptorSet,
+				};
+
+				// IMPORTANT: Reserve set 0 for global descriptors
+				vkCmdBindDescriptorSets(
+					commandBuffer,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					pipelineLayout,
+					1,
+					static_cast<uint32_t>(descriptorSets.size()),
+					descriptorSets.data(),
+					0, nullptr
+				);
+				
+				// Draw
+				if (primitive->indexCount > 0) {
+					vkCmdDrawIndexed(commandBuffer, primitive->indexCount, 1, primitive->firstIndex, 0, 0);
+				} else {
+					vkCmdDraw(commandBuffer, primitive->vertexCount, 1, 0, 0);
+				}
 			}
 		}
 
 		// Draw children
 		for (auto& child : node->children) {
-			drawNode(child, commandBuffer);
+			drawNode(child, commandBuffer, pipelineLayout);
 		}
 	}
 
-	void SumiModel::draw(VkCommandBuffer commandBuffer) {
+	// Draw a model node tree. *Starts binding descriptors from set 1*
+	void SumiModel::draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
 		for (auto& node : modelData.nodes) {
-			drawNode(node, commandBuffer);
+			drawNode(node, commandBuffer, pipelineLayout);
 		}
 	}
 

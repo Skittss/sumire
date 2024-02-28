@@ -32,11 +32,11 @@ namespace sumire {
 
         assert(SumiMaterial::MAT_TEX_COUNT == imageDescriptors.size() && "Material Descriptor layout does not match texture descriptor count (MAT_TEX_COUNT may need updating)");
         
+        SumiDescriptorWriter writer{layout, descriptorPool};
         for (size_t i = 0; i < imageDescriptors.size(); i++) {
-            SumiDescriptorWriter(layout, descriptorPool)
-                .writeImage(static_cast<uint32_t>(i), &imageDescriptors[i])
-                .build(matDescriptorSet);
+            writer.writeImage(static_cast<uint32_t>(i), &imageDescriptors[i]);
         }
+        writer.build(matDescriptorSet);
     }
 
     // TODO: Make this class interface through a material manager first before returning.

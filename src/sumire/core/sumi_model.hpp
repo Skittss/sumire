@@ -131,18 +131,22 @@ namespace sumire {
 
 		static std::unique_ptr<SumiModel> createFromFile(SumiDevice &device, const std::string &filepath);
 
+		static std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorLayout(SumiDevice &device);
+		static std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout(SumiDevice &device);
+		static std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout(SumiDevice &device);
+
 		void bind(VkCommandBuffer commandbuffer);
-		void draw(VkCommandBuffer commandbuffer);
+		void draw(VkCommandBuffer commandbuffer, VkPipelineLayout pipelineLayout);
 
 		std::string displayName{"Unnamed"};
 
 	private:
-		void drawNode(std::shared_ptr<Node> node, VkCommandBuffer commandBuffer);
+		void drawNode(std::shared_ptr<Node> node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
 
 		void createVertexBuffers(const std::vector<Vertex> &vertices);
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
 		void createDefaultTextures();
-		void initUniformDescriptors();
+		void initDescriptors();
 		void createMaterialStorageBuffer();
 
 		// Loading Entry point
@@ -182,8 +186,9 @@ namespace sumire {
 		// Descriptors
 		std::unique_ptr<SumiDescriptorPool> meshNodeDescriptorPool;
 		std::unique_ptr<SumiDescriptorPool> materialDescriptorPool;
-		std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorSetLayout;
 		VkDescriptorSet materialStorageDescriptorSet = VK_NULL_HANDLE;
+		// Texture Descriptor sets are stored in material textures,
+		//	 and mesh node descriptor sets are stored in SumiModel::Mesh
 
 		// Buffers
 		// std::vector<std::unique_ptr<SumiBuffer>> meshNodeUniformBuffers;

@@ -33,8 +33,17 @@ namespace sumire {
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		pushConstantRange.offset = 0;
 		pushConstantRange.size = sizeof(ModelPushConstantData);
+
+		matStorageDescriptorLayout = SumiModel::matStorageDescriptorLayout(sumiDevice);
+		meshNodeDescriptorLayout = SumiModel::meshNodeDescriptorLayout(sumiDevice);
+		matTextureDescriptorLayout = SumiModel::matTextureDescriptorLayout(sumiDevice);
 		
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalDescriptorSetLayout};
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{
+			globalDescriptorSetLayout,
+			matTextureDescriptorLayout->getDescriptorSetLayout(),
+			meshNodeDescriptorLayout->getDescriptorSetLayout(),
+			matStorageDescriptorLayout->getDescriptorSetLayout()
+		};
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -98,7 +107,7 @@ namespace sumire {
 			);
 			
 			obj.model->bind(frameInfo.commandBuffer);
-			obj.model->draw(frameInfo.commandBuffer);
+			obj.model->draw(frameInfo.commandBuffer, pipelineLayout);
 		}
 	}
 }

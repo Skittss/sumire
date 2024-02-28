@@ -30,6 +30,11 @@ namespace sumire {
 
 			SumiDevice& sumiDevice;
 
+			// Keep model descriptor layout handles alive for the lifespan of this rendersystem
+			std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout;
+			std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorLayout;
+			std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout;
+
 			std::unique_ptr<SumiPipeline> sumiPipeline;
 			VkPipelineLayout pipelineLayout;
 		};
