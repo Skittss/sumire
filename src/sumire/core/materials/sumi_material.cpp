@@ -53,4 +53,12 @@ namespace sumire {
             .build();
     }
 
+    SumiMaterial::MaterialShaderData SumiMaterial::getMaterialShaderData() {
+        return MaterialShaderData{
+            texData.baseColorFactors,
+            texData.metallicRoughnessFactors,
+            texData.emissiveFactors
+        };
+    }
+
 }

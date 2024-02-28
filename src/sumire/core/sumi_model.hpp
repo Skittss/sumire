@@ -142,7 +142,8 @@ namespace sumire {
 		void createVertexBuffers(const std::vector<Vertex> &vertices);
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
 		void createDefaultTextures();
-		void initDescriptors();
+		void initUniformDescriptors();
+		void createMaterialStorageBuffer();
 
 		// Loading Entry point
 		static void loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
@@ -182,13 +183,12 @@ namespace sumire {
 		std::unique_ptr<SumiDescriptorPool> meshNodeDescriptorPool;
 		std::unique_ptr<SumiDescriptorPool> materialDescriptorPool;
 		std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorSetLayout;
-		std::vector<VkDescriptorSet> meshNodeDescriptorSets;
-		//std::vector<VkDescriptorSet> materialDescriptorSets;
+		VkDescriptorSet materialStorageDescriptorSet = VK_NULL_HANDLE;
 
 		// Buffers
-		std::vector<std::unique_ptr<SumiBuffer>> meshNodeUniformBuffers;
-		std::vector<std::unique_ptr<SumiBuffer>> materialUniformBuffers;
-		std::unique_ptr<SumiBuffer> materialBuffer;
+		// std::vector<std::unique_ptr<SumiBuffer>> meshNodeUniformBuffers;
+		// std::vector<std::unique_ptr<SumiBuffer>> materialUniformBuffers;
+		std::unique_ptr<SumiBuffer> materialStorageBuffer;
 
 		// Default Textures & Materials
 		// TODO: These could be cached

@@ -48,7 +48,8 @@ namespace sumire {
 		createVertexBuffers(data.vertices);
 		createIndexBuffer(data.indices);
 		createDefaultTextures();
-		initDescriptors();
+		initUniformDescriptors();
+		createMaterialStorageBuffer();
 	}
 
 	SumiModel::~SumiModel() {
@@ -151,7 +152,7 @@ namespace sumire {
 		);
 	}
 
-	void SumiModel::initDescriptors() {
+	void SumiModel::initUniformDescriptors() {
 
 		// == Mesh Nodes ====================================================================
 		// - To push local transform matrices to the shader via UBO
@@ -205,6 +206,44 @@ namespace sumire {
 			// Write to images
 			mat->writeDescriptorSet(*materialDescriptorPool, *materialDescriptorLayout, emptyTexture.get());
 		}
+	}
+
+	void SumiModel::createMaterialStorageBuffer() {
+		auto matStorageDescriptorLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.build();
+
+		// Material Storage Buffer Descriptor
+		SumiDescriptorWriter(*matStorageDescriptorLayout, *materialDescriptorPool)
+			.writeBuffer(0, &(materialStorageBuffer->descriptorInfo()))
+			.build(materialStorageDescriptorSet);
+
+		std::vector<SumiMaterial::MaterialShaderData> matShaderData(modelData.materials.size());
+		for (auto& mat : modelData.materials) {
+			matShaderData.push_back(mat->getMaterialShaderData());
+		}
+
+		VkDeviceSize bufferSize = matShaderData.size() * sizeof(SumiMaterial::MaterialShaderData);
+
+		SumiBuffer stagingBuffer{
+			sumiDevice,
+			bufferSize,
+			1,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		};
+		stagingBuffer.map();
+		stagingBuffer.writeToBuffer((void *)matShaderData.data());
+
+		// Storage Buffer
+		materialStorageBuffer = std::make_unique<SumiBuffer>(
+			sumiDevice,
+			bufferSize,
+			1,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		);
+		sumiDevice.copyBuffer(stagingBuffer.getBuffer(), materialStorageBuffer->getBuffer(), bufferSize);
 	}
 
 	void SumiModel::bind(VkCommandBuffer commandBuffer) {

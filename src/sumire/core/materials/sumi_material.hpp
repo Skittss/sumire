@@ -45,6 +45,12 @@ namespace sumire {
                 std::string name{"Unnamed Material"};
             };
 
+            struct MaterialShaderData {
+                glm::vec4 baseColorFactors;
+                glm::vec2 metallicRoughnessFactors;
+                alignas(16) glm::vec3 emissiveFactors;
+            };
+
             // TODO: This constructor should be private but messes with make_unique().
             SumiMaterial(id_t matId, SumiDevice &device, MaterialTextureData &data);
             ~SumiMaterial();
@@ -66,6 +72,8 @@ namespace sumire {
                 SumiDescriptorSetLayout &layout,
                 SumiTexture *defaultTexture
             );
+
+            MaterialShaderData getMaterialShaderData();
 
         private:
             id_t id;
