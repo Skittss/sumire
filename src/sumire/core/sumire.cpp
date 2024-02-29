@@ -222,12 +222,12 @@ namespace sumire {
 
 	void Sumire::loadObjects() {
 		// TODO: Load objects in asynchronously
-		// std::shared_ptr<SumiModel> testOBJmodel = SumiModel::createFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
-		// auto renderObj = SumiObject::createObject();
-		// renderObj.model = testOBJmodel;
-		// renderObj.transform.translation = {-2.0f, 0.0f, 0.0f};
-		// renderObj.transform.scale = glm::vec3{1.0f};
-		// objects.emplace(renderObj.getId(), std::move(renderObj));
+		std::shared_ptr<SumiModel> testOBJmodel = SumiModel::createFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
+		auto renderObj = SumiObject::createObject();
+		renderObj.model = testOBJmodel;
+		renderObj.transform.translation = {-2.0f, 0.0f, 0.0f};
+		renderObj.transform.scale = glm::vec3{1.0f};
+		objects.emplace(renderObj.getId(), std::move(renderObj));
 
 		std::shared_ptr<SumiModel> testGLTFmodel = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/doomslayer_glb/scene.glb");
 		auto renderGltf = SumiObject::createObject();

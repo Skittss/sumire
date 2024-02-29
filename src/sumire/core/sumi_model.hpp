@@ -149,6 +149,8 @@ namespace sumire {
 		void initDescriptors();
 		void createMaterialStorageBuffer();
 
+		static std::unique_ptr<SumiMaterial> createDefaultMaterial(SumiDevice &device);
+
 		// Loading Entry point
 		static void loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
 

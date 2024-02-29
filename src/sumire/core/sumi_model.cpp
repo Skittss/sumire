@@ -251,6 +251,12 @@ namespace sumire {
 		sumiDevice.copyBuffer(stagingBuffer.getBuffer(), materialStorageBuffer->getBuffer(), bufferSize);
 	}
 
+	std::unique_ptr<SumiMaterial> SumiModel::createDefaultMaterial(SumiDevice &device) {
+		SumiMaterial::MaterialTextureData matData{};
+		// TODO: Set default properties here?
+		return SumiMaterial::createMaterial(device, matData);
+	}
+
 	std::unique_ptr<SumiDescriptorSetLayout> SumiModel::meshNodeDescriptorLayout(SumiDevice &device) {
 		return SumiDescriptorSetLayout::Builder(device)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
@@ -422,9 +428,10 @@ namespace sumire {
 			}
 		}
 
-		// TODO: OBJs currently have no materials causing validation errors.
-		//		 Make a default material and push to material arr.
-		std::shared_ptr<Primitive> mainPrimitive = std::make_shared<Primitive>(0, data.indices.size(), data.vertices.size(), nullptr);
+		// Push default material
+		data.materials.push_back(SumiModel::createDefaultMaterial(device));
+
+		std::shared_ptr<Primitive> mainPrimitive = std::make_shared<Primitive>(0, data.indices.size(), data.vertices.size(), data.materials.back().get());
 		mainNode->mesh->primitives.push_back(std::move(mainPrimitive));
 		data.meshCount = 1;
 
@@ -602,7 +609,8 @@ namespace sumire {
 			data.materials.push_back(SumiMaterial::createMaterial(device, mat));
 		}
 
-		// TODO: Default material to the back of the vector
+		// Push Default material to back of material array
+		data.materials.push_back(SumiModel::createDefaultMaterial(device));
 	}
 
 	void SumiModel::getGLTFnodeProperties(
