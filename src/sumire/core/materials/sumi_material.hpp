@@ -31,13 +31,18 @@ namespace sumire {
                 // PBR Metallic Roughness
                 std::shared_ptr<SumiTexture> baseColorTexture;
                 glm::vec4 baseColorFactors;
+                int baseColorTexCoord{-1};
                 std::shared_ptr<SumiTexture> metallicRoughnessTexture;
                 glm::vec2 metallicRoughnessFactors;
+                int metallicRoughnessTexCoord{-1};
                 // Lighting properties
                 std::shared_ptr<SumiTexture> normalTexture;
+                int normalTexCoord{-1};
                 std::shared_ptr<SumiTexture> occlusionTexture;
+                int occlusionTexCoord{-1};
                 std::shared_ptr<SumiTexture> emissiveTexture;
                 glm::vec3 emissiveFactors;
+                int emissiveTexCoord{-1};
                 // Other properties
                 bool doubleSided;
                 AlphaMode alphaMode;
@@ -47,9 +52,15 @@ namespace sumire {
 
             struct MaterialShaderData {
                 glm::vec4 baseColorFactors;
-                glm::vec2 metallicRoughnessFactors;
                 alignas(16) glm::vec3 emissiveFactors;
-                // TODO: texture included flags (e.g. hasBaseColor, etc)
+                glm::vec2 metallicRoughnessFactors;
+                int baseColorTexCoord; // Textures are empty if texcoord < 0
+                int metallicRoughnessTexCoord;
+                int normalTexCoord;
+                int occlusionTexCoord;
+                int emissiveTexCoord;
+                bool useAlphaMask;
+                float alphaMaskCutoff;
             };
 
             // TODO: This constructor should be private but messes with make_unique().

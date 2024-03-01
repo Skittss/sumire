@@ -590,18 +590,23 @@ namespace sumire {
 			//       for the respective texture.
 			if (material.pbrMetallicRoughness.baseColorTexture.index > -1) {
 				mat.baseColorTexture = data.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+				mat.baseColorTexCoord = material.pbrMetallicRoughness.baseColorTexture.texCoord;
 			}
 			if (material.pbrMetallicRoughness.metallicRoughnessTexture.index > -1) {
 				mat.metallicRoughnessTexture = data.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
+				mat.metallicRoughnessTexCoord = material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
 			}
 			if (material.normalTexture.index > -1) {
 				mat.normalTexture = data.textures[material.normalTexture.index];
+				mat.normalTexCoord = material.normalTexture.texCoord;
 			}
 			if (material.emissiveTexture.index > -1) {
 				mat.emissiveTexture = data.textures[material.emissiveTexture.index];
+				mat.emissiveTexCoord = material.emissiveTexture.texCoord;
 			}
 			if (material.occlusionTexture.index > -1) {
 				mat.occlusionTexture = data.textures[material.occlusionTexture.index];
+				mat.occlusionTexCoord = material.occlusionTexture.texCoord;
 			}
 
 			// Factors

@@ -56,8 +56,15 @@ namespace sumire {
     SumiMaterial::MaterialShaderData SumiMaterial::getMaterialShaderData() {
         return MaterialShaderData{
             texData.baseColorFactors,
+            texData.emissiveFactors,
             texData.metallicRoughnessFactors,
-            texData.emissiveFactors
+            texData.baseColorTexCoord,
+            texData.metallicRoughnessTexCoord,
+            texData.normalTexCoord,
+            texData.occlusionTexCoord,
+            texData.emissiveTexCoord,
+            texData.alphaMode == AlphaMode::MODE_MASK,
+            texData.alphaCutoff
         };
     }
 

@@ -1,7 +1,12 @@
-#version 450
-
 struct Material {
     vec4 baseColorFactors;
-    vec2 metallicRoughnessFactors;
     vec3 emissiveFactors;
-}
+    vec2 metallicRoughnessFactors;
+    int baseColorTexCoord;
+    int metallicRoughnessTexCoord;
+    int normalTexCoord;
+    int occlusionTexCoord;
+    int emissiveTexCoord;
+    bool useAlphaMask;
+    float alphaMaskCutoff;
+};
