@@ -16,6 +16,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <cassert>
 #include <cstring>
@@ -284,7 +285,7 @@ namespace sumire {
 		}
 	}
 
-	void SumiModel::drawNode(std::shared_ptr<Node> node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
+	void SumiModel::drawNode(Node *node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
 		// Draw this node's primitives
 		if (node->mesh) {
 			for (auto& primitive : node->mesh->primitives) {
@@ -325,7 +326,7 @@ namespace sumire {
 	// Draw a model node tree. *Starts binding descriptors from set 1*
 	void SumiModel::draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
 		for (auto& node : modelData.nodes) {
-			drawNode(node, commandBuffer, pipelineLayout);
+			drawNode(node.get(), commandBuffer, pipelineLayout);
 		}
 	}
 
@@ -490,10 +491,17 @@ namespace sumire {
 			getGLTFnodeProperties(gltfModel.nodes[scene.nodes[i]], gltfModel, vertexCount, indexCount, data);
 		}
 
-		// Mesh buffers
+		// Load nodes
 		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
 			const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
 			loadGLTFnode(device, nullptr, node, scene.nodes[i], gltfModel, data);
+		}
+
+		// Update once for initial pose
+		for (auto& node : data.flatNodes) {
+			if(node->mesh) {
+				node->update();
+			}
 		}
 	}
 
@@ -641,15 +649,15 @@ namespace sumire {
 
 	void SumiModel::loadGLTFnode(
 		SumiDevice &device,
-		std::shared_ptr<Node> parent, const tinygltf::Node &node, uint32_t nodeIdx, 
+		Node *parent, const tinygltf::Node &node, uint32_t nodeIdx, 
 		const tinygltf::Model &model, 
 		SumiModel::Data &data
 	) {
-
 		std::shared_ptr<Node> createNode = std::make_shared<Node>();
 		createNode->idx = nodeIdx;
+		createNode->parent = parent;
 		createNode->name = node.name;
-		createNode->matrix = glm::mat4(1.0f);
+		createNode->matrix =  glm::mat4(1.0f);
 
 		// Local transforms specified by either a 4x4 mat or translation, rotation and scale vectors.
 		if (node.matrix.size() == 16) {
@@ -665,10 +673,16 @@ namespace sumire {
 			createNode->scale = glm::make_vec3(node.scale.data());
 		}
 
+		// Invert y in top-most nodes so that -y is up. (GLTF spec defines +y as up).
+		// if (parent == nullptr) {
+		// 	std::cout << "rotated top level node" << std::endl;
+		// 	createNode->matrix[2][2] *= -1.0f;
+		// }
+
 		// Load node children if exists
 		if (node.children.size() > 0) {
 			for (size_t i = 0; i < node.children.size(); i++) {
-				loadGLTFnode(device, createNode, model.nodes[node.children[i]], node.children[i], model, data);
+				loadGLTFnode(device, createNode.get(), model.nodes[node.children[i]], node.children[i], model, data);
 			}
 		}
 
@@ -814,7 +828,7 @@ namespace sumire {
 
 		// Update node tree
 		if (parent) 
-			parent->children.push_back(createNode);
+			parent->children.push_back(createNode.get());
 		else
 			data.nodes.push_back(createNode);
 		
@@ -834,7 +848,7 @@ namespace sumire {
 	glm::mat4 SumiModel::Node::getGlobalTransform() {
 
 		glm::mat4 globalMatrix = getLocalTransform();
-		std::shared_ptr<Node> parentNode = parent;
+		Node *parentNode = parent;
 
 		// Recurse through parents and accumulate transforms
 		while (parentNode) {
@@ -843,6 +857,12 @@ namespace sumire {
 		}
 
 		return globalMatrix;
+	}
+
+	void SumiModel::Node::update() {
+		mesh->uniforms.matrix = getGlobalTransform();
+		mesh->uniformBuffer->writeToBuffer(&mesh->uniforms);
+		mesh->uniformBuffer->flush();
 	}
 
 	//==============Mesh========================================================================

@@ -57,10 +57,10 @@ namespace sumire {
 		//         to hold static members for its descriptor layout, etc.
 		struct Node {
 			uint32_t idx;
-			std::shared_ptr<Node> parent;
-			std::vector<std::shared_ptr<Node>> children;
+			Node *parent;
+			std::vector<Node*> children;
 			std::string name;
-			std::shared_ptr<Mesh> mesh;
+			std::shared_ptr<Mesh> mesh; // TODO: unique_ptr
 
 			// Node transform properties
 			glm::mat4 matrix;
@@ -71,10 +71,13 @@ namespace sumire {
 			glm::mat4 getLocalTransform();
 			glm::mat4 getGlobalTransform();
 
+			// Update matrices, skinning, and joints
+			void update();
+
 			~Node() {
+				mesh = nullptr;
 				parent = nullptr;
 				children.clear();
-				mesh = nullptr;
 			}
 		};
 
@@ -97,10 +100,12 @@ namespace sumire {
 			}
 		};
 
+		// TODO: Would like to unique_ptr-ize these fields to remove overhead and make the life-cycle
+		//		 more well defined, but i cannot for the life of me get this struct passed into the
+		//		 constructor if I do that (it refuses to *not* be copied).
 		struct Data {
 			// Scene tree
 			std::vector<std::shared_ptr<Node>> nodes{};
-			// TODO: This flat list is useful for gltf only?
 			std::vector<std::shared_ptr<Node>> flatNodes{};
 
 			// Mesh data
@@ -116,8 +121,8 @@ namespace sumire {
 			std::vector<std::shared_ptr<SumiMaterial>> materials;
 			
 			~Data() {
-				nodes.clear();
 				flatNodes.clear();
+				nodes.clear();
 				textures.clear();
 				materials.clear();
 			}
@@ -141,7 +146,7 @@ namespace sumire {
 		std::string displayName{"Unnamed"};
 
 	private:
-		void drawNode(std::shared_ptr<Node> node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
+		void drawNode(Node *node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
 
 		void createVertexBuffers(const std::vector<Vertex> &vertices);
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
@@ -169,7 +174,7 @@ namespace sumire {
 		);
 		static void loadGLTFnode(
 			SumiDevice &device, 
-			std::shared_ptr<Node> parent, const tinygltf::Node &node, uint32_t nodeIdx, 
+			Node *parent, const tinygltf::Node &node, uint32_t nodeIdx, 
 			const tinygltf::Model &model, 
 			SumiModel::Data &data
 		);
