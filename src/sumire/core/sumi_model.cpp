@@ -341,10 +341,12 @@ namespace sumire {
 	std::vector<VkVertexInputAttributeDescription> SumiModel::Vertex::getAttributeDescriptions() {
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
 
-		attributeDescriptions.push_back({0, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
-		attributeDescriptions.push_back({1, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
-		attributeDescriptions.push_back({2, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
-		attributeDescriptions.push_back({3, 0 , VK_FORMAT_R32G32_SFLOAT,    offsetof(Vertex, uv)});
+		attributeDescriptions.push_back({0, 0 , VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, joint)});
+		attributeDescriptions.push_back({1, 0 , VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, weight)});
+		attributeDescriptions.push_back({2, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
+		attributeDescriptions.push_back({3, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
+		attributeDescriptions.push_back({4, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
+		attributeDescriptions.push_back({5, 0 , VK_FORMAT_R32G32_SFLOAT,    offsetof(Vertex, uv)});
 
 		return attributeDescriptions;
 	}
@@ -479,7 +481,7 @@ namespace sumire {
 		const int default_scene_idx = std::max(gltfModel.defaultScene, 0);
 		const tinygltf::Scene &scene = gltfModel.scenes[default_scene_idx];
 
-		// Textures
+		// Textures & Materials
 		loadGLTFsamplers(device, gltfModel, data);
 		loadGLTFtextures(device, gltfModel, data);
 		loadGLTFmaterials(device, gltfModel, data);
@@ -497,8 +499,16 @@ namespace sumire {
 			loadGLTFnode(device, nullptr, node, scene.nodes[i], gltfModel, data);
 		}
 
-		// Update once for initial pose
+		// Skinning Information
+		// Note: Uses loaded nodes as joints, so ensure to always load nodes first.
+		loadGLTFskins(gltfModel, data);
+
 		for (auto& node : data.flatNodes) {
+			// Assign skin from loaded skinIdx;
+			if(node->skinIdx > -1) {
+				node->skin = data.skins[node->skinIdx].get();
+			}
+			// Update once for initial pose
 			if(node->mesh) {
 				node->update();
 			}
@@ -621,6 +631,46 @@ namespace sumire {
 		data.materials.push_back(SumiModel::createDefaultMaterial(device));
 	}
 
+	void SumiModel::loadGLTFskins(tinygltf::Model &model, SumiModel::Data &data) {
+		assert(data.nodes.size() > 0 && "Attempted to load skins before loading model nodes.");
+		assert(data.flatNodes.size() > 0 && "Flattened model nodes array was uninitialized when loading skins.");
+		
+		static int cnt = 0;
+		for (tinygltf::Skin &skin : model.skins) {
+			std::shared_ptr<Skin> createSkin = std::make_shared<Skin>();
+			createSkin->name = skin.name;
+
+			// Skeleton Root Node
+			if (skin.skeleton > -1) {
+				createSkin->skeletonRoot = getGLTFnode(skin.skeleton, data).get();
+			}
+
+			// Joint Nodes
+			for (int jointIdx : skin.joints) {
+				Node *jointNode = getGLTFnode(jointIdx, data).get();
+				if (jointNode != nullptr) {
+					createSkin->joints.push_back(jointNode);
+				}
+			}
+
+			// Inverse Bind Matrices
+			if (skin.inverseBindMatrices > -1) {
+				const tinygltf::Accessor &accessor = model.accessors[skin.inverseBindMatrices];
+				const tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
+				const tinygltf::Buffer & buffer = model.buffers[bufferView.buffer];
+
+				// Copy and cast raw data into skin's mat4 vector
+				createSkin->inverseBindMatrices.resize(accessor.count);
+				memcpy(
+					createSkin->inverseBindMatrices.data(), &buffer.data[accessor.byteOffset + bufferView.byteOffset], 
+					accessor.count * sizeof(glm::mat4)
+				);
+			}
+
+			data.skins.push_back(std::move(createSkin));
+		}
+	}
+
 	void SumiModel::getGLTFnodeProperties(
 		const tinygltf::Node &node, const tinygltf::Model &model, 
 		uint32_t &vertexCount, uint32_t &indexCount,
@@ -657,6 +707,7 @@ namespace sumire {
 		createNode->idx = nodeIdx;
 		createNode->parent = parent;
 		createNode->name = node.name;
+		createNode->skinIdx = node.skin;
 		createNode->matrix =  glm::mat4(1.0f);
 
 		// Local transforms specified by either a 4x4 mat or translation, rotation and scale vectors.
@@ -673,11 +724,11 @@ namespace sumire {
 			createNode->scale = glm::make_vec3(node.scale.data());
 		}
 
-		// Invert y in top-most nodes so that -y is up. (GLTF spec defines +y as up).
-		// if (parent == nullptr) {
-		// 	std::cout << "rotated top level node" << std::endl;
-		// 	createNode->matrix[2][2] *= -1.0f;
-		// }
+		// Invert y in top-most nodes so that -y is up. (GLTF spec defines +y as up, sumire uses -y = up).
+		if (parent == nullptr) {
+			// std::cout << "rotated top level node" << std::endl;
+			createNode->matrix[2][2] *= -1.0f;
+		}
 
 		// Load node children if exists
 		if (node.children.size() > 0) {
@@ -700,6 +751,7 @@ namespace sumire {
 
 				const tinygltf::Primitive &primitive = mesh.primitives[i];
 				bool hasIndices = primitive.indices > -1;
+				bool hasSkin;
 
 				// Vertices
 				{
@@ -709,11 +761,17 @@ namespace sumire {
 					const float *bufferTexCoord0 = nullptr;
 					const float *bufferTexCoord1 = nullptr;
 					const float *bufferColor0 = nullptr;
+					const void  *rawBufferJoints0 = nullptr;
+					const float *bufferWeights0 = nullptr;
 					int stridePos;
 					int strideNorm;
 					int strideTexCoord0;
 					int strideTexCoord1;
 					int strideColor0;
+					int strideJoints0;
+					int strideWeights0;
+
+					int jointsComponentType;
 
 					// Pos
 					auto positionEntry = primitive.attributes.find("POSITION");
@@ -759,13 +817,84 @@ namespace sumire {
 						strideColor0 = colorAccessor.ByteStride(colorBufferView) ? (colorAccessor.ByteStride(colorBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC3); 
 					}
 
+					// Skinning
+					if (createNode->skinIdx > -1) {
+						auto jointsEntry = primitive.attributes.find("JOINTS_0");
+						if (jointsEntry != primitive.attributes.end()) {
+							const tinygltf::Accessor& jointsAccessor = model.accessors[jointsEntry->second];
+							const tinygltf::BufferView& jointsBufferView = model.bufferViews[jointsAccessor.bufferView];
+							const tinygltf::Buffer& jointsBuffer = model.buffers[jointsBufferView.buffer];
+							rawBufferJoints0 = &(model.buffers[jointsBufferView.buffer].data[jointsAccessor.byteOffset + jointsBufferView.byteOffset]);
+							strideJoints0 = jointsAccessor.ByteStride(jointsBufferView) ? (jointsAccessor.ByteStride(jointsBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC4);
+							jointsComponentType = jointsAccessor.componentType;
+						}
+
+						auto weightsEntry = primitive.attributes.find("WEIGHTS_0");
+						if (weightsEntry != primitive.attributes.end()) {
+							const tinygltf::Accessor& weightsAccessor = model.accessors[weightsEntry->second];
+							const tinygltf::BufferView& weightsBufferView = model.bufferViews[weightsAccessor.bufferView];
+							const tinygltf::Buffer& weightsBuffer = model.buffers[weightsBufferView.buffer];
+							bufferWeights0 = reinterpret_cast<const float *>(&(model.buffers[weightsBufferView.buffer].data[weightsAccessor.byteOffset + weightsBufferView.byteOffset]));
+							strideWeights0 = weightsAccessor.ByteStride(weightsBufferView) ? (weightsAccessor.ByteStride(weightsBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC4);
+
+						}
+					}
+
+					hasSkin = rawBufferJoints0 && bufferWeights0;
+
+					// Cast skinning buffer to correct type before writing vertices
+					const uint16_t *castShortBufferJoints0;
+					const uint8_t *castByteBufferJoints0;
+					if (hasSkin) {
+						switch (jointsComponentType) {
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+								castShortBufferJoints0 = static_cast<const uint16_t*>(rawBufferJoints0);
+								break;
+							}
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+								castByteBufferJoints0 = static_cast<const uint8_t*>(rawBufferJoints0);
+								break;
+							}
+							default:
+								throw std::runtime_error("Attempted to load skin with an unsupported data type. Supported: uint16, uint8");
+						}
+					}
+
 					// Populate Vertex structs
 					for (uint32_t vIdx = 0; vIdx < vertexCount; vIdx++) {
 						Vertex v{};
 						v.position = glm::make_vec3(&bufferPos[vIdx * stridePos]);
-						v.normal = glm::normalize(bufferNorm ? glm::make_vec3(&bufferNorm[vIdx * strideNorm]) : glm::vec3(0.0f));
-						v.uv = bufferTexCoord0 ? glm::make_vec2(&bufferTexCoord0[vIdx * strideTexCoord0]) : glm::vec3(0.0f);
-						v.color = bufferColor0 ? glm::make_vec3(&bufferColor0[vIdx * strideColor0]) : glm::vec3(1.0f);
+						v.normal = glm::normalize(bufferNorm ? glm::make_vec3(&bufferNorm[vIdx * strideNorm]) : glm::vec3{0.0f});
+						v.uv = bufferTexCoord0 ? glm::make_vec2(&bufferTexCoord0[vIdx * strideTexCoord0]) : glm::vec3{0.0f};
+						v.color = bufferColor0 ? glm::make_vec3(&bufferColor0[vIdx * strideColor0]) : glm::vec3{1.0f};
+
+						// Skinning information
+						if (hasSkin) {
+							// Joints
+							switch (jointsComponentType) {
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+									v.joint = glm::make_vec4(&castShortBufferJoints0[vIdx * strideJoints0]);
+									break;
+								}
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+									v.joint = glm::make_vec4(&castByteBufferJoints0[vIdx * strideJoints0]);
+									break;
+								}
+							}
+
+							// Weights
+							v.weight = glm::make_vec4(&bufferWeights0[vIdx * strideWeights0]);
+							if (glm::length(v.weight) == 0.0f) // disallow zeroed weights
+								v.weight = glm::vec4{1.0f, 0.0f, 0.0f, 0.0f};
+
+						} else {
+							// Default Joint
+							v.joint = glm::vec4{0.0f};
+
+							// Default Weight
+							v.weight = glm::vec4{1.0f, 0.0f, 0.0f, 0.0f};
+						}
+
 						// TODO: Keeping track of current vertex no. and indexing straight to the array would again be faster than
 						//       push_back.
 						data.vertices.push_back(v);
@@ -836,6 +965,18 @@ namespace sumire {
 		data.flatNodes.push_back(createNode);
 	}
 
+	std::shared_ptr<SumiModel::Node> SumiModel::getGLTFnode(uint32_t idx, SumiModel::Data &data) {
+		// TODO: This linear (O(n)) search is pretty slow for objects with lots of nodes.
+		//		 Would recommend making another field for data: nodeMap which has <idx, Node*> pairs
+		//		 to reduce this to O(1).
+		for (auto& node : data.flatNodes) {
+			if (node->idx == idx) {
+				return node;
+			}
+		}
+		return nullptr;
+	}
+
 	//==============Node========================================================================
 
 	// local transform matrix for a *single* node
@@ -860,9 +1001,29 @@ namespace sumire {
 	}
 
 	void SumiModel::Node::update() {
-		mesh->uniforms.matrix = getGlobalTransform();
-		mesh->uniformBuffer->writeToBuffer(&mesh->uniforms);
-		mesh->uniformBuffer->flush();
+		if (mesh) {
+			// Update node matrix
+			glm::mat4 nodeMatrix = getGlobalTransform();
+			mesh->uniforms.matrix = nodeMatrix;
+
+			// Update joint matrix
+			if (skin) {
+				glm::mat4 inverseTransform = glm::inverse(nodeMatrix);
+				size_t nJoints = std::min(static_cast<uint32_t>(skin->joints.size()), MODEL_MAX_JOINTS);
+				for (size_t i = 0; i < nJoints; i++) {
+					Node *jointNode = skin->joints[i];
+					glm::mat4 jointMat = jointNode->getGlobalTransform() * skin->inverseBindMatrices[i];
+					jointMat = inverseTransform * jointMat;
+					mesh->uniforms.jointMatrices[i] = jointMat;
+				}
+				mesh->uniforms.nJoints = static_cast<int>(nJoints);
+			}
+
+			// Write updated uniforms
+			// TODO: write matrix only if no skin
+			mesh->uniformBuffer->writeToBuffer(&mesh->uniforms);
+			mesh->uniformBuffer->flush();
+		}
 	}
 
 	//==============Mesh========================================================================

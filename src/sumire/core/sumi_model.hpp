@@ -17,11 +17,16 @@
 #include <vector>
 #include <string>
 
+// TODO: Pass this in to shaders as a specialization constant
+#define MODEL_MAX_JOINTS 512u
+
 namespace sumire {
 
 	class SumiModel {
 
 	public:
+
+		struct Node;
 
 		struct Primitive {
 			uint32_t firstIndex;
@@ -39,6 +44,8 @@ namespace sumire {
 
 			struct UniformData {
 				glm::mat4 matrix;
+				glm::mat4 jointMatrices[MODEL_MAX_JOINTS] {};
+				int nJoints{ 0 };
 			} uniforms;
 			
 			// Unform Buffer & Descriptor Set
@@ -50,6 +57,18 @@ namespace sumire {
 			~Mesh() {
 				primitives.clear();
 				uniformBuffer = nullptr;
+			}
+		};
+
+		struct Skin {
+			std::string name;
+			Node *skeletonRoot{nullptr};
+			std::vector<glm::mat4> inverseBindMatrices;
+			std::vector<Node*> joints;
+
+			~Skin() {
+				skeletonRoot = nullptr;
+				joints.clear();
 			}
 		};
 
@@ -71,17 +90,24 @@ namespace sumire {
 			glm::mat4 getLocalTransform();
 			glm::mat4 getGlobalTransform();
 
+			// Skinning
+			Skin *skin;
+			int32_t skinIdx{-1};
+
 			// Update matrices, skinning, and joints
 			void update();
 
 			~Node() {
 				mesh = nullptr;
 				parent = nullptr;
+				skin = nullptr;
 				children.clear();
 			}
 		};
 
 		struct Vertex {
+			glm::vec4 joint;
+			glm::vec4 weight;
 			glm::vec3 position{};
 			glm::vec3 color{};
 			glm::vec3 normal{};
@@ -92,6 +118,8 @@ namespace sumire {
 		
 			bool operator==(const Vertex &other) const {
 				return (
+					joint == other.joint &&
+					weight == other.weight &&
 					position == other.position && 
 					color == other.color &&
 					normal == other.normal &&
@@ -112,6 +140,9 @@ namespace sumire {
 			std::vector<Vertex> vertices{};
 			std::vector<uint32_t> indices{};
 			uint32_t meshCount;
+			
+			// Mesh Skinning Data
+			std::vector<std::shared_ptr<Skin>> skins;
 
 			// Textures
 			std::vector<VkSamplerCreateInfo> samplers;
@@ -167,6 +198,7 @@ namespace sumire {
 		static void loadGLTFsamplers(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void loadGLTFmaterials(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
+		static void loadGLTFskins(tinygltf::Model &model, SumiModel::Data &data);
 		static void getGLTFnodeProperties(
 			const tinygltf::Node &node, const tinygltf::Model &model, 
 			uint32_t &vertexCount, uint32_t &indexCount,
@@ -178,6 +210,7 @@ namespace sumire {
 			const tinygltf::Model &model, 
 			SumiModel::Data &data
 		);
+		static std::shared_ptr<Node> getGLTFnode(uint32_t idx, SumiModel::Data &data);
 
 		SumiModel::Data modelData;
 
