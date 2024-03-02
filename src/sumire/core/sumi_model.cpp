@@ -214,7 +214,7 @@ namespace sumire {
 	void SumiModel::createMaterialStorageBuffer() {
 
 		// Gather material info
-		std::vector<SumiMaterial::MaterialShaderData> matShaderData(modelData.materials.size());
+		std::vector<SumiMaterial::MaterialShaderData> matShaderData;
 		for (auto& mat : modelData.materials) {
 			matShaderData.push_back(mat->getMaterialShaderData());
 		}
@@ -226,7 +226,7 @@ namespace sumire {
 			sumiDevice,
 			bufferSize,
 			1,
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		);
 
