@@ -2,7 +2,8 @@
 
 A lightweight graphics development engine built in vulkan.
 
-# Todo
+---
+## Todo
 
-[ ] glTF Animations
-[ ] Shader Hot-reloading
+- [ ] glTF Animations
+- [ ] Shader Hot-reloading
