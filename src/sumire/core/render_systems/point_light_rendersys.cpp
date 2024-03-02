@@ -1,4 +1,5 @@
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
+#include <sumire/core/render_systems/structs/point_light_rendersys_structs.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -9,10 +10,6 @@
 #include <cassert>
 
 namespace sumire {
-
-	struct PointLightPushConstantData {
-		alignas(16) glm::vec3 lightPos;
-	};
 
 	PointLightRenderSys::PointLightRenderSys(
 			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
@@ -32,7 +29,7 @@ namespace sumire {
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(PointLightPushConstantData);
+		pushConstantRange.size = sizeof(structs::PointLightPushConstantData);
 		
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalDescriptorSetLayout};
 

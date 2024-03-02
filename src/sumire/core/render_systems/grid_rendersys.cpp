@@ -1,4 +1,5 @@
 #include <sumire/core/render_systems/grid_rendersys.hpp>
+#include <sumire/core/render_systems/structs/grid_rendersys_structs.hpp>
 
 #include <sumire/core/sumi_swap_chain.hpp>
 
@@ -7,15 +8,6 @@
 #include <cassert>
 
 namespace sumire {
-
-	struct GridVertPushConstantData {
-		glm::mat4 modelMatrix;
-	};
-
-	struct GridFragPushConstantData {
-		alignas(16) glm::vec3 cameraPos;
-		float majorLineThickness;
-	};
 
 	GridRendersys::GridRendersys(
 			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
@@ -101,12 +93,12 @@ namespace sumire {
         VkPushConstantRange vertPushConstantRange{};
 		vertPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		vertPushConstantRange.offset = 0;
-		vertPushConstantRange.size = sizeof(GridVertPushConstantData);
+		vertPushConstantRange.size = sizeof(structs::GridVertPushConstantData);
 
 		VkPushConstantRange fragPushConstantRange{};
 		fragPushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragPushConstantRange.offset = sizeof(GridVertPushConstantData);
-		fragPushConstantRange.size = sizeof(GridFragPushConstantData);
+		fragPushConstantRange.offset = sizeof(structs::GridVertPushConstantData);
+		fragPushConstantRange.size = sizeof(structs::GridFragPushConstantData);
 
 		std::vector<VkPushConstantRange> pushConstantRanges{
 			vertPushConstantRange,
@@ -232,7 +224,7 @@ namespace sumire {
 		gridUniformBuffers[frameInfo.frameIdx]->flush();
 
 		// push constants
-		GridVertPushConstantData vertPush{};
+		structs::GridVertPushConstantData vertPush{};
 		vertPush.modelMatrix = glm::mat4{1.0f}; // identity
 
 		vkCmdPushConstants(
@@ -240,11 +232,11 @@ namespace sumire {
 			pipelineLayout,
 			VK_SHADER_STAGE_VERTEX_BIT,
 			0,
-			sizeof(GridVertPushConstantData),
+			sizeof(structs::GridVertPushConstantData),
 			&vertPush
 		);
 
-		GridFragPushConstantData fragPush{};
+		structs::GridFragPushConstantData fragPush{};
 		fragPush.cameraPos = frameInfo.camera.transform.translation;
 		fragPush.majorLineThickness = 0.02f;
 
@@ -252,8 +244,8 @@ namespace sumire {
 			frameInfo.commandBuffer, 
 			pipelineLayout,
 			VK_SHADER_STAGE_FRAGMENT_BIT,
-			sizeof(GridVertPushConstantData),
-			sizeof(GridFragPushConstantData),
+			sizeof(structs::GridVertPushConstantData),
+			sizeof(structs::GridFragPushConstantData),
 			&fragPush
 		);
 
