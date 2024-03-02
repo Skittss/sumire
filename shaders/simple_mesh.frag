@@ -23,7 +23,7 @@ layout(set = 0, binding = 1) uniform Camera {
 };
 
 layout(push_constant) uniform Push {
-	mat4 modelMatrix;
+	layout(offset = 64) int materialIdx;
 };
 
 // Material Textures
@@ -42,6 +42,9 @@ layout(set = 3, binding = 0) buffer SSBO {
 };
 
 void main() {
+
+	Material mat = materials[materialIdx];
+
 	vec3 pointLightDir = ubo.lightPos - fragWorldPos.xyz;
 	float dLight = length(pointLightDir);
 	float attenuation = ubo.lightIntensity / dLight * dLight;

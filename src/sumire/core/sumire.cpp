@@ -237,7 +237,7 @@ namespace sumire {
 		renderGltf.transform.scale = glm::vec3{1.0f};
 		objects.emplace(renderGltf.getId(), std::move(renderGltf));
 
-		std::shared_ptr<SumiModel> testGLBmodel = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/2b/2b.glb");
+		std::shared_ptr<SumiModel> testGLBmodel = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
 		auto renderGlb = SumiObject::createObject();
 		renderGlb.model = testGLBmodel;
 		renderGlb.transform.translation = {2.0f, 0.0f, 0.0f};

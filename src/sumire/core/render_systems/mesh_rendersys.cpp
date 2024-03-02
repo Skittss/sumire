@@ -1,4 +1,5 @@
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
+#include <sumire/core/render_systems/structs/mesh_rendersys_structs.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -10,9 +11,8 @@
 
 namespace sumire {
 
-	struct ModelPushConstantData {
-		glm::mat4 modelMatrix;
-	};
+	// Note: If any more Frag push constants are needed, create a struct here with 
+	//		 SumiMaterial::MaterialPushConstantData as an internal struct.
 
 	MeshRenderSys::MeshRenderSys(
 			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
@@ -29,10 +29,20 @@ namespace sumire {
 
 	void MeshRenderSys::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
 
-		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(ModelPushConstantData);
+		VkPushConstantRange vertPushConstantRange{};
+		vertPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		vertPushConstantRange.offset = 0;
+		vertPushConstantRange.size = sizeof(structs::VertPushConstantData);
+
+		VkPushConstantRange fragPushConstantRange{};
+		fragPushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragPushConstantRange.offset = sizeof(structs::VertPushConstantData);
+		fragPushConstantRange.size = sizeof(structs::FragPushConstantData);
+
+		std::vector<VkPushConstantRange> pushConstantRanges{
+			vertPushConstantRange,
+			fragPushConstantRange
+		};
 
 		matStorageDescriptorLayout = SumiModel::matStorageDescriptorLayout(sumiDevice);
 		meshNodeDescriptorLayout = SumiModel::meshNodeDescriptorLayout(sumiDevice);
@@ -49,8 +59,8 @@ namespace sumire {
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+		pipelineLayoutInfo.pushConstantRangeCount = pushConstantRanges.size();
+		pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
 		if (vkCreatePipelineLayout(
 				sumiDevice.device(), 
@@ -93,19 +103,19 @@ namespace sumire {
 			// Only render objects with a mesh
 			if (obj.model == nullptr) continue;
 
-			ModelPushConstantData push{};
-			auto modelMatrix = obj.transform.mat4();
-			push.modelMatrix = modelMatrix;
+			structs::VertPushConstantData push{};
+			push.modelMatrix = obj.transform.mat4();
 
 			vkCmdPushConstants(
 				frameInfo.commandBuffer, 
 				pipelineLayout,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				VK_SHADER_STAGE_VERTEX_BIT,
 				0,
-				sizeof(ModelPushConstantData),
+				sizeof(structs::VertPushConstantData),
 				&push
 			);
 			
+			// SumiModel handles the binding of descriptor sets 1-3 and frag push constants
 			obj.model->bind(frameInfo.commandBuffer);
 			obj.model->draw(frameInfo.commandBuffer, pipelineLayout);
 		}

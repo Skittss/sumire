@@ -7,6 +7,7 @@
 #define TINYGLTF_NOEXCEPTION // No exceptions (for now?)
 
 #include <sumire/core/sumi_model.hpp>
+#include <sumire/core/render_systems/structs/mesh_rendersys_structs.hpp>
 
 #include <sumire/core/sumi_swap_chain.hpp>
 #include <sumire/util/gltf_vulkan_flag_converters.hpp>
@@ -297,6 +298,19 @@ namespace sumire {
 					materialStorageDescriptorSet,
 				};
 
+				// Fragment Shader Push constants (for material indexing)
+				structs::FragPushConstantData push{};
+				push.materialIdx = primitive->materialIdx;
+
+				vkCmdPushConstants(
+					commandBuffer,
+					pipelineLayout,
+					VK_SHADER_STAGE_FRAGMENT_BIT,
+					sizeof(structs::VertPushConstantData),
+					sizeof(structs::FragPushConstantData),
+					&push
+				);
+
 				// IMPORTANT: Reserve set 0 for global descriptors
 				vkCmdBindDescriptorSets(
 					commandBuffer,
@@ -434,7 +448,13 @@ namespace sumire {
 		// Push default material
 		data.materials.push_back(SumiModel::createDefaultMaterial(device));
 
-		std::shared_ptr<Primitive> mainPrimitive = std::make_shared<Primitive>(0, data.indices.size(), data.vertices.size(), data.materials.back().get());
+		std::shared_ptr<Primitive> mainPrimitive = std::make_shared<Primitive>(
+			0, 
+			data.indices.size(), 
+			data.vertices.size(), 
+			data.materials.back().get(), 
+			0 // Use default material only
+		);
 		mainNode->mesh->primitives.push_back(std::move(mainPrimitive));
 		data.meshCount = 1;
 
@@ -730,10 +750,9 @@ namespace sumire {
 		}
 
 		// Invert y in top-most nodes so that -y is up. (GLTF spec defines +y as up, sumire uses -y = up).
-		if (parent == nullptr) {
-			// std::cout << "rotated top level node" << std::endl;
-			createNode->matrix[2][2] *= -1.0f;
-		}
+		// if (parent == nullptr) {
+		// 	createNode->matrix[2][2] *= -1.0f;
+		// }
 
 		// Load node children if exists
 		if (node.children.size() > 0) {
@@ -952,7 +971,8 @@ namespace sumire {
 					indexStart, 
 					indexCount, 
 					vertexCount, 
-					primitive.material > -1 ? data.materials[primitive.material].get() : data.materials.back().get()
+					primitive.material > -1 ? data.materials[primitive.material].get() : data.materials.back().get(),
+					primitive.material > -1 ? primitive.material : data.materials.size() - 1
 				);
 				createMesh->primitives.push_back(std::move(createPrimitive));
 			}

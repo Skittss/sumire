@@ -62,7 +62,7 @@ namespace sumire {
                 bool useAlphaMask;
                 float alphaMaskCutoff;
             };
-
+            
             // TODO: This constructor should be private but messes with make_unique().
             SumiMaterial(id_t matId, SumiDevice &device, MaterialTextureData &data);
             ~SumiMaterial();

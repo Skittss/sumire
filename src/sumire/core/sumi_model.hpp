@@ -33,10 +33,14 @@ namespace sumire {
 			uint32_t indexCount;
 			uint32_t vertexCount;
 			SumiMaterial *material{nullptr};
+			uint32_t materialIdx;
 
-			Primitive(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, SumiMaterial *material)
-				: firstIndex{firstIndex}, indexCount{indexCount}, vertexCount{vertexCount},
-				material{material} {}
+			Primitive(
+				uint32_t firstIndex, 
+				uint32_t indexCount, uint32_t vertexCount, 
+				SumiMaterial *material, uint32_t materialIdx
+			) : firstIndex{firstIndex}, indexCount{indexCount}, vertexCount{vertexCount},
+				material{material}, materialIdx{materialIdx} {}
 		};
 
 		struct Mesh {
