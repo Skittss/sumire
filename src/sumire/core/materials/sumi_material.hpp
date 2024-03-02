@@ -30,23 +30,25 @@ namespace sumire {
             struct MaterialTextureData {
                 // PBR Metallic Roughness
                 std::shared_ptr<SumiTexture> baseColorTexture;
-                glm::vec4 baseColorFactors;
+                glm::vec4 baseColorFactors{1.0f};
                 int baseColorTexCoord{-1};
                 std::shared_ptr<SumiTexture> metallicRoughnessTexture;
-                glm::vec2 metallicRoughnessFactors;
+                glm::vec2 metallicRoughnessFactors{1.0f};
                 int metallicRoughnessTexCoord{-1};
                 // Lighting properties
                 std::shared_ptr<SumiTexture> normalTexture;
+                float normalScale{1.0f};
                 int normalTexCoord{-1};
                 std::shared_ptr<SumiTexture> occlusionTexture;
+                float occlusionStrength{1.0f};
                 int occlusionTexCoord{-1};
                 std::shared_ptr<SumiTexture> emissiveTexture;
-                glm::vec3 emissiveFactors;
+                glm::vec3 emissiveFactors{1.0f};
                 int emissiveTexCoord{-1};
                 // Other properties
-                bool doubleSided;
-                AlphaMode alphaMode;
-                float alphaCutoff;
+                bool doubleSided{true};
+                AlphaMode alphaMode{AlphaMode::MODE_OPAQUE};
+                float alphaCutoff{0.0f};
                 std::string name{"Unnamed Material"};
             };
 
@@ -54,6 +56,8 @@ namespace sumire {
                 glm::vec4 baseColorFactors;
                 alignas(16) glm::vec3 emissiveFactors;
                 glm::vec2 metallicRoughnessFactors;
+                float normalScale;
+                float occlusionStrength;
                 int baseColorTexCoord; // Textures are empty if texcoord < 0
                 int metallicRoughnessTexCoord;
                 int normalTexCoord;

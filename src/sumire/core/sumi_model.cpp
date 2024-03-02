@@ -636,6 +636,8 @@ namespace sumire {
 				material.pbrMetallicRoughness.roughnessFactor
 			};
 			mat.emissiveFactors = glm::make_vec3(material.emissiveFactor.data());
+			mat.normalScale = material.normalTexture.scale; // TODO: these should be doubles?
+			mat.occlusionStrength = material.occlusionTexture.strength;
 
 			// Other properties
 			mat.doubleSided = material.doubleSided;

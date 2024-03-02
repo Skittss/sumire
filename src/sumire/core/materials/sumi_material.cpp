@@ -58,6 +58,8 @@ namespace sumire {
             texData.baseColorFactors,
             texData.emissiveFactors,
             texData.metallicRoughnessFactors,
+            texData.normalScale,
+            texData.occlusionStrength,
             texData.baseColorTexCoord,
             texData.metallicRoughnessTexCoord,
             texData.normalTexCoord,
