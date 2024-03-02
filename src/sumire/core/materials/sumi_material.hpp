@@ -53,18 +53,18 @@ namespace sumire {
             };
 
             struct MaterialShaderData {
-                glm::vec4 baseColorFactors;
+                alignas(16) glm::vec4 baseColorFactors;
                 alignas(16) glm::vec3 emissiveFactors;
-                glm::vec2 metallicRoughnessFactors;
-                float normalScale;
-                float occlusionStrength;
-                int baseColorTexCoord; // Textures are empty if texcoord < 0
-                int metallicRoughnessTexCoord;
-                int normalTexCoord;
-                int occlusionTexCoord;
-                int emissiveTexCoord;
-                bool useAlphaMask;
-                float alphaMaskCutoff;
+                alignas(8)  glm::vec2 metallicRoughnessFactors;
+                alignas(4)  float normalScale;
+                alignas(4)  float occlusionStrength;
+                alignas(4)  int baseColorTexCoord; // Textures are empty if texcoord < 0
+                alignas(4)  int metallicRoughnessTexCoord;
+                alignas(4)  int normalTexCoord;
+                alignas(4)  int occlusionTexCoord;
+                alignas(4)  int emissiveTexCoord;
+                alignas(4)  bool useAlphaMask;
+                alignas(4)  float alphaMaskCutoff;
             };
             
             // TODO: This constructor should be private but messes with make_unique().
