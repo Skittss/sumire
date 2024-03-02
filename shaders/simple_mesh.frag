@@ -1,12 +1,12 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-layout (location = 0) in vec3 fragColor;
-layout (location = 1) in vec3 fragWorldPos;
-layout (location = 2) in vec3 fragWorldNorm;
-layout (location = 3) in vec2 fragUv;
+layout (location = 0) in vec3 inColor;
+layout (location = 1) in vec3 inPos;
+layout (location = 2) in vec3 inNorm;
+layout (location = 3) in vec2 inUv;
 
-layout (location = 0) out vec4 col;
+layout (location = 0) out vec4 outCol;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
@@ -27,7 +27,7 @@ layout(push_constant) uniform Push {
 };
 
 // Material Textures
-// TODO: These textures are SRGB, so processing them in linear color space requires a conversion
+// Note: These textures are SRGB, so processing them in linear color space requires a conversion
 layout(set = 1, binding = 0) uniform sampler2D albedoMap;
 layout(set = 1, binding = 1) uniform sampler2D metallicRoughnessMap;
 layout(set = 1, binding = 2) uniform sampler2D normalMap;
@@ -41,17 +41,27 @@ layout(set = 3, binding = 0) buffer SSBO {
 	Material materials[];
 };
 
-void main() {
+#include "includes/srgb2linear.glsl"
 
+void main() {
+	// Index mesh's material from storage buffer
 	Material mat = materials[materialIdx];
 
-	vec3 pointLightDir = ubo.lightPos - fragWorldPos.xyz;
+	// Use base colour factors if no albedo map is given
+	vec4 albedo = mat.baseColorTexCoord > -1 ? texture(albedoMap, inUv) : vec4(1.0);
+	albedo *= mat.baseColorFactors;
+
+	// Check if fragment needs to be alpha-masked before doing any other computations
+	if (mat.useAlphaMask) {
+		if (albedo.a < mat.alphaMaskCutoff) 
+			discard;
+	}
+
+	vec3 pointLightDir = ubo.lightPos - inPos.xyz;
 	float dLight = length(pointLightDir);
 	float attenuation = ubo.lightIntensity / dLight * dLight;
 
-	vec3 diffuse = attenuation * ubo.lightCol * max(dot(normalize(fragWorldNorm), normalize(pointLightDir)), 0.0);
+	vec3 diffuse = attenuation * ubo.lightCol * max(dot(normalize(inNorm), normalize(pointLightDir)), 0.0);
 
-	vec4 baseCol = texture(albedoMap, fragUv);
-
-	col = vec4((ubo.ambientCol + diffuse) * baseCol.rgb, 1.0);
+	outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
 }

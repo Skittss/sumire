@@ -7,10 +7,10 @@ layout(location = 3) in vec3 col;
 layout(location = 4) in vec3 normal;
 layout(location = 5) in vec2 uv;
 
-layout(location = 1) out vec3 fragWorldPos;
-layout(location = 0) out vec3 fragColor;
-layout(location = 2) out vec3 fragWorldNorm;
-layout(location = 3) out vec2 fragUv;
+layout(location = 1) out vec3 outPos;
+layout(location = 0) out vec3 outColor;
+layout(location = 2) out vec3 outNorm;
+layout(location = 3) out vec2 outUv;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
@@ -49,17 +49,17 @@ void main() {
 			weight.z * meshNode.jointMatrices[int(joint.z)] +
 			weight.w * meshNode.jointMatrices[int(joint.w)];
 		localPos = modelMatrix * meshNode.matrix * skinMat * vec4(position, 1.0);
-		fragWorldNorm = normalize(transpose(inverse(mat3(modelMatrix * meshNode.matrix * skinMat))) * normal);
+		outNorm = normalize(transpose(inverse(mat3(modelMatrix * meshNode.matrix * skinMat))) * normal);
 	} else {
 		localPos = modelMatrix * meshNode.matrix * vec4(position, 1.0);
-		fragWorldNorm = normalize(transpose(inverse(mat3(modelMatrix * meshNode.matrix))) * normal);
+		outNorm = normalize(transpose(inverse(mat3(modelMatrix * meshNode.matrix))) * normal);
 	}
 
 	// Standard Camera Projection
 	gl_Position = projectionViewMatrix * localPos;
 
 	// Pass remaining vertex attributes to frag shader
-	fragWorldPos = localPos.xyz / localPos.w;
-	fragColor = col;
-	fragUv = uv;
+	outPos = localPos.xyz / localPos.w;
+	outColor = col;
+	outUv = uv;
 }
