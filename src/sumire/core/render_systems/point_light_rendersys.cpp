@@ -1,5 +1,5 @@
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
-#include <sumire/core/render_systems/structs/point_light_rendersys_structs.hpp>
+#include <sumire/core/render_systems/data_structs/point_light_rendersys_structs.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
