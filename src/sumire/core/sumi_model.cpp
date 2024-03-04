@@ -7,7 +7,7 @@
 #define TINYGLTF_NOEXCEPTION // No exceptions (for now?)
 
 #include <sumire/core/sumi_model.hpp>
-#include <sumire/core/render_systems/structs/mesh_rendersys_structs.hpp>
+#include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
 #include <sumire/core/sumi_swap_chain.hpp>
 #include <sumire/util/gltf_vulkan_flag_converters.hpp>
@@ -344,25 +344,84 @@ namespace sumire {
 		}
 	}
 
-	std::vector<VkVertexInputBindingDescription> SumiModel::Vertex::getBindingDescriptions() {
-		std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
-		bindingDescriptions[0].binding = 0;
-		bindingDescriptions[0].stride = sizeof(Vertex);
-		bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		return bindingDescriptions;
+	void SumiModel::updateAnimation(uint32_t animIdx, float time, bool loop) {
+		if (modelData.animations.empty() || animIdx < 0) return;
+		assert(animIdx < modelData.animations.size() && "Animation index out of range");
+		
+		std::shared_ptr<Animation> animation = modelData.animations[animIdx];
+
+		// loop animation
+		// TODO: I'm not sure this works if time < animation->start
+		//		 it would be better to use math::fmod here
+		if (loop && time > animation->end) {
+			float duration = animation->end - animation->start;
+			float exceeds = time - animation->start - duration;
+			float n_times_exceeds = std::floor(exceeds/duration);
+			time = animation->start + (exceeds - n_times_exceeds * duration);
+		}
+
+		// TODO: Perhaps this "changed" flag should be given to each node so only updated nodes are affected.
+		bool modelUpdated = false;
+		for (auto& channel : animation->channels) {
+			AnimationSampler &sampler = animation->samplers[channel.samplerIdx];
+			
+			// Note: Only loop to penultimate animation state as we interpolate between keyframes
+			//		 i and i + 1.
+			for (size_t i = 0; i < sampler.inputs.size() - 1; i++) {
+
+				// Only update this animation when we are within its specified time-frame
+				if (time < sampler.inputs[i] || time > sampler.inputs[i + 1]) continue;
+
+				// Interpolation value
+				float u = std::max(0.0f, time - sampler.inputs[i]) / (sampler.inputs[i + 1] - sampler.inputs[i]);
+				if (u < 0.0f || u > 1.0f) continue;
+
+				// Update pointed mesh node parameters (T,S,R,W)
+				switch (channel.path) {
+					case AnimationChannel::PathType::TRANSLATION: {
+						glm::vec4 translation = glm::mix(sampler.outputs[i], sampler.outputs[i + 1], u);
+						channel.node->translation = glm::vec3(translation);
+					}
+					break;
+					case AnimationChannel::PathType::SCALE: {
+						glm::vec4 scale = glm::mix(sampler.outputs[i], sampler.outputs[i + 1], u);
+						channel.node->scale = glm::vec3(scale);
+					}
+					break;
+					case AnimationChannel::PathType::ROTATION: {
+						glm::quat qCurr;
+						qCurr.x = sampler.outputs[i].x;
+						qCurr.y = sampler.outputs[i].y;
+						qCurr.z = sampler.outputs[i].z;
+						qCurr.w = sampler.outputs[i].w;
+						glm::quat qNext;
+						qNext.x = sampler.outputs[i + 1].x;
+						qNext.y = sampler.outputs[i + 1].y;
+						qNext.z = sampler.outputs[i + 1].z;
+						qNext.w = sampler.outputs[i + 1].w;
+						channel.node->rotation = glm::normalize(glm::slerp(qCurr, qNext, u));
+					}
+					break;
+					case AnimationChannel::PathType::WEIGHTS: {
+						std::runtime_error("TODO: Morph target animation update via weights.");
+					}
+					break;
+				}
+
+				modelUpdated = true;
+			}
+		}
+
+		// Only update nodes if we advanced any animation channels
+		if (modelUpdated) {
+			updateNodes();
+		}
 	}
 
-	std::vector<VkVertexInputAttributeDescription> SumiModel::Vertex::getAttributeDescriptions() {
-		std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
-
-		attributeDescriptions.push_back({0, 0 , VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, joint)});
-		attributeDescriptions.push_back({1, 0 , VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, weight)});
-		attributeDescriptions.push_back({2, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
-		attributeDescriptions.push_back({3, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
-		attributeDescriptions.push_back({4, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
-		attributeDescriptions.push_back({5, 0 , VK_FORMAT_R32G32_SFLOAT,    offsetof(Vertex, uv)});
-
-		return attributeDescriptions;
+	void SumiModel::updateNodes() {
+		for (auto& node : modelData.nodes) {
+			node->update();
+		}
 	}
 
 	void SumiModel::loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data) {
@@ -495,6 +554,8 @@ namespace sumire {
 		data.indices.clear();
 
 		// default gltf scene
+		// TODO: For now only the default scene is loaded. It would be better to load all scenes or be able
+		//		 to specify a scene index.
 		if (gltfModel.defaultScene < 0)
 			std::cerr << "WARN: Model <" << filepath << "> has no default scene - here be dragons!" << std::endl;
 
@@ -517,6 +578,11 @@ namespace sumire {
 		for (uint32_t i = 0; i < scene.nodes.size(); i++) {
 			const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
 			loadGLTFnode(device, nullptr, node, scene.nodes[i], gltfModel, data);
+		}
+
+		// Animations
+		if (gltfModel.animations.size() > 0) {
+			loadGLTFanimations(gltfModel, data);
 		}
 
 		// Skinning Information
@@ -595,6 +661,8 @@ namespace sumire {
 					image.image.data()
 				);
 			}
+
+			// TODO: Mip-mapping
 
 			data.textures.push_back(std::move(tex));
 		}
@@ -695,6 +763,113 @@ namespace sumire {
 			}
 
 			data.skins.push_back(std::move(createSkin));
+		}
+	}
+
+	void SumiModel::loadGLTFanimations(tinygltf::Model &model, SumiModel::Data &data) {
+		assert(data.flatNodes.size() > 0 && "Flattened model nodes array was uninitialized when loading animations.");
+
+		for (tinygltf::Animation &animation : model.animations) {
+			std::shared_ptr<Animation> createAnimation = std::make_shared<Animation>();
+			createAnimation->name = animation.name.empty() ?
+				 std::to_string(data.animations.size()) : animation.name;
+
+			// Sampler Information
+			for (auto &sampler : animation.samplers) {
+				AnimationSampler createSampler{};
+
+				// Interpolation Type
+				if (sampler.interpolation == "LINEAR") {
+					createSampler.interpolation = util::GLTFinterpolationType::INTERP_LINEAR;
+				}
+				if (sampler.interpolation == "STEP") {
+					createSampler.interpolation = util::GLTFinterpolationType::INTERP_STEP;
+				}
+				if (sampler.interpolation == "CUBICSPLINE") {
+					createSampler.interpolation = util::GLTFinterpolationType::INTERP_CUBIC_SPLINE;
+				}
+
+				// Time values (inputs)
+				const tinygltf::Accessor &inputAccessor = model.accessors[sampler.input];
+				const tinygltf::BufferView &inputBufferView = model.bufferViews[inputAccessor.bufferView];
+				const tinygltf::Buffer &inputBuffer = model.buffers[inputBufferView.buffer];
+
+				assert(inputAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && "Animation sampler input data was not float type");
+
+				const void *inputDataPtr = &inputBuffer.data[inputAccessor.byteOffset + inputBufferView.byteOffset];
+				const float *floatData = static_cast<const float*>(inputDataPtr);
+
+				for (size_t idx = 0; idx < inputAccessor.count; idx++) {
+					createSampler.inputs.push_back(floatData[idx]);
+				}
+
+				// Compile individual sampler start-end values into a single time range for the animation
+				for (size_t i = 0; i < createSampler.inputs.size(); i++) {
+					float input = createSampler.inputs[i];
+					createAnimation->start = std::min(createAnimation->start, input);
+					createAnimation->end = std::max(createAnimation->end, input);
+				}
+
+				// Translation, Rotation, Scale and Weight values (outputs)
+				const tinygltf::Accessor &outputAccessor = model.accessors[sampler.output];
+				const tinygltf::BufferView &outputBufferView = model.bufferViews[outputAccessor.bufferView];
+				const tinygltf::Buffer &outputBuffer = model.buffers[outputBufferView.buffer];
+
+				assert(outputAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && "Animation sampler output data was not float type");
+
+				const void *outputDataPtr = &outputBuffer.data[outputAccessor.byteOffset + outputBufferView.byteOffset];
+				
+				switch (outputAccessor.type) {
+					case TINYGLTF_TYPE_VEC3: {
+						const glm::vec3 *vec3Data = static_cast<const glm::vec3*>(outputDataPtr);
+						for (size_t idx = 0; idx < outputAccessor.count; idx++) {
+							createSampler.outputs.push_back(glm::vec4(vec3Data[idx], 0.0f));
+						}
+					}
+					break;
+					case TINYGLTF_TYPE_VEC4: {
+						const glm::vec4 *vec4Data = static_cast<const glm::vec4*>(outputDataPtr);
+						for (size_t idx = 0; idx < outputAccessor.count; idx++) {
+							createSampler.outputs.push_back(vec4Data[idx]);
+						}
+					}
+					break;
+					default: {
+						std::runtime_error("Tried to Cast Unsupported Sampler Output Value Data Type (Supported: Vec3, Vec4)");
+					}
+				}
+
+				assert(createSampler.inputs.size() == createSampler.outputs.size() && "Animation channel has non 1-to-1 mapping of animation inputs (time values) to outputs (morphing values)");
+
+				createAnimation->samplers.push_back(createSampler);
+			}
+			
+			// Animation Channels
+			for (auto& channel : animation.channels) {
+				AnimationChannel createChannel{};
+
+				if (channel.target_path == "rotation") {
+					createChannel.path = AnimationChannel::PathType::ROTATION;
+				}
+				if (channel.target_path == "translation") {
+					createChannel.path = AnimationChannel::PathType::TRANSLATION;
+				}
+				if (channel.target_path == "scale") {
+					createChannel.path = AnimationChannel::PathType::SCALE;
+				}
+				if (channel.target_path == "weights") {
+					std::runtime_error("TODO: Animation via weights & morph targets");
+					createChannel.path = AnimationChannel::PathType::WEIGHTS;
+				}
+
+				createChannel.samplerIdx = channel.sampler;
+				createChannel.node = getGLTFnode(channel.target_node, data).get();
+				assert(createChannel.node != nullptr && "Animation reffered to a non-existant model node");
+
+				createAnimation->channels.push_back(createChannel);
+			}
+
+			data.animations.push_back(std::move(createAnimation));
 		}
 	}
 
@@ -850,9 +1025,9 @@ namespace sumire {
 							const tinygltf::Accessor& jointsAccessor = model.accessors[jointsEntry->second];
 							const tinygltf::BufferView& jointsBufferView = model.bufferViews[jointsAccessor.bufferView];
 							const tinygltf::Buffer& jointsBuffer = model.buffers[jointsBufferView.buffer];
-							rawBufferJoints0 = &(model.buffers[jointsBufferView.buffer].data[jointsAccessor.byteOffset + jointsBufferView.byteOffset]);
-							strideJoints0 = jointsAccessor.ByteStride(jointsBufferView) ? (jointsAccessor.ByteStride(jointsBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC4);
 							jointsComponentType = jointsAccessor.componentType;
+							rawBufferJoints0 = &(model.buffers[jointsBufferView.buffer].data[jointsAccessor.byteOffset + jointsBufferView.byteOffset]);
+							strideJoints0 = jointsAccessor.ByteStride(jointsBufferView) ? (jointsAccessor.ByteStride(jointsBufferView) / tinygltf::GetComponentSizeInBytes(jointsComponentType)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC4);
 						}
 
 						auto weightsEntry = primitive.attributes.find("WEIGHTS_0");
@@ -1004,6 +1179,29 @@ namespace sumire {
 		return nullptr;
 	}
 
+	//==============Vertex======================================================================
+	
+	std::vector<VkVertexInputBindingDescription> SumiModel::Vertex::getBindingDescriptions() {
+		std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
+		bindingDescriptions[0].binding = 0;
+		bindingDescriptions[0].stride = sizeof(Vertex);
+		bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		return bindingDescriptions;
+	}
+
+	std::vector<VkVertexInputAttributeDescription> SumiModel::Vertex::getAttributeDescriptions() {
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
+
+		attributeDescriptions.push_back({0, 0 , VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, joint)});
+		attributeDescriptions.push_back({1, 0 , VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, weight)});
+		attributeDescriptions.push_back({2, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
+		attributeDescriptions.push_back({3, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
+		attributeDescriptions.push_back({4, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
+		attributeDescriptions.push_back({5, 0 , VK_FORMAT_R32G32_SFLOAT,    offsetof(Vertex, uv)});
+
+		return attributeDescriptions;
+	}
+
 	//==============Node========================================================================
 
 	// local transform matrix for a *single* node
@@ -1028,6 +1226,8 @@ namespace sumire {
 	}
 
 	void SumiModel::Node::update() {
+		// TODO: THIS UPDATE IS WHAT IS CAUSING ANIMATION PROBLEMS UH OHHHH POOOOPY STINKY AAAH CODE
+		// Update mesh nodes
 		if (mesh) {
 			// Update node matrix
 			glm::mat4 nodeMatrix = getGlobalTransform();
@@ -1044,12 +1244,19 @@ namespace sumire {
 					mesh->uniforms.jointMatrices[i] = jointMat;
 				}
 				mesh->uniforms.nJoints = static_cast<int>(nJoints);
-			}
 
-			// Write updated uniforms
-			// TODO: write matrix only if no skin
-			mesh->uniformBuffer->writeToBuffer(&mesh->uniforms);
-			mesh->uniformBuffer->flush();
+				// Write updated uniforms
+				mesh->uniformBuffer->writeToBuffer(&mesh->uniforms);
+				mesh->uniformBuffer->flush();
+			} else {
+				mesh->uniformBuffer->writeToBuffer(&mesh->uniforms.matrix, sizeof(glm::mat4), 0);
+				mesh->uniformBuffer->flush();
+			}
+		}
+
+		// Update Children
+		for (auto& child : children) {
+			child->update();
 		}
 	}
 

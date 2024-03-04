@@ -52,6 +52,7 @@ void main() {
 	albedo *= mat.baseColorFactors;
 
 	// Check if fragment needs to be alpha-masked before doing any other computations
+	// TODO: This simple implementation causes z-fighting.
 	if (mat.useAlphaMask) {
 		if (albedo.a < mat.alphaMaskCutoff) 
 			discard;
@@ -63,5 +64,6 @@ void main() {
 
 	vec3 diffuse = attenuation * ubo.lightCol * max(dot(normalize(inNorm), normalize(pointLightDir)), 0.0);
 
-	outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
+	outCol = vec4(albedo.rgb, 1.0);
+	//outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
 }

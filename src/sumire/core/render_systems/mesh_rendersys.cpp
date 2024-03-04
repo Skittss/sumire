@@ -114,6 +114,12 @@ namespace sumire {
 				sizeof(structs::VertPushConstantData),
 				&push
 			);
+
+			// TODO: Link animation playback (e.g. index, timer, loop) to UI.
+			//		 For now, just play the animation at idx 0, looped, if present.
+			if (obj.model->getAnimationCount() > 0) {
+				obj.model->updateAnimation(0, frameInfo.cumulativeFrameTime);
+			}
 			
 			// SumiModel handles the binding of descriptor sets 1-3 and frag push constants
 			obj.model->bind(frameInfo.commandBuffer);

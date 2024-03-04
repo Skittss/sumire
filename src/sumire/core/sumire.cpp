@@ -110,7 +110,7 @@ namespace sumire {
 				.build(globalDescriptorSets[i]);
 		}
 
-		MeshRenderSys renderSystem{
+		MeshRenderSys meshRenderSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
 		PointLightRenderSys pointLightSystem{
@@ -128,6 +128,7 @@ namespace sumire {
 		SumiImgui gui{sumiRenderer};
 
 		auto currentTime = std::chrono::high_resolution_clock::now();
+		float cumulativeFrameTime = 0.0f;
 
 		// Draw loop
 		while (!sumiWindow.shouldClose()) {
@@ -142,6 +143,8 @@ namespace sumire {
 
 			const float MAX_FRAME_TIME = 0.2f; // 5fps
 			frameTime = glm::min(frameTime, MAX_FRAME_TIME);
+
+			cumulativeFrameTime += frameTime;
 
 			// Handle input.
 			// TODO: move components to member variables and call this from a function
@@ -164,6 +167,7 @@ namespace sumire {
 			FrameInfo frameInfo{
 				-1,        // frameIdx
 				frameTime,
+				cumulativeFrameTime,
 				nullptr,   // commandBuffer
 				camera,
 				nullptr,   // globalDescriptorSet
@@ -198,7 +202,7 @@ namespace sumire {
 
 				sumiRenderer.beginSwapChainRenderPass(commandBuffer);
 
-				renderSystem.renderObjects(frameInfo);
+				meshRenderSystem.renderObjects(frameInfo);
 				pointLightSystem.render(frameInfo);
 				
 				if (gui.showGrid && gui.gridOpacity > 0.0f) {
@@ -236,12 +240,12 @@ namespace sumire {
 		glb1.transform.scale = glm::vec3{1.0f};
 		objects.emplace(glb1.getId(), std::move(glb1));
 
-		std::shared_ptr<SumiModel> modelGlb2 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/doomslayer.glb");
-		auto glb2 = SumiObject::createObject();
-		glb2.model = modelGlb2;
-		glb2.transform.translation = {0.0f, 0.0f, 0.0f};
-		glb2.transform.scale = glm::vec3{1.0f};
-		objects.emplace(glb2.getId(), std::move(glb2));
+		// std::shared_ptr<SumiModel> modelGlb2 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/doomslayer.glb");
+		// auto glb2 = SumiObject::createObject();
+		// glb2.model = modelGlb2;
+		// glb2.transform.translation = {0.0f, 0.0f, 0.0f};
+		// glb2.transform.scale = glm::vec3{1.0f};
+		// objects.emplace(glb2.getId(), std::move(glb2));
 
 		std::shared_ptr<SumiModel> modelGlb3 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
 		auto glb3 = SumiObject::createObject();

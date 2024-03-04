@@ -10,6 +10,7 @@ namespace sumire {
     struct FrameInfo {
         int frameIdx;
         float frameTime;
+        float cumulativeFrameTime;
         VkCommandBuffer commandBuffer;
         SumiCamera &camera;
         VkDescriptorSet globalDescriptorSet;

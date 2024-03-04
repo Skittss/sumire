@@ -6,6 +6,8 @@
 #include <sumire/core/sumi_texture.hpp>
 #include <sumire/core/sumi_descriptors.hpp>
 
+#include <sumire/util/gltf_interpolators.hpp>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -109,6 +111,31 @@ namespace sumire {
 			}
 		};
 
+		struct AnimationChannel {
+			enum PathType { TRANSLATION, ROTATION, SCALE, WEIGHTS };
+			PathType path;
+			Node *node;
+			uint32_t samplerIdx;
+			
+			~AnimationChannel() {
+				node = nullptr;
+			};
+		};
+
+		struct AnimationSampler {
+			util::GLTFinterpolationType interpolation;
+			std::vector<float> inputs;
+			std::vector<glm::vec4> outputs;
+		};
+
+		struct Animation {
+			std::string name;
+			std::vector<AnimationSampler> samplers;
+			std::vector<AnimationChannel> channels;
+			float start = std::numeric_limits<float>::max();
+			float end = std::numeric_limits<float>::min();
+		};
+
 		struct Vertex {
 			glm::vec4 joint;
 			glm::vec4 weight;
@@ -148,6 +175,9 @@ namespace sumire {
 			// Mesh Skinning Data
 			std::vector<std::shared_ptr<Skin>> skins;
 
+			// Animations
+			std::vector<std::shared_ptr<Animation>> animations;
+
 			// Textures
 			std::vector<VkSamplerCreateInfo> samplers;
 			std::vector<std::shared_ptr<SumiTexture>> textures;
@@ -175,14 +205,20 @@ namespace sumire {
 		static std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout(SumiDevice &device);
 		static std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout(SumiDevice &device);
 
+		uint32_t getAnimationCount() { return modelData.animations.size(); }
+
 		void bind(VkCommandBuffer commandbuffer);
 		void draw(VkCommandBuffer commandbuffer, VkPipelineLayout pipelineLayout);
+
+		void updateAnimation(uint32_t animIdx, float time, bool loop = true);
+		void updateNodes();
 
 		std::string displayName{"Unnamed"};
 
 	private:
 		void drawNode(Node *node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
 
+		// Resource Initializers
 		void createVertexBuffers(const std::vector<Vertex> &vertices);
 		void createIndexBuffer(const std::vector<uint32_t> &indices);
 		void createDefaultTextures();
@@ -198,11 +234,14 @@ namespace sumire {
 		static void loadOBJ(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
 
 		// .gltf loading
+		// TODO: For full GLTF support (including extensions), the loader should really load an entire scene
+		// 		 Not just directly to a model.
 		static void loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
 		static void loadGLTFsamplers(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void loadGLTFmaterials(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
 		static void loadGLTFskins(tinygltf::Model &model, SumiModel::Data &data);
+		static void loadGLTFanimations(tinygltf::Model &model, SumiModel::Data &data);
 		static void getGLTFnodeProperties(
 			const tinygltf::Node &node, const tinygltf::Model &model, 
 			uint32_t &vertexCount, uint32_t &indexCount,
@@ -215,6 +254,8 @@ namespace sumire {
 			SumiModel::Data &data
 		);
 		static std::shared_ptr<Node> getGLTFnode(uint32_t idx, SumiModel::Data &data);
+
+		SumiDevice &sumiDevice;
 
 		SumiModel::Data modelData;
 
@@ -235,14 +276,10 @@ namespace sumire {
 		//	 and mesh node descriptor sets are stored in SumiModel::Mesh
 
 		// Buffers
-		// std::vector<std::unique_ptr<SumiBuffer>> meshNodeUniformBuffers;
-		// std::vector<std::unique_ptr<SumiBuffer>> materialUniformBuffers;
 		std::unique_ptr<SumiBuffer> materialStorageBuffer;
 
 		// Default Textures & Materials
 		// TODO: These could be cached
 		std::shared_ptr<SumiTexture> emptyTexture;
-
-		SumiDevice &sumiDevice;
 	};
 }
