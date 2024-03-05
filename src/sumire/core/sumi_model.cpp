@@ -11,6 +11,7 @@
 
 #include <sumire/core/sumi_swap_chain.hpp>
 #include <sumire/util/gltf_vulkan_flag_converters.hpp>
+#include <sumire/util/gltf_interpolators.hpp>
 #include <sumire/math/math_utils.hpp>
 
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
@@ -344,9 +345,17 @@ namespace sumire {
 		}
 	}
 
+	// Update a range of animations for this model.
+	void SumiModel::updateAnimations(const std::vector<uint32_t> indices, float time, bool loop) {
+		if (modelData.animations.empty() || indices.empty()) return;
+
+		for (const uint32_t &i : indices) {
+			updateAnimation(i, time, loop);
+		}
+	}
+
 	void SumiModel::updateAnimation(uint32_t animIdx, float time, bool loop) {
-		if (modelData.animations.empty() || animIdx < 0) return;
-		assert(animIdx < modelData.animations.size() && "Animation index out of range");
+		assert(animIdx < modelData.animations.size() && animIdx >= 0 && "Animation index out of range");
 		
 		std::shared_ptr<Animation> animation = modelData.animations[animIdx];
 
@@ -368,38 +377,84 @@ namespace sumire {
 			// Note: Only loop to penultimate animation state as we interpolate between keyframes
 			//		 i and i + 1.
 			for (size_t i = 0; i < sampler.inputs.size() - 1; i++) {
+				
+				// current keyframe (0) and next keyframe (1) input data
+				float input0 = sampler.inputs[i];
+				float input1 = sampler.inputs[i + 1];
 
 				// Only update this animation when we are within its specified time-frame
-				if (time < sampler.inputs[i] || time > sampler.inputs[i + 1]) continue;
+				if (time < input0 || time > input1) continue;
 
 				// Interpolation value
-				float u = std::max(0.0f, time - sampler.inputs[i]) / (sampler.inputs[i + 1] - sampler.inputs[i]);
+				float u = std::max(0.0f, time - input0) / (input1 - input0);
 				if (u < 0.0f || u > 1.0f) continue;
+
+				// current keyframe (0) and next keyframe (1) output data
+				glm::vec4 output0;
+				glm::vec4 output1;
+				// (output data to fill if cubic spline):
+				glm::vec4 inTangent0;
+				glm::vec4 outTangent0;
+				glm::vec4 inTangent1;
+				glm::vec4 outTangent1;
+
+				// Fill output data
+				switch (sampler.interpolation) {
+					case util::INTERP_STEP:
+					case util::INTERP_LINEAR: {
+						output0 = sampler.outputs[i];
+						output1 = sampler.outputs[i + 1];
+					}
+					break;
+					case util::INTERP_CUBIC_SPLINE: {
+						// Cublic spline data is formatted as (in tangent, value, out tangent) triplets.
+						float offset0 = 3*i;
+						float offset1 = 3*(i+1);
+						inTangent0  = sampler.outputs[offset0];
+						output0     = sampler.outputs[offset0 + 1];
+						outTangent0 = sampler.outputs[offset0 + 2];
+						inTangent1  = sampler.outputs[offset1];
+						output1     = sampler.outputs[offset1 + 1];
+						outTangent1 = sampler.outputs[offset1 + 2];
+					}
+					break;
+				}
 
 				// Update pointed mesh node parameters (T,S,R,W)
 				switch (channel.path) {
 					case AnimationChannel::PathType::TRANSLATION: {
-						glm::vec4 translation = glm::mix(sampler.outputs[i], sampler.outputs[i + 1], u);
+						glm::vec4 translation = util::interpVec4(output0, outTangent0, output1, inTangent1, u, sampler.interpolation);;
 						channel.node->translation = glm::vec3(translation);
 					}
 					break;
 					case AnimationChannel::PathType::SCALE: {
-						glm::vec4 scale = glm::mix(sampler.outputs[i], sampler.outputs[i + 1], u);
+						glm::vec4 scale = util::interpVec4(output0, outTangent0, output1, inTangent1, u, sampler.interpolation);
 						channel.node->scale = glm::vec3(scale);
 					}
 					break;
 					case AnimationChannel::PathType::ROTATION: {
-						glm::quat qCurr;
-						qCurr.x = sampler.outputs[i].x;
-						qCurr.y = sampler.outputs[i].y;
-						qCurr.z = sampler.outputs[i].z;
-						qCurr.w = sampler.outputs[i].w;
-						glm::quat qNext;
-						qNext.x = sampler.outputs[i + 1].x;
-						qNext.y = sampler.outputs[i + 1].y;
-						qNext.z = sampler.outputs[i + 1].z;
-						qNext.w = sampler.outputs[i + 1].w;
-						channel.node->rotation = glm::normalize(glm::slerp(qCurr, qNext, u));
+						glm::quat q0;
+						q0.x = output0.x; 
+						q0.y = output0.y; 
+						q0.z = output0.z; 
+						q0.w = output0.w;
+						glm::quat q0_ot = glm::quat{outTangent0.x, outTangent0.y, outTangent0.z, outTangent0.w};
+						q0_ot.x = outTangent0.x; 
+						q0_ot.y = outTangent0.y;
+						q0_ot.x = outTangent0.z; 
+						q0_ot.y = outTangent0.w;
+						glm::quat q1;
+						q1.x = output1.x; 
+						q1.y = output1.y; 
+						q1.z = output1.z; 
+						q1.w = output1.w;
+						glm::quat q1_it = glm::quat(inTangent1.x, inTangent1.y, inTangent1.z, inTangent1.w);
+						q1_it.x = inTangent1.x; 
+						q1_it.y = inTangent1.y; 
+						q1_it.z = inTangent1.z; 
+						q1_it.w = inTangent1.w;
+
+						channel.node->rotation = util::interpQuat(q0, q0_ot, q1, q1_it, u, sampler.interpolation);
 					}
 					break;
 					case AnimationChannel::PathType::WEIGHTS: {
@@ -839,7 +894,12 @@ namespace sumire {
 					}
 				}
 
-				assert(createSampler.inputs.size() == createSampler.outputs.size() && "Animation channel has non 1-to-1 mapping of animation inputs (time values) to outputs (morphing values)");
+				// Check inputs and outputs directly map to one another for interpolation types other than cubic spline.
+				if (createSampler.interpolation != util::GLTFinterpolationType::INTERP_CUBIC_SPLINE && 
+					createSampler.inputs.size() != createSampler.outputs.size()
+				) {
+					std::runtime_error("Non cubic spline animation channel has non 1-to-1 mapping of animation inputs (time values) to outputs (morphing values)");
+				}
 
 				createAnimation->samplers.push_back(createSampler);
 			}

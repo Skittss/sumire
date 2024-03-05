@@ -11,7 +11,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
-#include <glm/ext/quaternion_float.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include <tiny_gltf.h>
 
@@ -210,6 +210,7 @@ namespace sumire {
 		void bind(VkCommandBuffer commandbuffer);
 		void draw(VkCommandBuffer commandbuffer, VkPipelineLayout pipelineLayout);
 
+		void updateAnimations(const std::vector<uint32_t> indices, float time, bool loop = true);
 		void updateAnimation(uint32_t animIdx, float time, bool loop = true);
 		void updateNodes();
 
