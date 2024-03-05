@@ -1,6 +1,6 @@
 #include <sumire/core/sumi_pipeline.hpp>
 
-#include <sumire/core/sumi_model.hpp>
+#include <sumire/core//models/sumi_model.hpp>
 
 #include <fstream>
 #include <iostream>

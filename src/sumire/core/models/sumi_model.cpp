@@ -6,7 +6,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION // No exceptions (for now?)
 
-#include <sumire/core/sumi_model.hpp>
+#include <sumire/core/models/sumi_model.hpp>
 #include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
 #include <sumire/core/sumi_swap_chain.hpp>

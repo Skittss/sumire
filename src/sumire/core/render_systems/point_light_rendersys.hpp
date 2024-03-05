@@ -2,7 +2,6 @@
 
 #include <sumire/core/sumi_pipeline.hpp>
 #include <sumire/core/sumi_device.hpp>
-#include <sumire/core/sumi_model.hpp>
 #include <sumire/core/sumi_object.hpp>
 #include <sumire/core/sumi_camera.hpp>
 #include <sumire/core/sumi_frame_info.hpp>

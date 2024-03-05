@@ -240,12 +240,12 @@ namespace sumire {
 		glb1.transform.scale = glm::vec3{1.0f};
 		objects.emplace(glb1.getId(), std::move(glb1));
 
-		std::shared_ptr<SumiModel> modelGlb2 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/doomslayer.glb");
-		auto glb2 = SumiObject::createObject();
-		glb2.model = modelGlb2;
-		glb2.transform.translation = {0.0f, 0.0f, 0.0f};
-		glb2.transform.scale = glm::vec3{1.0f};
-		objects.emplace(glb2.getId(), std::move(glb2));
+		// std::shared_ptr<SumiModel> modelGlb2 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/doomslayer.glb");
+		// auto glb2 = SumiObject::createObject();
+		// glb2.model = modelGlb2;
+		// glb2.transform.translation = {0.0f, 0.0f, 0.0f};
+		// glb2.transform.scale = glm::vec3{1.0f};
+		// objects.emplace(glb2.getId(), std::move(glb2));
 
 		std::shared_ptr<SumiModel> modelGlb3 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
 		auto glb3 = SumiObject::createObject();
