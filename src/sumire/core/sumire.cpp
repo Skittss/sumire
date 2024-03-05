@@ -6,6 +6,10 @@
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 
+// Asset loaders
+#include <sumire/loaders/gltf_loader.hpp>
+#include <sumire/loaders/obj_loader.hpp>
+
 // input
 #include <sumire/input/sumi_kbm_controller.hpp>
 
@@ -226,28 +230,28 @@ namespace sumire {
 
 	void Sumire::loadObjects() {
 		// TODO: Load objects in asynchronously
-		std::shared_ptr<SumiModel> modelObj1 = SumiModel::createFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
+		std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
 		auto obj1 = SumiObject::createObject();
 		obj1.model = modelObj1;
 		obj1.transform.translation = {-4.0f, 0.0f, 0.0f};
 		obj1.transform.scale = glm::vec3{1.0f};
 		objects.emplace(obj1.getId(), std::move(obj1));
 
-		std::shared_ptr<SumiModel> modelGlb1 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/clorinde.glb");
+		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/clorinde.glb");
 		auto glb1 = SumiObject::createObject();
 		glb1.model = modelGlb1;
 		glb1.transform.translation = {-2.0f, 0.0f, 0.0f};
 		glb1.transform.scale = glm::vec3{1.0f};
 		objects.emplace(glb1.getId(), std::move(glb1));
 
-		// std::shared_ptr<SumiModel> modelGlb2 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/doomslayer.glb");
-		// auto glb2 = SumiObject::createObject();
-		// glb2.model = modelGlb2;
-		// glb2.transform.translation = {0.0f, 0.0f, 0.0f};
-		// glb2.transform.scale = glm::vec3{1.0f};
-		// objects.emplace(glb2.getId(), std::move(glb2));
+		std::shared_ptr<SumiModel> modelGlb2 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/doomslayer.glb");
+		auto glb2 = SumiObject::createObject();
+		glb2.model = modelGlb2;
+		glb2.transform.translation = {0.0f, 0.0f, 0.0f};
+		glb2.transform.scale = glm::vec3{1.0f};
+		objects.emplace(glb2.getId(), std::move(glb2));
 
-		std::shared_ptr<SumiModel> modelGlb3 = SumiModel::createFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
+		std::shared_ptr<SumiModel> modelGlb3 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
 		auto glb3 = SumiObject::createObject();
 		glb3.model = modelGlb3;
 		glb3.transform.translation = {2.0f, 0.0f, 0.0f};

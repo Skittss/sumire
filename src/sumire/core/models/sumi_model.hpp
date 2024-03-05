@@ -13,8 +13,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include <tiny_gltf.h>
-
 #include <memory>
 #include <vector>
 #include <string>
@@ -200,7 +198,7 @@ namespace sumire {
 		SumiModel(const SumiModel&) = delete;
 		SumiModel& operator=(const SumiModel&) = delete;
 
-		static std::unique_ptr<SumiModel> createFromFile(SumiDevice &device, const std::string &filepath);
+		// static std::unique_ptr<SumiModel> createFromFile(SumiDevice &device, const std::string &filepath);
 
 		static std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorLayout(SumiDevice &device);
 		static std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout(SumiDevice &device);
@@ -226,37 +224,6 @@ namespace sumire {
 		void createDefaultTextures();
 		void initDescriptors();
 		void createMaterialStorageBuffer();
-
-		static std::unique_ptr<SumiMaterial> createDefaultMaterial(SumiDevice &device);
-
-		// Loading Entry point
-		static void loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
-
-		// .obj loading
-		static void loadOBJ(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
-
-		// .gltf loading
-		// TODO: For full GLTF support (including extensions), the loader should really load an entire scene
-		// 		 Not just directly to a model.
-		static void loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
-		static void loadGLTFsamplers(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
-		static void loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
-		static void loadGLTFmaterials(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
-		static void loadGLTFskins(tinygltf::Model &model, SumiModel::Data &data);
-		static void loadGLTFanimations(tinygltf::Model &model, SumiModel::Data &data);
-		static void getGLTFnodeProperties(
-			const tinygltf::Node &node, const tinygltf::Model &model, 
-			uint32_t &vertexCount, uint32_t &indexCount,
-			SumiModel::Data &data
-		);
-		static void loadGLTFnode(
-			SumiDevice &device, 
-			Node *parent, const tinygltf::Node &node, uint32_t nodeIdx, 
-			const tinygltf::Model &model, 
-			SumiModel::Data &data
-		);
-		static std::shared_ptr<Node> getGLTFnode(uint32_t idx, SumiModel::Data &data);
-		static uint32_t getLowestUnreservedGLTFNodeIdx(SumiModel::Data &data);
 
 		SumiDevice &sumiDevice;
 
