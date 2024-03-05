@@ -116,9 +116,11 @@ namespace sumire {
 			);
 
 			// TODO: Link animation playback (e.g. index, timer, loop) to UI.
-			//		 For now, just play the animation at idx 0, looped, if present.
+			//		 For now, play all animations, looped.
 			if (obj.model->getAnimationCount() > 0) {
-				obj.model->updateAnimation(0, frameInfo.cumulativeFrameTime);
+				std::vector<uint32_t> indices(obj.model->getAnimationCount());
+				for (uint32_t i = 0; i < indices.size(); i++) indices[i] = i;
+				obj.model->updateAnimations(indices, frameInfo.cumulativeFrameTime);
 			}
 			
 			// SumiModel handles the binding of descriptor sets 1-3 and frag push constants
