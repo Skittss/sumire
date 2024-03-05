@@ -85,22 +85,23 @@ namespace sumire {
 			Node *parent;
 			std::vector<Node*> children;
 			std::string name;
-			std::shared_ptr<Mesh> mesh; // TODO: unique_ptr
+			std::shared_ptr<Mesh> mesh; // Optional
 
 			// Node transform properties
-			glm::mat4 matrix;
-			glm::vec3 translation{};
-			glm::quat rotation{};
+			glm::mat4 matrix{1.0f};
+			glm::vec3 translation{0.0f};
+			glm::quat rotation;
 			glm::vec3 scale{1.0f};
 
 			glm::mat4 getLocalTransform();
 			glm::mat4 getGlobalTransform();
 
-			// Skinning
+			// Skinning (Optional)
 			Skin *skin;
 			int32_t skinIdx{-1};
 
 			// Update matrices, skinning, and joints
+			void updateRecursive();
 			void update();
 
 			~Node() {
@@ -255,6 +256,7 @@ namespace sumire {
 			SumiModel::Data &data
 		);
 		static std::shared_ptr<Node> getGLTFnode(uint32_t idx, SumiModel::Data &data);
+		static uint32_t getLowestUnreservedGLTFNodeIdx(SumiModel::Data &data);
 
 		SumiDevice &sumiDevice;
 
