@@ -39,10 +39,10 @@ if (DEFINED GLFW_PATH)
 	message(STATUS "Using GLFW path specified in .env")
 	set(GLFW_INCLUDE_DIRS "${GLFW_PATH}/include")
 	if (MSVC)
-		set(GLFW_LIB "${GLFW_PATH}/lib-vc2019") # MAKE SURE THIS MATCHES YOUR MSVC VERSION!!
+		set(GLFW_LIB "${GLFW_PATH}/lib-vc2019") # Make sure this matches MSVC version
 	elseif (CMAKE_GENERATOR STREQUAL "MinGW Makefiles")
 		message(STATUS "USING MINGW")
-		set(GLFW_LIB "${GLFW_PATH}/lib-mingw-w64") # MAKE SURE THIS MATCHES YOUR GLFW MIN-GW SUBDIRECTORY!!
+		set(GLFW_LIB "${GLFW_PATH}/lib-mingw-w64")
 	endif()
 else()
 	find_package(glfw3 3.3 REQUIRED)
