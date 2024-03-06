@@ -371,12 +371,12 @@ namespace sumire {
 				switch (channel.path) {
 					case AnimationChannel::PathType::TRANSLATION: {
 						glm::vec4 translation = util::interpVec4(output0, outTangent0, output1, inTangent1, u, sampler.interpolation);;
-						channel.node->translation = glm::vec3(translation);
+						channel.node->setTranslation(glm::vec3(translation));
 					}
 					break;
 					case AnimationChannel::PathType::SCALE: {
 						glm::vec4 scale = util::interpVec4(output0, outTangent0, output1, inTangent1, u, sampler.interpolation);
-						channel.node->scale = glm::vec3(scale);
+						channel.node->setScale(glm::vec3(scale));
 					}
 					break;
 					case AnimationChannel::PathType::ROTATION: {
@@ -401,7 +401,7 @@ namespace sumire {
 						q1_it.z = inTangent1.z; 
 						q1_it.w = inTangent1.w;
 
-						channel.node->rotation = util::interpQuat(q0, q0_ot, q1, q1_it, u, sampler.interpolation);
+						channel.node->setRotation(util::interpQuat(q0, q0_ot, q1, q1_it, u, sampler.interpolation));
 					}
 					break;
 					case AnimationChannel::PathType::WEIGHTS: {
@@ -451,10 +451,35 @@ namespace sumire {
 
 	//==============Node========================================================================
 
+	void SumiModel::Node::setMatrix(glm::mat4 matrix) {
+		this->matrix = matrix;
+		needsUpdate = true;
+	}
+
+	void SumiModel::Node::setTranslation(glm::vec3 translation) {
+		this->translation = translation;
+		needsUpdate = true;
+	}
+
+	void SumiModel::Node::setRotation(glm::quat rotation) {
+		this->rotation = rotation;
+		needsUpdate = true;
+	}
+
+	void SumiModel::Node::setScale(glm::vec3 scale) {
+		this->scale = scale;
+		needsUpdate = true;
+	}
+
 	// local transform matrix for a *single* node
 	glm::mat4 SumiModel::Node::getLocalTransform() {
-		// TODO: potentially use sumi_transform3d.hpp here for consistency.
-		return glm::translate(glm::mat4{1.0f}, translation) * glm::mat4(rotation) * glm::scale(glm::mat4{1.0f}, scale) * matrix;
+		if (needsUpdate) {
+			cachedLocalTransform = glm::translate(glm::mat4{1.0f}, translation) * glm::mat4(rotation) * glm::scale(glm::mat4{1.0f}, scale) * matrix;
+			needsUpdate = false;
+		}
+		
+		return cachedLocalTransform;
+		// return glm::translate(glm::mat4{1.0f}, translation) * glm::mat4(rotation) * glm::scale(glm::mat4{1.0f}, scale) * matrix;
 	}
 
 	// global transform matrix for a node (considering its parents transforms)

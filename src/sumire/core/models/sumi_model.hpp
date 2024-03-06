@@ -91,6 +91,13 @@ namespace sumire {
 			glm::quat rotation;
 			glm::vec3 scale{1.0f};
 
+			glm::mat4 cachedLocalTransform{1.0f};
+
+			void setMatrix(glm::mat4 matrix);
+			void setTranslation(glm::vec3 translation);
+			void setRotation(glm::quat rotation);
+			void setScale(glm::vec3 scale);
+
 			glm::mat4 getLocalTransform();
 			glm::mat4 getGlobalTransform();
 
@@ -101,6 +108,7 @@ namespace sumire {
 			// Update matrices, skinning, and joints
 			void updateRecursive();
 			void update();
+			bool needsUpdate = true;
 
 			~Node() {
 				mesh = nullptr;
