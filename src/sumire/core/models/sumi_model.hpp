@@ -86,12 +86,15 @@ namespace sumire {
 			std::shared_ptr<Mesh> mesh; // Optional
 
 			// Node transform properties
-			glm::mat4 matrix{1.0f};
-			glm::vec3 translation{0.0f};
+			glm::mat4 matrix{ 1.0f };
+			glm::vec3 translation{ 0.0f };
 			glm::quat rotation;
-			glm::vec3 scale{1.0f};
+			glm::vec3 scale{ 1.0f };
 
-			glm::mat4 cachedLocalTransform{1.0f};
+			glm::mat4 cachedLocalTransform{ 1.0f };
+			glm::mat4 worldTransform{ 1.0f };
+			glm::mat4 invWorldTransform{ 1.0f };
+			glm::mat4 normalMatrix{ 1.0f };
 
 			void setMatrix(glm::mat4 matrix);
 			void setTranslation(glm::vec3 translation);
@@ -106,6 +109,7 @@ namespace sumire {
 			int32_t skinIdx{-1};
 
 			// Update matrices, skinning, and joints
+			void applyTransformHierarchy();
 			void updateRecursive();
 			void update();
 			bool needsUpdate = true;
@@ -206,13 +210,11 @@ namespace sumire {
 		SumiModel(const SumiModel&) = delete;
 		SumiModel& operator=(const SumiModel&) = delete;
 
-		// static std::unique_ptr<SumiModel> createFromFile(SumiDevice &device, const std::string &filepath);
-
 		static std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorLayout(SumiDevice &device);
 		static std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout(SumiDevice &device);
 		static std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout(SumiDevice &device);
 
-		uint32_t getAnimationCount() { return modelData.animations.size(); }
+		uint32_t getAnimationCount() { return static_cast<uint32_t>(modelData.animations.size()); }
 
 		void bind(VkCommandBuffer commandbuffer);
 		void draw(VkCommandBuffer commandbuffer, VkPipelineLayout pipelineLayout);

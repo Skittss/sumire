@@ -125,15 +125,17 @@ namespace sumire::loaders {
 		// Note: Uses loaded nodes as joints, so ensure to always load nodes first.
 		loadGLTFskins(gltfModel, data);
 
+		// Assign skins to nodes
 		for (auto& node : data.flatNodes) {
-			// Assign skin from loaded skinIdx;
 			if(node->skinIdx > -1) {
 				node->skin = data.skins[node->skinIdx].get();
 			}
-			// Update once for initial pose
-			if(node->mesh) {
-				node->update();
-			}
+		}
+
+		// Initial pose
+		for (auto& node : data.nodes) {
+			node->applyTransformHierarchy();
+			node->updateRecursive();
 		}
 	}
 

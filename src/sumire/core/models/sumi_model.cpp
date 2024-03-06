@@ -340,10 +340,10 @@ namespace sumire {
 				glm::vec4 output0;
 				glm::vec4 output1;
 				// (output data to fill if cubic spline):
-				glm::vec4 inTangent0;
-				glm::vec4 outTangent0;
-				glm::vec4 inTangent1;
-				glm::vec4 outTangent1;
+				glm::vec4 inTangent0{0.0f};
+				glm::vec4 outTangent0{0.0f};
+				glm::vec4 inTangent1{0.0f};
+				glm::vec4 outTangent1{0.0f};
 
 				// Fill output data
 				switch (sampler.interpolation) {
@@ -422,6 +422,7 @@ namespace sumire {
 
 	void SumiModel::updateNodes() {
 		for (auto& node : modelData.nodes) {
+			node->applyTransformHierarchy();
 			node->updateRecursive();
 		}
 	}
@@ -479,7 +480,6 @@ namespace sumire {
 		}
 		
 		return cachedLocalTransform;
-		// return glm::translate(glm::mat4{1.0f}, translation) * glm::mat4(rotation) * glm::scale(glm::mat4{1.0f}, scale) * matrix;
 	}
 
 	// global transform matrix for a node (considering its parents transforms)
@@ -497,6 +497,17 @@ namespace sumire {
 		return globalMatrix;
 	}
 
+	void SumiModel::Node::applyTransformHierarchy() {
+
+		worldTransform = parent ? parent->worldTransform * getLocalTransform() : getLocalTransform();
+		invWorldTransform = glm::inverse(worldTransform);
+		normalMatrix = glm::transpose(invWorldTransform);
+
+		for (auto& child : children) {
+			child->applyTransformHierarchy();
+		}
+	}
+
 	// Updates a node and its children.
 	void SumiModel::Node::updateRecursive() {
 		update();
@@ -511,18 +522,14 @@ namespace sumire {
 	void SumiModel::Node::update() {
 		// Update mesh nodes
 		if (mesh) {
-			// Update node matrix
-			glm::mat4 nodeMatrix = getGlobalTransform();
-			mesh->uniforms.matrix = nodeMatrix;
+			mesh->uniforms.matrix = worldTransform;
 
 			// Update joint matrix
 			if (skin) {
-				glm::mat4 inverseTransform = glm::inverse(nodeMatrix);
 				size_t nJoints = std::min(static_cast<uint32_t>(skin->joints.size()), MODEL_MAX_JOINTS);
 				for (size_t i = 0; i < nJoints; i++) {
 					Node *jointNode = skin->joints[i];
-					glm::mat4 jointMat = jointNode->getGlobalTransform() * skin->inverseBindMatrices[i];
-					jointMat = inverseTransform * jointMat;
+					glm::mat4 jointMat = invWorldTransform * jointNode->worldTransform * skin->inverseBindMatrices[i];
 					mesh->uniforms.jointMatrices[i] = jointMat;
 				}
 				mesh->uniforms.nJoints = static_cast<int>(nJoints);
