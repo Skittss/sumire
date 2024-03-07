@@ -6,6 +6,7 @@ namespace sumire::structs {
 
     struct VertPushConstantData {
         glm::mat4 modelMatrix;
+        glm::mat4 normalMatrix;
     };
 
     struct FragPushConstantData {

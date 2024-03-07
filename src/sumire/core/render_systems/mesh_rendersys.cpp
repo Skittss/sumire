@@ -17,7 +17,24 @@ namespace sumire {
 	MeshRenderSys::MeshRenderSys(
 			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
 		) : sumiDevice{device} {
-			
+		
+		// Check physical device can support the size of push constants for this pipeline.
+		//  VK min guarantee is 128 bytes, this pipeline targets 256 bytes.
+		VkPhysicalDeviceProperties deviceProperties{};
+		vkGetPhysicalDeviceProperties(device.getPhysicalDevice(), &deviceProperties);
+		uint32_t requiredPushConstantSize = static_cast<uint32_t>(
+			sizeof(structs::VertPushConstantData) + sizeof(structs::FragPushConstantData
+		));
+		if (deviceProperties.limits.maxPushConstantsSize < requiredPushConstantSize) {
+			std::runtime_error(
+				"Mesh rendering requires at least" + 
+				std::to_string(requiredPushConstantSize) +
+				" bytes of push constant storage. Physical device used supports only " +
+				std::to_string(deviceProperties.limits.maxPushConstantsSize) +
+				" bytes."
+			);
+		}
+
 		createPipelineLayout(globalDescriptorSetLayout);
 		createPipeline(renderPass);
 	}
@@ -104,7 +121,8 @@ namespace sumire {
 			if (obj.model == nullptr) continue;
 
 			structs::VertPushConstantData push{};
-			push.modelMatrix = obj.transform.mat4();
+			push.modelMatrix = obj.transform.modelMatrix();
+			push.normalMatrix = obj.transform.normalMatrix();
 
 			vkCmdPushConstants(
 				frameInfo.commandBuffer, 

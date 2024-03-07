@@ -237,7 +237,7 @@ namespace sumire {
 		);
 
 		structs::GridFragPushConstantData fragPush{};
-		fragPush.cameraPos = frameInfo.camera.transform.translation;
+		fragPush.cameraPos = frameInfo.camera.transform.getTranslation();
 		fragPush.majorLineThickness = 0.02f;
 
 		vkCmdPushConstants(

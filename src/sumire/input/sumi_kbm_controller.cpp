@@ -10,14 +10,17 @@ namespace sumire {
         if (glfwGetKey(window, keybinds.lookUp   ) == GLFW_PRESS) rotate.x += 1.0f;
         if (glfwGetKey(window, keybinds.lookDown ) == GLFW_PRESS) rotate.x -= 1.0f;
 
+        glm::vec3 newRotation = transform.getRotation();
         if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) {
-            transform.rotation += lookSensitivity * dt * glm::normalize(rotate);
+            newRotation += lookSensitivity * dt * glm::normalize(rotate);
         }
 
-        transform.rotation.x = glm::clamp(transform.rotation.x, -1.5f, 1.5f);
-        transform.rotation.y = glm::mod(transform.rotation.y, glm::two_pi<float>());
+        newRotation.x = glm::clamp(newRotation.x, -1.5f, 1.5f);
+        newRotation.y = glm::mod(newRotation.y, glm::two_pi<float>());
 
-        float yaw = transform.rotation.y;
+        transform.setRotation(newRotation);
+
+        float yaw = newRotation.y;
         const glm::vec3 forward{sin(yaw), 0.0f, cos(yaw)};
         const glm::vec3 right{forward.z, 0.0f, -forward.x};
         const glm::vec3 up{0.0f, -1.0f, 0.0f}; 
@@ -31,7 +34,7 @@ namespace sumire {
         if (glfwGetKey(window, keybinds.moveDown    ) == GLFW_PRESS) moveDir -= up;
 
         if (glm::dot(moveDir, moveDir) > std::numeric_limits<float>::epsilon()) {
-            transform.translation += moveSensitivity * dt * glm::normalize(moveDir);
+            transform.setTranslation(transform.getTranslation() + moveSensitivity * dt * glm::normalize(moveDir));
         }
 
     }

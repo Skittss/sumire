@@ -250,25 +250,27 @@ namespace sumire {
     void SumiImgui::drawTransformUI(Transform3DComponent &transform, bool includeScale) {
         ImGui::SeparatorText("Transform");
 
+        glm::vec3 translation = transform.getTranslation();
         float pos[3] = {
-            transform.translation.x, 
-            transform.translation.y, 
-            transform.translation.z
+            translation.x, 
+            translation.y, 
+            translation.z
         };
         ImGui::InputFloat3("translation", pos);
-        transform.translation = {pos[0], pos[1], pos[2]};
+        transform.setTranslation(glm::vec3{pos[0], pos[1], pos[2]});
 
+        glm::vec3 rotation = transform.getRotation();
         float rot[3] = {
-            glm::degrees(transform.rotation.x), 
-            glm::degrees(transform.rotation.y), 
-            glm::degrees(transform.rotation.z)
+            glm::degrees(rotation.x), 
+            glm::degrees(rotation.y), 
+            glm::degrees(rotation.z)
         };
         ImGui::InputFloat3("rotation (deg)", rot, "%.1f");
-        transform.rotation = {
+        transform.setRotation(glm::vec3{
             glm::radians(rot[0]), 
             glm::radians(rot[1]), 
             glm::radians(rot[2])
-        };
+        });
         
         if (includeScale) {
             ImGui::Spacing();
@@ -276,21 +278,22 @@ namespace sumire {
             static bool perAxisScale = false;
             ImGui::Checkbox("Per-axis scale?", &perAxisScale);
 
+            glm::vec3 scale = transform.getScale();
             if (perAxisScale) {
 
-                float scale[3] = {
-                    transform.scale.x,
-                    transform.scale.y,
-                    transform.scale.z
+                float sca[3] = {
+                    scale.x,
+                    scale.y,
+                    scale.z
                 };
-                ImGui::InputFloat3("scale", scale);
-                transform.scale = {scale[0], scale[1], scale[2]};
+                ImGui::InputFloat3("scale", sca);
+                transform.setScale(glm::vec3{sca[0], sca[1], sca[2]});
 
             } else {
 
-                float scale = (transform.scale.x + transform.scale.y + transform.scale.z) / 3.0;
-                ImGui::DragFloat("scale", &scale, 0.1f);
-                transform.scale = glm::vec3{scale};
+                float sca = (scale.x + scale.y + scale.z) / 3.0;
+                ImGui::DragFloat("scale", &sca, 0.1f);
+                transform.setScale(glm::vec3{sca});
 
             }
         }

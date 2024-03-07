@@ -23,7 +23,7 @@ layout(set = 0, binding = 1) uniform Camera {
 };
 
 layout(push_constant) uniform Push {
-	layout(offset = 64) int materialIdx;
+	layout(offset = 128) int materialIdx;
 };
 
 // Material Textures
@@ -58,12 +58,41 @@ void main() {
 			discard;
 	}
 
+	vec3 normal;
+	if (mat.normalTexCoord > -1) {
+		vec3 tangentNormal = normalize(texture(normalMap, inUv).rgb * 2.0 - 1.0);
+
+		vec2 uv_dx = dFdx(inUv);
+		vec2 uv_dy = dFdx(inUv);
+		vec3 pos_dx = dFdx(inPos);
+		vec3 pos_dy = dFdy(inPos);
+
+		// if (length(uv_dx) <= 1e-2) uv_dx = vec2(1.0, 0.0);
+		// if (length(uv_dy) <= 1e-2) uv_dy = vec2(0.0, 1.0);
+
+		vec3 N = normalize(inNorm);
+		vec3 T = normalize(pos_dx * uv_dy.t - pos_dy * uv_dx.t);
+		vec3 B = -normalize(cross(N, T));
+		mat3 TBN = mat3(T, B, N);
+
+		normal = normalize(TBN * tangentNormal);
+		
+	} else {
+		normal = normalize(inNorm);
+	}
+
 	vec3 pointLightDir = ubo.lightPos - inPos.xyz;
 	float dLight = length(pointLightDir);
 	float attenuation = ubo.lightIntensity / dLight * dLight;
 
-	vec3 diffuse = attenuation * ubo.lightCol * max(dot(normalize(inNorm), normalize(pointLightDir)), 0.0);
+	vec3 diffuse = attenuation * ubo.lightCol * max(dot(normalize(normal), normalize(pointLightDir)), 0.0);
 
-	outCol = vec4(albedo.rgb, 1.0);
-	//outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
+	// outCol = vec4(albedo.rgb, 1.0);
+
+	// Debug Normal Ouput
+	outCol = 0.5 + vec4(0.5 * normal, 1.0);
+
+	// outCol = vec4((ubo.ambientCol + diffuse))
+
+	// outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
 }

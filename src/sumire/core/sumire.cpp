@@ -124,7 +124,7 @@ namespace sumire {
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
 		SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
-		camera.transform.translation = {0.0f, -0.5f, -3.0f};
+		camera.transform.setTranslation(glm::vec3{0.0f, -0.5f, -3.0f});
 		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
 		SumiKBMcontroller cameraController{};
 
@@ -157,7 +157,7 @@ namespace sumire {
 				cameraController.moveWalk(sumiWindow.getGLFWwindow(), frameTime, camera.transform);
 			}
 
-			camera.setViewYXZ(camera.transform.translation, camera.transform.rotation);
+			camera.setViewYXZ(camera.transform.getTranslation(), camera.transform.getRotation());
 
 			if (sumiRenderer.wasSwapChainRecreated()) {
 				float aspect = sumiRenderer.getAspect();
@@ -233,29 +233,29 @@ namespace sumire {
 		std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
 		auto obj1 = SumiObject::createObject();
 		obj1.model = modelObj1;
-		obj1.transform.translation = {-4.0f, 0.0f, 0.0f};
-		obj1.transform.scale = glm::vec3{1.0f};
+		obj1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
+		obj1.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(obj1.getId(), std::move(obj1));
 
 		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/clorinde.glb");
 		auto glb1 = SumiObject::createObject();
 		glb1.model = modelGlb1;
-		glb1.transform.translation = {-2.0f, 0.0f, 0.0f};
-		glb1.transform.scale = glm::vec3{1.0f};
+		glb1.transform.setTranslation(glm::vec3{-2.0f, 0.0f, 0.0f});
+		glb1.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(glb1.getId(), std::move(glb1));
 
 		std::shared_ptr<SumiModel> modelGlb2 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/doomslayer.glb");
 		auto glb2 = SumiObject::createObject();
 		glb2.model = modelGlb2;
-		glb2.transform.translation = {0.0f, 0.0f, 0.0f};
-		glb2.transform.scale = glm::vec3{1.0f};
+		glb2.transform.setTranslation(glm::vec3{0.0f, 0.0f, 0.0f});
+		glb2.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(glb2.getId(), std::move(glb2));
 
 		std::shared_ptr<SumiModel> modelGlb3 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
 		auto glb3 = SumiObject::createObject();
 		glb3.model = modelGlb3;
-		glb3.transform.translation = {2.0f, 0.0f, 0.0f};
-		glb3.transform.scale = glm::vec3{1.0f};
+		glb3.transform.setTranslation(glm::vec3{2.0f, 0.0f, 0.0f});
+		glb3.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(glb3.getId(), std::move(glb3));
 	}
 }

@@ -148,8 +148,8 @@ namespace sumire {
 		};
 
 		struct Vertex {
-			glm::vec4 joint;
-			glm::vec4 weight;
+			glm::vec4 joint{};
+			glm::vec4 weight{};
 			glm::vec3 position{};
 			glm::vec3 color{};
 			glm::vec3 normal{};

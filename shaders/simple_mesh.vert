@@ -35,6 +35,7 @@ layout(set = 2, binding = 0) uniform MeshNode {
 
 layout(push_constant) uniform Model {
 	mat4 modelMatrix;
+	mat4 normalMatrix;
 };
 
 void main() {
@@ -54,6 +55,8 @@ void main() {
 		localPos = modelMatrix * meshNode.matrix * vec4(position, 1.0);
 		outNorm = normalize(transpose(inverse(mat3(modelMatrix * meshNode.matrix))) * normal);
 	}
+
+	// outNorm = normalize(mat3(normalMatrix) *  outNorm);
 
 	// Standard Camera Projection
 	gl_Position = projectionViewMatrix * localPos;
