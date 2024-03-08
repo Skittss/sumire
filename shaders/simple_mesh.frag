@@ -1,10 +1,11 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-layout (location = 0) in vec3 inColor;
-layout (location = 1) in vec3 inPos;
+layout (location = 0) in vec3 inPos;
+layout (location = 1) in vec3 inColor;
 layout (location = 2) in vec3 inNorm;
-layout (location = 3) in vec2 inUv;
+layout (location = 3) in vec3 inTangent;
+layout (location = 4) in vec2 inUv;
 
 layout (location = 0) out vec4 outCol;
 
@@ -66,6 +67,7 @@ void main() {
 		tangentSpaceNormal *= vec3(mat.normalScale, mat.normalScale, 1.0); // Apply scale
 		tangentSpaceNormal = normalize(tangentSpaceNormal);
 
+		// Approximation of tangents
 		vec2 uv_dx = dFdx(inUv);
 		vec2 uv_dy = dFdx(inUv);
 		vec3 pos_dx = dFdx(inPos);
@@ -99,7 +101,8 @@ void main() {
 	// outCol = vec4(albedo.rgb, 1.0);
 
 	// Debug Normal Ouput
-	outCol = vec4(0.5 + 0.5 * normal, 1.0);
+	// outCol = vec4(0.5 + 0.5 * normal, 1.0);
+	outCol = vec4(0.5 + 0.5 * inTangent, 1.0);
 
 	// outCol = vec4((ubo.ambientCol + diffuse))
 

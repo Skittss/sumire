@@ -497,6 +497,7 @@ namespace sumire::loaders {
 					// Buffer pointers & data strides
 					const float *bufferPos = nullptr;
 					const float *bufferNorm = nullptr;
+					const float *bufferTangent = nullptr;
 					const float *bufferTexCoord0 = nullptr;
 					const float *bufferTexCoord1 = nullptr;
 					const float *bufferColor0 = nullptr;
@@ -504,6 +505,7 @@ namespace sumire::loaders {
 					const float *bufferWeights0 = nullptr;
 					int stridePos;
 					int strideNorm;
+					int strideTangent;
 					int strideTexCoord0;
 					int strideTexCoord1;
 					int strideColor0;
@@ -532,6 +534,15 @@ namespace sumire::loaders {
 						const tinygltf::Buffer& normBuffer = model.buffers[normBufferView.buffer];
 						bufferNorm = reinterpret_cast<const float *>(&(normBuffer.data[normAccessor.byteOffset + normBufferView.byteOffset]));
 						strideNorm = normAccessor.ByteStride(normBufferView) ? (normAccessor.ByteStride(normBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC3); 
+					}
+
+					auto tangentEntry = primitive.attributes.find("TANGENT");
+					if (tangentEntry != primitive.attributes.end()) {
+						const tinygltf::Accessor& tangentAccessor = model.accessors[tangentEntry->second];
+						const tinygltf::BufferView& tangentBufferView = model.bufferViews[tangentAccessor.bufferView];
+						const tinygltf::Buffer& tangentBuffer = model.buffers[tangentBufferView.buffer];
+						bufferTangent = reinterpret_cast<const float *>(&(tangentBuffer.data[tangentAccessor.byteOffset + tangentBufferView.byteOffset]));
+						strideTangent = tangentAccessor.ByteStride(tangentBufferView) ? (tangentAccessor.ByteStride(tangentBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC4);
 					}
 
 					// UVs
@@ -604,6 +615,7 @@ namespace sumire::loaders {
 						SumiModel::Vertex v{};
 						v.position = glm::make_vec3(&bufferPos[vIdx * stridePos]);
 						v.normal = glm::normalize(bufferNorm ? glm::make_vec3(&bufferNorm[vIdx * strideNorm]) : glm::vec3{0.0f});
+						v.tangent = glm::normalize(bufferTangent ? glm::make_vec3(&bufferTangent[vIdx * strideTangent]) : glm::vec3{0.0f});
 						v.uv = bufferTexCoord0 ? glm::make_vec2(&bufferTexCoord0[vIdx * strideTexCoord0]) : glm::vec3{0.0f};
 						v.color = bufferColor0 ? glm::make_vec3(&bufferColor0[vIdx * strideColor0]) : glm::vec3{1.0f};
 

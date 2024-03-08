@@ -230,7 +230,8 @@ namespace sumire {
 
 	void Sumire::loadObjects() {
 		// TODO: Load objects in asynchronously
-		std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
+		// std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
+		std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/test/NormalTangentMirrorTest.glb");
 		auto obj1 = SumiObject::createObject();
 		obj1.model = modelObj1;
 		obj1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});

@@ -153,6 +153,7 @@ namespace sumire {
 			glm::vec3 position{};
 			glm::vec3 color{};
 			glm::vec3 normal{};
+			glm::vec3 tangent{};
 			glm::vec2 uv{};
 
 			static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
@@ -165,6 +166,7 @@ namespace sumire {
 					position == other.position && 
 					color == other.color &&
 					normal == other.normal &&
+					tangent == other.tangent &&
 					uv == other.uv
 				);
 			}

@@ -100,7 +100,9 @@ namespace sumire::loaders {
 						attrib.normals[3 * index.normal_index + 1], 
 						attrib.normals[3 * index.normal_index + 2]
 					};
-				} 
+				}
+
+				vertex.tangent = {0.0f, 0.0f, 0.0f};
 
 				if (index.texcoord_index >= 0) {
 					vertex.uv = {
