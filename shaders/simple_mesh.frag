@@ -58,24 +58,33 @@ void main() {
 			discard;
 	}
 
+	// Normal Mapping
 	vec3 normal;
 	if (mat.normalTexCoord > -1) {
-		vec3 tangentNormal = normalize(texture(normalMap, inUv).rgb * 2.0 - 1.0);
+		// Read normal from texture
+		vec3 tangentSpaceNormal = texture(normalMap, inUv).rgb * 2.0 - 1.0;
+		tangentSpaceNormal *= vec3(mat.normalScale, mat.normalScale, 1.0); // Apply scale
+		tangentSpaceNormal = normalize(tangentSpaceNormal);
 
 		vec2 uv_dx = dFdx(inUv);
 		vec2 uv_dy = dFdx(inUv);
 		vec3 pos_dx = dFdx(inPos);
 		vec3 pos_dy = dFdy(inPos);
 
-		// if (length(uv_dx) <= 1e-2) uv_dx = vec2(1.0, 0.0);
-		// if (length(uv_dy) <= 1e-2) uv_dy = vec2(0.0, 1.0);
+		// Deal with inprecision of small differentials
+		if (length(uv_dx) <= 1e-2) uv_dx = vec2(1.0, 0.0);
+		if (length(uv_dy) <= 1e-2) uv_dy = vec2(0.0, 1.0);
 
+		vec3 tangentCoeff = (pos_dx * uv_dy.t - pos_dy * uv_dx.t) / (uv_dx.s * uv_dy.t - uv_dx.t * uv_dy.s);
+		
 		vec3 N = normalize(inNorm);
-		vec3 T = normalize(pos_dx * uv_dy.t - pos_dy * uv_dx.t);
+		vec3 T = normalize(tangentCoeff - N * dot(N, tangentCoeff));
 		vec3 B = -normalize(cross(N, T));
+
+		// Tangent space -> world space matrix
 		mat3 TBN = mat3(T, B, N);
 
-		normal = normalize(TBN * tangentNormal);
+		normal = normalize(TBN * tangentSpaceNormal);
 		
 	} else {
 		normal = normalize(inNorm);
@@ -90,7 +99,7 @@ void main() {
 	// outCol = vec4(albedo.rgb, 1.0);
 
 	// Debug Normal Ouput
-	outCol = 0.5 + vec4(0.5 * normal, 1.0);
+	outCol = vec4(0.5 + 0.5 * normal, 1.0);
 
 	// outCol = vec4((ubo.ambientCol + diffuse))
 
