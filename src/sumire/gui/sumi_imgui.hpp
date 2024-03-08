@@ -55,6 +55,7 @@ namespace sumire {
             VkDescriptorPool imguiDescriptorPool;
 
             int resetProjParamsCounter{0};
+            int resetOrthonormalBasisCounter{0};
     };
 
 }

@@ -158,7 +158,51 @@ namespace sumire {
                 // Transform UI
                 drawTransformUI(frameInfo.camera.transform, false);
                 
+                // Orthonormal Basis
+                ImGui::SeparatorText("Orthonormal Basis");
+
+                ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.6f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.7f, 0.7f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.0f, 0.8f, 0.8f));
+                if (ImGui::Button("Reset Basis")) resetOrthonormalBasisCounter++;
+                if (resetOrthonormalBasisCounter > 0) {
+                    frameInfo.camera.setDefaultOrthonormalBasis();
+                    resetOrthonormalBasisCounter = 0;
+                }
+                ImGui::PopStyleColor(3);
+
+                ImGui::Spacing();
+
+                glm::vec3 camRight = frameInfo.camera.getRight();
+                float right[3] {camRight.x, camRight.y, camRight.z};
+                ImGui::InputFloat3("right", right, "%.2f");
+                frameInfo.camera.setRight(glm::vec3{right[0], right[1], right[2]});
+
+                glm::vec3 camUp = frameInfo.camera.getUp();
+                float up[3] {camUp.x, camUp.y, camUp.z};
+                ImGui::InputFloat3("up", up, "%.2f");
+                frameInfo.camera.setUp(glm::vec3{up[0], up[1], up[2]});
+
+                glm::vec3 camForward = frameInfo.camera.getForward();
+                float forward[3] {camForward.x, camForward.y, camForward.z};
+                ImGui::InputFloat3("forward", forward, "%.2f");
+                frameInfo.camera.setForward(glm::vec3{forward[0], forward[1], forward[2]});
+
+                ImGui::Spacing();
+
                 ImGui::SeparatorText("Projection");
+
+                ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.6f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.7f, 0.7f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.0f, 0.8f, 0.8f));
+                if (ImGui::Button("Reset Projection Params")) resetProjParamsCounter++;
+                if (resetProjParamsCounter > 0) {
+                    frameInfo.camera.setDefaultProjectionParams(sumiRenderer.getAspect());
+                    resetProjParamsCounter = 0;
+                }
+                ImGui::PopStyleColor(3);
+
+                ImGui::Spacing();
 
                 // Projection Type
                 const char* projTypes[] = {"Perspective", "Orthographic"};
@@ -204,15 +248,16 @@ namespace sumire {
                     ImGui::Text("Oopsie - Something went wrong! Please reload.");
                 }
 
-                ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.6f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.7f, 0.7f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.0f, 0.8f, 0.8f));
-                if (ImGui::Button("Reset")) resetProjParamsCounter++;
-                if (resetProjParamsCounter > 0) {
-                    frameInfo.camera.setDefaultProjectionParams(sumiRenderer.getAspect());
-                    resetProjParamsCounter = 0;
-                }
-                ImGui::PopStyleColor(3);
+                ImGui::Spacing();
+                
+                // Near and Far planes
+                float tNear = frameInfo.camera.near();
+                ImGui::DragFloat("Near", &tNear, 0.01f, 0.01f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                frameInfo.camera.setNear(tNear);
+
+                float tFar = frameInfo.camera.far();
+                ImGui::DragFloat("Far", &tFar, 1.0f, 1.0f, 10000.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                frameInfo.camera.setFar(tFar);
 
                 frameInfo.camera.calculateProjectionMatrix();
 

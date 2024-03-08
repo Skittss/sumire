@@ -22,6 +22,7 @@ namespace sumire {
         ~SumiCamera();
 
         void setDefaultProjectionParams(float aspect, bool recomputeProjMatrix = false);
+        void setDefaultOrthonormalBasis() { orthonormalBasis = glm::mat4{1.0f}; }
 
         void setOrthographicProjection(float l, float r, float top, float bot);
         void setPerspectiveProjection(float fovy, float aspect);
@@ -39,12 +40,34 @@ namespace sumire {
         void setRotY(float y);
         void setRotZ(float z);
         glm::vec3 getRotation() const; 
-        
-        glm::vec3 getUpVector() const;
 
+        // Orthonormal Bases Get & Set
+        glm::vec3 getRight() const {
+            return glm::vec3{orthonormalBasis[0][0], orthonormalBasis[0][1], orthonormalBasis[0][2]};
+        }
+        glm::vec3 getUp() const {
+            return glm::vec3{orthonormalBasis[1][0], orthonormalBasis[1][1], orthonormalBasis[1][2]}; 
+        }
+        glm::vec3 getForward() const { 
+            return glm::vec3{orthonormalBasis[2][0], orthonormalBasis[2][1], orthonormalBasis[2][2]}; 
+        }
+        void setRight(glm::vec3 right) {
+            orthonormalBasis[0][0] = right.x; orthonormalBasis[0][1] = right.y; orthonormalBasis[0][2] = right.z;
+        }
+        void setUp(glm::vec3 up) {
+            orthonormalBasis[1][0] = up.x; orthonormalBasis[1][1] = up.y; orthonormalBasis[1][2] = up.z;
+        }
+        void setForward(glm::vec3 forward) {
+            orthonormalBasis[2][0] = forward.x; orthonormalBasis[2][1] = forward.y; orthonormalBasis[2][2] = forward.z;
+        };
+
+        // Near and Far get & set
+        float near() const { return nearPlane; }
+        float far() const { return farPlane; }
         void setNear(float dist, bool recomputeProjMatrix = false);
         void setFar(float dist, bool recomputeProjMatrix = false);
 
+        // Projection get & set
         float getFovy() const { return persp_fovy; }
         void setFovy(float fovy, bool recomputeProjMatrix = false);
         float getAspect() const { return persp_aspect; }
@@ -76,6 +99,7 @@ namespace sumire {
     private:
         glm::mat4 projectionMatrix{1.0f};
         glm::mat4 viewMatrix{1.0f};
+        glm::mat4 orthonormalBasis{1.0f};
 
         // Camera properties
         SmCameraType camType{CAM_TYPE_PERSPECTIVE};
@@ -93,7 +117,6 @@ namespace sumire {
         float ortho_r;
         float ortho_top;
         float ortho_bot;
-
     };
     
 }
