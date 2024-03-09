@@ -12,6 +12,8 @@
 #include <sumire/core/sumi_object.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 
+#include <sumire/input/sumi_kbm_controller.hpp>
+
 namespace sumire {
 
     struct gridAdjustableParams {
@@ -30,7 +32,7 @@ namespace sumire {
             void endFrame();
             void renderToCmdBuffer(VkCommandBuffer &buffer);
 
-            void drawStatWindow(FrameInfo &frameInfo);
+            void drawStatWindow(FrameInfo &frameInfo, SumiKBMcontroller &cameraController);
 
             ImGuiIO& getIO();
 
@@ -47,7 +49,7 @@ namespace sumire {
 
         private:
             void initImgui();
-            void drawConfigUI();
+            void drawConfigUI(SumiKBMcontroller &cameraController);
             void drawSceneUI(FrameInfo &frameInfo);
             void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 

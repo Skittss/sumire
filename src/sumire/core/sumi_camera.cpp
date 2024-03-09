@@ -59,11 +59,14 @@ namespace sumire {
     void SumiCamera::setOrthographicProjection(float l, float r, float top, float bot) {
         camType = CAM_TYPE_ORTHOGRAPHIC;
 
+        projectionMatrix = glm::ortho(l, r, bot, top);
+        return;
+
         // Note: y and x are negated from a normal projection matrix in order to go 
         //       from vulkan (clip space) left hand convention -> right hand convention.
         projectionMatrix = glm::mat4{1.0f};
-        projectionMatrix[0][0] = -2.0f / (r - l);
-        projectionMatrix[1][1] = -2.0f / (bot - top);
+        projectionMatrix[0][0] = 2.0f / (r - l);
+        projectionMatrix[1][1] = 2.0f / (bot - top);
         projectionMatrix[2][2] = 1.0f / (farPlane - nearPlane);
         projectionMatrix[3][0] = -(r + l) / (r - l);
         projectionMatrix[3][1] = -(bot + top) / (bot - top);
@@ -75,12 +78,15 @@ namespace sumire {
 
         camType = CAM_TYPE_PERSPECTIVE;
         
+        projectionMatrix = glm::perspective(fovy, aspect, nearPlane, farPlane);
+        return;
+
         // Note: y and x are negated from a normal projection matrix in order to go 
         //       from vulkan (clip space) left hand convention -> right hand convention.
         const float tanHalfFovy = tan(fovy / 2.0f);
         projectionMatrix = glm::mat4{0.0f};
-        projectionMatrix[0][0] = -1.0f / (aspect * tanHalfFovy);
-        projectionMatrix[1][1] = -1.0f / (tanHalfFovy);
+        projectionMatrix[0][0] = 1.0f / (aspect * tanHalfFovy);
+        projectionMatrix[1][1] = 1.0f / (tanHalfFovy);
         projectionMatrix[2][2] = farPlane / (farPlane - nearPlane);
         projectionMatrix[2][3] = 1.0f;
         projectionMatrix[3][2] = -(farPlane * nearPlane) / (farPlane - nearPlane);
@@ -198,6 +204,7 @@ namespace sumire {
         viewMatrix[3][0] = -glm::dot(u, pos);
         viewMatrix[3][1] = -glm::dot(v, pos);
         viewMatrix[3][2] = -glm::dot(w, pos);
+
         // TODO: It may be possible to elimite this matrix calculation with better linear algebra :P
         viewMatrix = orthonormalBasis * viewMatrix;
     }

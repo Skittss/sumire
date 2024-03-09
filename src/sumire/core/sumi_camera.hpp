@@ -42,6 +42,7 @@ namespace sumire {
         glm::vec3 getRotation() const; 
 
         // Orthonormal Bases Get & Set
+        const glm::mat4& getOrthonormalBasis() const { return orthonormalBasis; }
         glm::vec3 getRight() const {
             return glm::vec3{orthonormalBasis[0][0], orthonormalBasis[0][1], orthonormalBasis[0][2]};
         }
@@ -89,7 +90,9 @@ namespace sumire {
         const glm::mat4& getProjectionMatrix() const { return projectionMatrix; }
         const glm::mat4& getViewMatrix() const { return viewMatrix; }
 
+        SmCameraType getCameraType() const { return camType; }
         void setCameraType(SmCameraType projType, bool recomputeProjMatrix = false);
+
         void calculateProjectionMatrix();
         void FORCE_calculateProjectionMatrix();
 

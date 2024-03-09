@@ -107,13 +107,16 @@ namespace sumire {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer);
     }
     
-    void SumiImgui::drawStatWindow(FrameInfo &frameInfo) {
-        ImGui::ShowDemoWindow();
+    void SumiImgui::drawStatWindow(FrameInfo &frameInfo, SumiKBMcontroller &cameraController) {
+        // ImGui::ShowDemoWindow();
+        
         ImGui::Begin("Sumire Scene Viewer");
         ImGui::Text("Sumire Build v0.0.1");
 
+        ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
+
         ImGui::Spacing();
-        drawConfigUI();
+        drawConfigUI(cameraController);
 
         ImGui::Spacing();
         drawSceneUI(frameInfo);
@@ -122,9 +125,49 @@ namespace sumire {
         ImGui::End();
     }
 
-    void SumiImgui::drawConfigUI() {
+    void SumiImgui::drawConfigUI(SumiKBMcontroller &cameraController) {
         if (ImGui::CollapsingHeader("Config")) {
 
+            ImGui::SeparatorText("Input");
+            if (ImGui::TreeNode("Mouse")) {
+                ImGui::Text("Todo");
+                ImGui::Text("Mouse pos: ()");
+                ImGui::Text("Mouse delta: ()");
+                ImGui::Spacing();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Keyboard")) {
+                ImGui::Text("Todo");
+                ImGui::Spacing();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Camera Controls")) {
+                const char* controlTypes[] = {"Walk", "FPS"};
+                static int controlTypesIdx = cameraController.getControllerType();
+                ImGui::Combo("Type", &controlTypesIdx, controlTypes, IM_ARRAYSIZE(controlTypes));
+                SumiKBMcontroller::ControllerType controlType = static_cast<SumiKBMcontroller::ControllerType>(controlTypesIdx);
+                cameraController.setControllerType(controlType);
+
+                ImGui::Spacing();
+                switch(controlType) {
+                    case SumiKBMcontroller::ControllerType::FPS: {
+                        ImGui::Checkbox("Toggle show cursor", &cameraController.toggleShowCursor);
+                        ImGui::Spacing();
+                        ImGui::DragFloat("Mouse Sensitivity", &cameraController.mouseLookSensitivity, 0.1f, 1.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                    }
+                    break;
+                    case SumiKBMcontroller::ControllerType::WALK: {
+                        ImGui::DragFloat("Look Sensitivity", &cameraController.keyboardLookSensitivity, 0.1f, 1.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                    }
+                    break;
+                }
+                ImGui::Spacing();
+                ImGui::DragFloat("Move Speed", &cameraController.moveSensitivity, 0.1f, 0.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Sprint Speed", &cameraController.sprintSensitivity, 0.1f, 0.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::Spacing();
+                ImGui::TreePop();
+            }
+            ImGui::Spacing();
             ImGui::SeparatorText("UI");
             if (ImGui::TreeNode("Grid")) {
                 ImGui::SeparatorText("Visibility");
@@ -154,7 +197,6 @@ namespace sumire {
         if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::TreeNode("Camera")) {
                 
-                ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
                 // Transform UI
                 drawTransformUI(frameInfo.camera.transform, false);
                 
@@ -206,7 +248,7 @@ namespace sumire {
 
                 // Projection Type
                 const char* projTypes[] = {"Perspective", "Orthographic"};
-                static int projTypeIdx = 0;
+                static int projTypeIdx = frameInfo.camera.getCameraType();
                 ImGui::Combo("Type", &projTypeIdx, projTypes, IM_ARRAYSIZE(projTypes));
                 frameInfo.camera.setCameraType(static_cast<SmCameraType>(projTypeIdx));
 

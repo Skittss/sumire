@@ -31,7 +31,7 @@ namespace sumire {
 	struct GlobalUBO {
 		alignas(16) glm::vec3 ambientCol{0.02f};
 		alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
-		alignas(16) glm::vec3 lightPos{-1.0f};
+		alignas(16) glm::vec3 lightPos{ 1.0f};
 		alignas(16) glm::vec3 lightCol{ 1.0f};
 		float lightIntesnity = 1.0f;
 	};
@@ -49,7 +49,7 @@ namespace sumire {
 	};
 
 	struct PointLightUBO {
-		alignas(16) glm::vec3 lightPos{-1.0f};
+		alignas(16) glm::vec3 lightPos{ 1.0f};
 		alignas(16) glm::vec3 lightCol{ 1.0f};
 		float lightIntesnity = 1.0f;
 	};
@@ -123,10 +123,14 @@ namespace sumire {
 		GridRendersys gridRenderSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
+		// Camera Control
 		SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
 		camera.transform.setTranslation(glm::vec3{0.0f, -0.5f, -3.0f});
 		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
-		SumiKBMcontroller cameraController{};
+		SumiKBMcontroller cameraController{
+			sumiWindow,
+			SumiKBMcontroller::ControllerType::FPS
+		};
 
 		// GUI
 		SumiImgui gui{sumiRenderer};
@@ -136,6 +140,8 @@ namespace sumire {
 
 		// Draw loop
 		while (!sumiWindow.shouldClose()) {
+			sumiWindow.clearMouseDelta();
+			sumiWindow.clearKeypressEvents();
 			glfwPollEvents();
 			// TODO:
 			//  Prevent inputs from passthrough to application when ImGui wants to consume them...
@@ -154,7 +160,13 @@ namespace sumire {
 			// TODO: move components to member variables and call this from a function
 			auto guiIO = gui.getIO();
 			if (!(guiIO.WantCaptureKeyboard && guiIO.WantTextInput)) {
-				cameraController.moveWalk(sumiWindow.getGLFWwindow(), frameTime, camera.transform);
+				cameraController.move(
+					frameTime, 
+					sumiWindow.keypressEvents,
+					guiIO.WantCaptureMouse ? glm::vec2{0.0f} : sumiWindow.mouseDelta,
+					camera.getOrthonormalBasis(),
+					camera.transform
+				);
 			}
 
 			camera.setViewYXZ(camera.transform.getTranslation(), camera.transform.getRotation());
@@ -164,8 +176,6 @@ namespace sumire {
 				camera.setAspect(aspect, true);
 				sumiRenderer.resetScRecreatedFlag();
 			}
-			//camera.setOrthographicProjection(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
-			//camera.setPerspectiveProjection(glm::radians(50.0f), aspect);
 
 			// Set up FrameInfo for GUI, and add remaining props later;
 			FrameInfo frameInfo{
@@ -180,7 +190,7 @@ namespace sumire {
 
 			// Render GUI
 			gui.beginFrame();
-			gui.drawStatWindow(frameInfo);
+			gui.drawStatWindow(frameInfo, cameraController);
 			gui.endFrame();
 
 			if (auto commandBuffer = sumiRenderer.beginFrame()) {
