@@ -130,9 +130,10 @@ namespace sumire {
 
             ImGui::SeparatorText("Input");
             if (ImGui::TreeNode("Mouse")) {
-                ImGui::Text("Todo");
-                ImGui::Text("Mouse pos: ()");
-                ImGui::Text("Mouse delta: ()");
+                glm::vec2 mousePos = sumiRenderer.getWindow().mousePos;
+                ImGui::Text("Mouse pos: %.2f, %.2f", mousePos.x, mousePos.y);
+                glm::vec2 mouseDelta = sumiRenderer.getWindow().mouseDelta;
+                ImGui::Text("Mouse delta: %.2f, %.2f", mouseDelta.x, mouseDelta.y);
                 ImGui::Spacing();
                 ImGui::TreePop();
             }
@@ -153,11 +154,11 @@ namespace sumire {
                     case SumiKBMcontroller::ControllerType::FPS: {
                         ImGui::Checkbox("Toggle show cursor", &cameraController.toggleShowCursor);
                         ImGui::Spacing();
-                        ImGui::DragFloat("Mouse Sensitivity", &cameraController.mouseLookSensitivity, 0.1f, 1.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                        ImGui::DragFloat("Mouse Sensitivity", &cameraController.mouseLookSensitivity, 0.01f, 0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                     }
                     break;
                     case SumiKBMcontroller::ControllerType::WALK: {
-                        ImGui::DragFloat("Look Sensitivity", &cameraController.keyboardLookSensitivity, 0.1f, 1.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                        ImGui::DragFloat("Look Sensitivity", &cameraController.keyboardLookSensitivity, 0.01f, 0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                     }
                     break;
                 }
