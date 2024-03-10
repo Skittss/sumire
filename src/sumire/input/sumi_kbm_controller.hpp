@@ -32,7 +32,7 @@ namespace sumire {
         void move(
             float dt, 
             const SumiWindow::KeypressEvents &keypressEvents,
-            const glm::vec2 &mouseDelta,
+            const glm::tvec2<double> &mouseDelta,
             const glm::mat4 &view,
             Transform3DComponent& transform
         );
@@ -45,7 +45,7 @@ namespace sumire {
         float cursorHidden{true};
         bool toggleShowCursor{true}; // hold to show cursor by default.
 
-        float dtNoUpdateThreshold{1.0f}; // seconds
+        float dtNoUpdateThreshold{0.2f}; // TODO: Match this with the Max frame time in sumire.cpp
 
         ControllerType getControllerType() const { return type; }
         void setControllerType(ControllerType type) { this->type = type; }
@@ -59,7 +59,7 @@ namespace sumire {
         void moveFPS(
             float dt, 
             const SumiWindow::KeypressEvents &keypressEvents,
-            const glm::vec2 &mouseDelta,
+            const glm::tvec2<double> &mouseDelta,
             const glm::mat4 &view,
             Transform3DComponent& transform
         );

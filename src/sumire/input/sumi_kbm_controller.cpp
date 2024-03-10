@@ -26,7 +26,7 @@ namespace sumire {
     void SumiKBMcontroller::move(
         float dt,
         const SumiWindow::KeypressEvents &keypressEvents,
-        const glm::vec2 &mouseDelta,
+        const glm::tvec2<double> &mouseDelta,
         const glm::mat4 &view,
         Transform3DComponent& transform
     ) {
@@ -91,7 +91,7 @@ namespace sumire {
     void SumiKBMcontroller::moveFPS(
         float dt, 
         const SumiWindow::KeypressEvents &keypressEvents,
-        const glm::vec2 &mouseDelta,
+        const glm::tvec2<double> &mouseDelta,
         const glm::mat4 &view,
         Transform3DComponent &transform
     ) {
@@ -115,13 +115,11 @@ namespace sumire {
             glfwSetInputMode(window, GLFW_CURSOR, cursorHidden ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
         }
 
-        // TODO: This rotation needs to be done in quaternions as there is some gimbal locking present currently.
-        //       This may need to be changed in the camera class itself.
         glm::vec3 rotate = cursorHidden ? glm::vec3{-mouseDelta.y, -mouseDelta.x, 0.0f} : glm::vec3{0.0f};
 
         glm::vec3 newRotation = transform.getRotation();
         if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) {
-            newRotation += mouseLookSensitivity * dt * glm::normalize(rotate);
+            newRotation += mouseLookSensitivity * dt * rotate;
         }
 
         newRotation.x = glm::clamp(newRotation.x, -1.5f, 1.5f);
@@ -146,7 +144,6 @@ namespace sumire {
         if (glm::dot(moveDir, moveDir) > std::numeric_limits<float>::epsilon()) {
             transform.setTranslation(transform.getTranslation() + moveSpeed * dt * glm::normalize(moveDir));
         }
-
     }
 
 }
