@@ -15,3 +15,4 @@ A lightweight graphics development engine built in vulkan.
 - [ ] glTF Morph-target support (and their animation)
 - [ ] glTF texture mip-mapping support
 - [ ] Shader Hot-reloading
+- [ ] Proper logging system via lib such as spdlog

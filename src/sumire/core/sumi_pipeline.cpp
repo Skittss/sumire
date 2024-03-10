@@ -1,6 +1,6 @@
 #include <sumire/core/sumi_pipeline.hpp>
 
-#include <sumire/core//models/sumi_model.hpp>
+#include <sumire/core//models/vertex.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -220,8 +220,8 @@ namespace sumire {
 		configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
 		configInfo.dynamicStateInfo.flags = 0;
 
-		configInfo.bindingDescriptions = SumiModel::Vertex::getBindingDescriptions();
-		configInfo.attributeDescriptions = SumiModel::Vertex::getAttributeDescriptions();
+		configInfo.bindingDescriptions = Vertex::getBindingDescriptions();
+		configInfo.attributeDescriptions = Vertex::getAttributeDescriptions();
 	}
 
 	void SumiPipeline::enableAlphaBlending(PipelineConfigInfo &configInfo) {

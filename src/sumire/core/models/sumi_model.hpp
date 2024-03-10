@@ -6,6 +6,9 @@
 #include <sumire/core/sumi_texture.hpp>
 #include <sumire/core/sumi_descriptors.hpp>
 
+// Model components
+#include <sumire/core/models/vertex.hpp>
+
 #include <sumire/util/gltf_interpolators.hpp>
 
 #define GLM_FORCE_RADIANS
@@ -147,31 +150,6 @@ namespace sumire {
 			float end = std::numeric_limits<float>::min();
 		};
 
-		struct Vertex {
-			glm::vec4 joint{};
-			glm::vec4 weight{};
-			glm::vec3 position{};
-			glm::vec3 color{};
-			glm::vec3 normal{};
-			glm::vec3 tangent{};
-			glm::vec2 uv{};
-
-			static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
-			static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
-		
-			bool operator==(const Vertex &other) const {
-				return (
-					joint == other.joint &&
-					weight == other.weight &&
-					position == other.position && 
-					color == other.color &&
-					normal == other.normal &&
-					tangent == other.tangent &&
-					uv == other.uv
-				);
-			}
-		};
-
 		// TODO: Would like to unique_ptr-ize these fields to remove overhead and make the life-cycle
 		//		 more well defined, but i cannot for the life of me get this struct passed into the
 		//		 constructor if I do that (it refuses to *not* be copied).
@@ -217,6 +195,7 @@ namespace sumire {
 		static std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout(SumiDevice &device);
 
 		uint32_t getAnimationCount() { return static_cast<uint32_t>(modelData.animations.size()); }
+		bool hasIndices() { return useIndexBuffer; }
 
 		void bind(VkCommandBuffer commandbuffer);
 		void draw(VkCommandBuffer commandbuffer, VkPipelineLayout pipelineLayout);

@@ -75,10 +75,16 @@ if (NOT IMGUI_PATH)
 	set(IMGUI_PATH external/imgui)
 endif()
 
+if (NOT MIKKTSPACE_PATH)
+	message(STATUS "MIKKTSPACE_PATH not specified in .env.cmake, using external/mikktspace")
+	set(MIKKTSPACE_PATH external/mikktspace)
+endif()
+
+file(GLOB_RECURSE MIKKTSPACE_SOURCES ${MIKKTSPACE_PATH}/*.c)
 file(GLOB_RECURSE IMGUI_SOURCES ${IMGUI_PATH}/*.cpp)
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp) # find cpp files (nested) -> store in ${SOURCES}
  
-add_executable(${PROJECT_NAME} ${SOURCES} ${IMGUI_SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES})
  
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # c++ 17 standard
  
@@ -103,6 +109,7 @@ if (WIN32)
 			${TINYOBJ_PATH}
 			${TINYGLTF_PATH}
 			${IMGUI_PATH}
+			${MIKKTSPACE_PATH}
 			${GLFW_INCLUDE_DIRS}
 			${GLM_PATH}
 		PRIVATE 
@@ -123,6 +130,8 @@ elseif (UNIX)
 	PUBLIC
 		${TINYOBJ_PATH}
 		${TINYGLTF_PATH}
+		${IMGUI_PATH}
+		${MIKKTSPACE_PATH}
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src
 	)

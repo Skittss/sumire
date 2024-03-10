@@ -5,14 +5,13 @@ build/*
 shaders/*.spv
 
 assets/models/*
-!assets/models/placeholder.txt
 !assets/models/primitives
 
 assets/textures/*
-!assets/textures/placeholder.txt
 !assets/textures/empty.*
 
 external/*
 !external/tinygltf
 !external/tinyobjloader
 !external/imgui
+!external/mikktspace

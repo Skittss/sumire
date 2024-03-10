@@ -68,6 +68,7 @@ void main() {
 		tangentSpaceNormal = normalize(tangentSpaceNormal);
 
 		// Approximation of tangents
+		// TODO: This approximation breaks down at reasonable distances causing floating point precision errors.
 		vec2 uv_dx = dFdx(inUv);
 		vec2 uv_dy = dFdx(inUv);
 		vec3 pos_dx = dFdx(inPos);
@@ -101,7 +102,7 @@ void main() {
 	// outCol = vec4(albedo.rgb, 1.0);
 
 	// Debug Normal Ouput
-	// outCol = vec4(0.5 + 0.5 * normal, 1.0);
+	// outCol = vec4(0.5 + 0.5 * inNorm, 1.0);
 	outCol = vec4(0.5 + 0.5 * inTangent, 1.0);
 
 	// outCol = vec4((ubo.ambientCol + diffuse))

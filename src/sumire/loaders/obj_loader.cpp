@@ -4,6 +4,7 @@
 #include <sumire/loaders/obj_loader.hpp>
 
 #include <sumire/math/math_utils.hpp>
+#include <sumire/util/generate_mikktspace_tangents.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -13,10 +14,10 @@
 #include <unordered_map>
 
 namespace std {
-    // Allow hashing of SumiModel::Vertex
+    // Allow hashing of Vertex
 	template <>
-	struct hash<sumire::SumiModel::Vertex> {
-		size_t operator()(sumire::SumiModel::Vertex const &vertex) const {
+	struct hash<sumire::Vertex> {
+		size_t operator()(sumire::Vertex const &vertex) const {
 			size_t seed = 0;
 			sumire::hashCombine(seed, vertex.position, vertex.color, vertex.normal, vertex.uv);
 			return seed;
@@ -26,15 +27,20 @@ namespace std {
 
 namespace sumire::loaders {
 
-    std::unique_ptr<SumiModel> OBJloader::createModelFromFile(SumiDevice &device, const std::string &filepath) {
+    std::unique_ptr<SumiModel> OBJloader::createModelFromFile(
+		SumiDevice &device, 
+		const std::string &filepath,
+		bool genTangents
+	) {
         std::filesystem::path fp = filepath;
         SumiModel::Data data{};
-        loadModel(device, filepath, data);
+        loadModel(device, filepath, data, genTangents);
 
         auto modelPtr = std::make_unique<SumiModel>(device, data);
         modelPtr->displayName = fp.filename().u8string();
 
         std::cout << "Loaded Model <" << filepath << "> (verts: " << data.vertices.size() 
+					<< ", triangles: " << (modelPtr->hasIndices() ? data.indices.size() / 3.0f : data.vertices.size())
                     << ", nodes: " << data.flatNodes.size() << " [top level: " << data.nodes.size() << "]"
                     << ", mat: " << data.materials.size()
                     << ", tex: " << data.textures.size()
@@ -42,18 +48,18 @@ namespace sumire::loaders {
         return modelPtr;
     }
 
-    void OBJloader::loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data) {
+    void OBJloader::loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool genTangents) {
 		std::filesystem::path fp = filepath;
 		std::filesystem::path ext = fp.extension();
 
 		if (ext == ".obj") 
-			loadOBJ(device, filepath, data);
+			loadOBJ(device, filepath, data, genTangents);
 		else
 			throw std::runtime_error("Attempted to load unsupported OBJ type: <" + ext.u8string() + ">");
 
 	}
 
-    void OBJloader::loadOBJ(SumiDevice &device, const std::string &filepath, SumiModel::Data &data) {
+    void OBJloader::loadOBJ(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool genTangents) {
 		// .Obj loading
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
@@ -73,11 +79,11 @@ namespace sumire::loaders {
 		mainNode->name = "mesh";
 		mainNode->mesh = std::make_shared<SumiModel::Mesh>(device, glm::mat4{1.0});
 
-		std::unordered_map<SumiModel::Vertex, uint32_t> uniqueVertices{}; // map for calculating index buffer from obj
+		std::unordered_map<Vertex, uint32_t> uniqueVertices{}; // map for calculating index buffer from obj
 
 		for (const auto &shape : shapes) {
 			for (const auto &index : shape.mesh.indices) {
-				SumiModel::Vertex vertex{};
+				Vertex vertex{};
 
 				if (index.vertex_index >= 0) {
 					vertex.position = {
@@ -120,13 +126,35 @@ namespace sumire::loaders {
 			}
 		}
 
+		uint32_t vertexCount = data.vertices.size();
+		uint32_t indexCount = data.indices.size();
+
+		// Tangent generation
+		if (genTangents) {
+			util::MikktspaceData mikktspaceData{
+				data.vertices,
+				data.indices,
+				std::vector<glm::vec4>(vertexCount),
+				0,
+				vertexCount,
+				0,
+				indexCount
+			};
+
+			util::generateMikktspaceTangents(&mikktspaceData);
+
+			for (uint32_t vIdx = 0; vIdx < vertexCount; vIdx++) {
+				data.vertices[vIdx].tangent = mikktspaceData.outTangents[vIdx];
+			}
+		}
+
 		// Push default material
 		data.materials.push_back(OBJloader::createDefaultMaterial(device));
 
 		std::shared_ptr<SumiModel::Primitive> mainPrimitive = std::make_shared<SumiModel::Primitive>(
 			0, 
-			data.indices.size(), 
-			data.vertices.size(), 
+			indexCount, 
+			vertexCount, 
 			data.materials.back().get(), 
 			0 // Use default material only
 		);

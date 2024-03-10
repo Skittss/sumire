@@ -8,15 +8,26 @@ namespace sumire::loaders {
 
     class GLTFloader {
         public:
-            static std::unique_ptr<SumiModel> createModelFromFile(SumiDevice &device, const std::string &filepath);
+            static std::unique_ptr<SumiModel> createModelFromFile(
+                SumiDevice &device, 
+                const std::string &filepath,
+                bool genTangents = true
+            );
 
         private:
 
-		    static void loadModel(SumiDevice &device, const std::string &filepath, SumiModel::Data &data);
+		    static void loadModel(
+                SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool genTangents);
 
             // TODO: For full GLTF support (including extensions), the loader should really load an entire scene
             // 		 Not just directly to a model.
-            static void loadGLTF(SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool isBinaryFile);
+            static void loadGLTF(
+                SumiDevice &device, 
+                const std::string &filepath, 
+                SumiModel::Data &data,
+                bool isBinaryFile,
+                bool genTangents
+            );
             static void loadGLTFsamplers(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
             static void loadGLTFtextures(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
             static void loadGLTFmaterials(SumiDevice &device, tinygltf::Model &model, SumiModel::Data &data);
@@ -31,7 +42,8 @@ namespace sumire::loaders {
                 SumiDevice &device, 
                 SumiModel::Node *parent, const tinygltf::Node &node, uint32_t nodeIdx, 
                 const tinygltf::Model &model, 
-                SumiModel::Data &data
+                SumiModel::Data &data,
+                bool genTangents
             );
             static std::shared_ptr<SumiModel::Node> getGLTFnode(uint32_t idx, SumiModel::Data &data);
             static uint32_t getLowestUnreservedGLTFNodeIdx(SumiModel::Data &data);
