@@ -28,6 +28,12 @@ namespace sumire {
 
 		void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
 		
+		void showCursor();
+		void disableCursor();
+		bool isCursorHidden() const { return cursorHidden; }
+
+		glm::vec2 getDimensions() const { return glm::vec2{width, height}; }
+
 		// Mouse Information
 
 		// Whether to poll mouse information with event callbacks or with manual calls to 
@@ -65,6 +71,8 @@ namespace sumire {
 		int width;
 		int height;
 		bool fbResizeFlag = false;
+
+		bool cursorHidden = false;
 
 		std::string windowName;
 

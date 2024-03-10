@@ -21,8 +21,13 @@ namespace sumire {
 
 		window = glfwCreateWindow(width, height, windowName.c_str(), nullptr, nullptr);
 		glfwSetWindowUserPointer(window, this);
+
 		glfwSetFramebufferSizeCallback(window, fbResizeCallback);
+
 		setMousePollMode(MousePollMode::MANUAL);
+		if (glfwRawMouseMotionSupported)
+			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+
 		glfwSetKeyCallback(window, keyCallback);
 	}
 
@@ -30,6 +35,16 @@ namespace sumire {
 		if (glfwCreateWindowSurface(instance, window, nullptr, surface) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create window surface");
 		}
+	}
+
+	void SumiWindow::showCursor() {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		cursorHidden = false;
+	}
+
+	void SumiWindow::disableCursor() {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		cursorHidden = true;
 	}
 
 	void SumiWindow::fbResizeCallback(GLFWwindow* window, int width, int height) {
