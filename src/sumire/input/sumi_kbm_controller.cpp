@@ -6,18 +6,19 @@
 namespace sumire {
 
     SumiKBMcontroller::SumiKBMcontroller(SumiWindow &sumiWindow, ControllerType type) 
-        : sumiWindow{ sumiWindow}, type{ type } 
+        : sumiWindow{ sumiWindow }, type{ type } 
     {
         switch(type) {
             // Init cursor behaviour for camera types
             case ControllerType::FPS: {
-                glfwSetInputMode(sumiWindow.getGLFWwindow(), GLFW_CURSOR, cursorHidden ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+                if (cursorHidden) sumiWindow.disableCursor();
+                else sumiWindow.showCursor();
             }
             break;
             // Default is normal camera behaviour.
             case ControllerType::WALK:
             default: {
-                glfwSetInputMode(sumiWindow.getGLFWwindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                sumiWindow.showCursor();
             }
             break;
         }
@@ -61,7 +62,7 @@ namespace sumire {
 
         glm::vec3 newRotation = transform.getRotation();
         if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) {
-            newRotation += keyboardLookSensitivity * dt * glm::normalize(rotate);
+            newRotation += keyboardLookSensitivity * KBM_SENSITIVITY_FACTOR * glm::normalize(rotate);
         }
 
         newRotation.x = glm::clamp(newRotation.x, -1.5f, 1.5f);
@@ -111,15 +112,17 @@ namespace sumire {
                 default:
                 break;
             }
-            // TODO: This functionality should really be moved to the sumiWindow container
-            glfwSetInputMode(window, GLFW_CURSOR, cursorHidden ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+
+            // Show / Hide cursor accordingly
+            if (cursorHidden) sumiWindow.disableCursor();
+            else sumiWindow.showCursor();
         }
 
         glm::vec3 rotate = cursorHidden ? glm::vec3{-mouseDelta.y, -mouseDelta.x, 0.0f} : glm::vec3{0.0f};
 
         glm::vec3 newRotation = transform.getRotation();
         if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) {
-            newRotation += mouseLookSensitivity * dt * rotate;
+            newRotation += mouseLookSensitivity * KBM_SENSITIVITY_FACTOR * rotate;
         }
 
         newRotation.x = glm::clamp(newRotation.x, -1.5f, 1.5f);

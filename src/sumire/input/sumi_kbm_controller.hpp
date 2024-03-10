@@ -3,6 +3,9 @@
 #include <sumire/core/sumi_object.hpp>
 #include <sumire/core/sumi_window.hpp>
 
+// To make input values to a more sensible 0->1 sensitivity range;
+#define KBM_SENSITIVITY_FACTOR 0.05f
+
 namespace sumire {
 
     class SumiKBMcontroller {
@@ -40,8 +43,8 @@ namespace sumire {
         float moveSensitivity{5.0f};
         float sprintSensitivity{2.5f * moveSensitivity};
         
-        float keyboardLookSensitivity{2.0f};
-        float mouseLookSensitivity{7.0f};
+        float keyboardLookSensitivity{0.65f};
+        float mouseLookSensitivity{0.05f};
         float cursorHidden{true};
         bool toggleShowCursor{true}; // hold to show cursor by default.
 
