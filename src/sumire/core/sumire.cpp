@@ -123,10 +123,12 @@ namespace sumire {
 		GridRendersys gridRenderSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
+
+		sumiWindow.setMousePollMode(SumiWindow::MousePollMode::EVENT_BASED);
+
 		// Camera Control
 		SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
 		camera.transform.setTranslation(glm::vec3{0.0f, -0.5f, -3.0f});
-		//camera.setViewTarget(glm::vec3(2.0f), glm::vec3(0.0f));
 		SumiKBMcontroller cameraController{
 			sumiWindow,
 			SumiKBMcontroller::ControllerType::FPS
@@ -140,7 +142,8 @@ namespace sumire {
 
 		// Draw loop
 		while (!sumiWindow.shouldClose()) {
-			sumiWindow.clearMouseDelta();
+			// sumiWindow.pollMousePos(); // if manual polling mouse pos
+			sumiWindow.clearMouseDelta(); // if using event-based polling
 			sumiWindow.clearKeypressEvents();
 			glfwPollEvents();
 			// TODO:
@@ -163,7 +166,7 @@ namespace sumire {
 				cameraController.move(
 					frameTime, 
 					sumiWindow.keypressEvents,
-					guiIO.WantCaptureMouse ? glm::vec2{0.0f} : sumiWindow.mouseDelta,
+					guiIO.WantCaptureMouse ? glm::tvec2<double>{0.0f} : sumiWindow.mouseDelta,
 					camera.getOrthonormalBasis(),
 					camera.transform
 				);

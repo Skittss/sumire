@@ -22,7 +22,7 @@ namespace sumire {
 		window = glfwCreateWindow(width, height, windowName.c_str(), nullptr, nullptr);
 		glfwSetWindowUserPointer(window, this);
 		glfwSetFramebufferSizeCallback(window, fbResizeCallback);
-		glfwSetCursorPosCallback(window, mousePosCallback);
+		setMousePollMode(MousePollMode::MANUAL);
 		glfwSetKeyCallback(window, keyCallback);
 	}
 
@@ -39,10 +39,30 @@ namespace sumire {
 		sumiWindow->height = height;
 	}
 
+	void SumiWindow::setMousePollMode(MousePollMode pollMode) {
+		mousePollMode = pollMode;
+		switch(pollMode) {
+			case MousePollMode::EVENT_BASED: {
+				glfwSetCursorPosCallback(window, mousePosCallback);
+			}
+			break;
+			case MousePollMode::MANUAL:
+			default: {
+				glfwSetCursorPosCallback(window, nullptr);
+			}
+		}
+	}
+
+	void SumiWindow::pollMousePos() {
+		prevMousePos = mousePos;
+		getMousePos(mousePos);
+		mouseDelta = mousePos - prevMousePos;
+	}
+
 	void SumiWindow::mousePosCallback(GLFWwindow* window, double xpos, double ypos) {
 		auto sumiWindow = reinterpret_cast<SumiWindow*>(glfwGetWindowUserPointer(window));
 		sumiWindow->prevMousePos = sumiWindow->mousePos;
-		sumiWindow->mousePos = glm::vec2{xpos, ypos};
+		sumiWindow->mousePos = glm::tvec2<double>{xpos, ypos};
 		sumiWindow->mouseDelta = sumiWindow->mousePos - sumiWindow->prevMousePos;
 	}
 
