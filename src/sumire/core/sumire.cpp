@@ -124,7 +124,7 @@ namespace sumire {
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
 
-		sumiWindow.setMousePollMode(SumiWindow::MousePollMode::EVENT_BASED);
+		sumiWindow.setMousePollMode(SumiWindow::MousePollMode::MANUAL);
 
 		// Camera Control
 		SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
@@ -142,8 +142,8 @@ namespace sumire {
 
 		// Draw loop
 		while (!sumiWindow.shouldClose()) {
-			// sumiWindow.pollMousePos(); // if manual polling mouse pos
-			sumiWindow.clearMouseDelta(); // if using event-based polling
+			sumiWindow.pollMousePos(); // if manual polling mouse pos
+			// sumiWindow.clearMouseDelta(); // if using event-based polling
 			sumiWindow.clearKeypressEvents();
 			glfwPollEvents();
 			// TODO:
@@ -163,10 +163,15 @@ namespace sumire {
 			// TODO: move components to member variables and call this from a function
 			auto guiIO = gui.getIO();
 			if (!(guiIO.WantCaptureKeyboard && guiIO.WantTextInput)) {
+
+				glm::vec2 mouseDelta = (!sumiWindow.isCursorHidden() && guiIO.WantCaptureMouse)
+					? glm::tvec2<double>{0.0f}
+					: sumiWindow.mouseDelta;
+
 				cameraController.move(
 					frameTime, 
 					sumiWindow.keypressEvents,
-					guiIO.WantCaptureMouse ? glm::tvec2<double>{0.0f} : sumiWindow.mouseDelta,
+					mouseDelta,
 					camera.getOrthonormalBasis(),
 					camera.transform
 				);
