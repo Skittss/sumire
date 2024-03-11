@@ -162,6 +162,10 @@ namespace sumire {
 			// Handle input.
 			// TODO: move components to member variables and call this from a function
 			auto guiIO = gui.getIO();
+
+			if (sumiWindow.isCursorHidden()) gui.ignoreMouse();
+			else gui.enableMouse();
+
 			if (!(guiIO.WantCaptureKeyboard && guiIO.WantTextInput)) {
 
 				glm::vec2 mouseDelta = (!sumiWindow.isCursorHidden() && guiIO.WantCaptureMouse)

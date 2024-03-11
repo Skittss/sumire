@@ -35,6 +35,8 @@ namespace sumire {
             void drawStatWindow(FrameInfo &frameInfo, SumiKBMcontroller &cameraController);
 
             ImGuiIO& getIO();
+            void ignoreMouse() { getIO().ConfigFlags |= ImGuiConfigFlags_NoMouse; }
+            void enableMouse() { getIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse; }
 
             // Grid Params
             GridRendersys::GridUBOdata getGridUboData();
