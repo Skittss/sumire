@@ -163,8 +163,8 @@ namespace sumire {
 		configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE; // Enable = only use first few stages of pipeline. (i.e. no raster)
 		configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
 		configInfo.rasterizationInfo.lineWidth = 1.0f;
-		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_NONE; // Triangle culling. (NONE) to not accidentally cull right now.
-		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE; // Determine which to cull via winding order
+		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT; // Back-face triangle culling
+		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // Determine which to cull via winding order
 		configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;
 		configInfo.rasterizationInfo.depthBiasConstantFactor = 0.0f;  // Optional
 		configInfo.rasterizationInfo.depthBiasClamp = 0.0f;           // Optional
