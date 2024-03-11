@@ -612,7 +612,7 @@ namespace sumire::loaders {
 					Vertex v{};
 					v.position = glm::make_vec3(&bufferPos[vIdx * stridePos]);
 					v.normal = glm::normalize(bufferNorm ? glm::make_vec3(&bufferNorm[vIdx * strideNorm]) : glm::vec3{0.0f});
-					v.tangent = glm::normalize(bufferTangent ? glm::make_vec3(&bufferTangent[vIdx * strideTangent]) : glm::vec3{0.0f});
+					v.tangent = glm::normalize(bufferTangent ? glm::make_vec4(&bufferTangent[vIdx * strideTangent]) : glm::vec4{0.0f});
 					v.uv = bufferTexCoord0 ? glm::make_vec2(&bufferTexCoord0[vIdx * strideTexCoord0]) : glm::vec3{0.0f};
 					v.color = bufferColor0 ? glm::make_vec3(&bufferColor0[vIdx * strideColor0]) : glm::vec3{1.0f};
 
