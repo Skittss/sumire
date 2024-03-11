@@ -47,7 +47,7 @@ namespace sumire {
 		};
 
 		struct Mesh {
-			std::vector<std::shared_ptr<Primitive>> primitives;
+			std::vector<std::unique_ptr<Primitive>> primitives;
 
 			struct UniformData {
 				glm::mat4 matrix;
@@ -86,7 +86,7 @@ namespace sumire {
 			Node *parent;
 			std::vector<Node*> children;
 			std::string name;
-			std::shared_ptr<Mesh> mesh; // Optional
+			std::unique_ptr<Mesh> mesh; // Optional
 
 			// Node transform properties
 			glm::mat4 matrix{ 1.0f };
@@ -148,43 +148,48 @@ namespace sumire {
 			std::vector<AnimationChannel> channels;
 			float start = std::numeric_limits<float>::max();
 			float end = std::numeric_limits<float>::min();
+
+			~Animation() {
+				channels.clear();
+			}
 		};
 
-		// TODO: Would like to unique_ptr-ize these fields to remove overhead and make the life-cycle
-		//		 more well defined, but i cannot for the life of me get this struct passed into the
-		//		 constructor if I do that (it refuses to *not* be copied).
+		// Data loader struct for SumiModel constructor.
 		struct Data {
 			// Scene tree
-			std::vector<std::shared_ptr<Node>> nodes{};
-			std::vector<std::shared_ptr<Node>> flatNodes{};
+			std::vector<Node*> nodes{};
+			std::vector<std::unique_ptr<Node>> flatNodes{};
 
-			// Mesh data
+			// Temporary holders for Mesh data (Uploaded to GPU on model init).
 			std::vector<Vertex> vertices{};
 			std::vector<uint32_t> indices{};
 			uint32_t meshCount;
 			
 			// Mesh Skinning Data
-			std::vector<std::shared_ptr<Skin>> skins;
+			std::vector<std::unique_ptr<Skin>> skins;
 
 			// Animations
-			std::vector<std::shared_ptr<Animation>> animations;
+			std::vector<std::unique_ptr<Animation>> animations;
 
-			// Textures
+			// Temporary holders for textures (not stored as member variables).
+			//  for if access is required in initialization
 			std::vector<VkSamplerCreateInfo> samplers;
 			std::vector<std::shared_ptr<SumiTexture>> textures;
 
 			// Materials
-			std::vector<std::shared_ptr<SumiMaterial>> materials;
+			std::vector<std::unique_ptr<SumiMaterial>> materials;
 			
 			~Data() {
 				flatNodes.clear();
 				nodes.clear();
+				skins.clear();
+				animations.clear();
 				textures.clear();
 				materials.clear();
 			}
 		};
 
-		SumiModel(SumiDevice &device, SumiModel::Data data);
+		SumiModel(SumiDevice &device, SumiModel::Data &data);
 		~SumiModel();
 
 		SumiModel(const SumiModel&) = delete;
@@ -194,7 +199,7 @@ namespace sumire {
 		static std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout(SumiDevice &device);
 		static std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout(SumiDevice &device);
 
-		uint32_t getAnimationCount() { return static_cast<uint32_t>(modelData.animations.size()); }
+		uint32_t getAnimationCount() { return static_cast<uint32_t>(animations.size()); }
 		bool hasIndices() { return useIndexBuffer; }
 
 		void bind(VkCommandBuffer commandbuffer);
@@ -218,7 +223,18 @@ namespace sumire {
 
 		SumiDevice &sumiDevice;
 
-		SumiModel::Data modelData;
+		//SumiModel::Data modelData;
+
+		// Model data
+		std::vector<Node*> nodes{};
+		std::vector<std::unique_ptr<Node>> flatNodes{};
+
+		uint32_t meshCount;
+
+		std::vector<std::unique_ptr<Skin>> skins;
+		std::vector<std::unique_ptr<Animation>> animations;
+
+		std::vector<std::unique_ptr<SumiMaterial>> materials;
 
 		// Vertex Buffer params
 		std::unique_ptr<SumiBuffer> vertexBuffer;

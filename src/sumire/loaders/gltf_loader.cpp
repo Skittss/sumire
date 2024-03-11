@@ -266,17 +266,17 @@ namespace sumire::loaders {
 		
 		static int cnt = 0;
 		for (tinygltf::Skin &skin : model.skins) {
-			std::shared_ptr<SumiModel::Skin> createSkin = std::make_shared<SumiModel::Skin>();
+			std::unique_ptr<SumiModel::Skin> createSkin = std::make_unique<SumiModel::Skin>();
 			createSkin->name = skin.name;
 
 			// Skeleton Root Node
 			if (skin.skeleton > -1) {
-				createSkin->skeletonRoot = getGLTFnode(skin.skeleton, data).get();
+				createSkin->skeletonRoot = getGLTFnode(skin.skeleton, data);
 			}
 
 			// Joint Nodes
 			for (int jointIdx : skin.joints) {
-				SumiModel::Node *jointNode = getGLTFnode(jointIdx, data).get();
+				SumiModel::Node *jointNode = getGLTFnode(jointIdx, data);
 				if (jointNode != nullptr) {
 					createSkin->joints.push_back(jointNode);
 				}
@@ -304,7 +304,7 @@ namespace sumire::loaders {
 		assert(data.flatNodes.size() > 0 && "Flattened model nodes array was uninitialized when loading animations.");
 
 		for (tinygltf::Animation &animation : model.animations) {
-			std::shared_ptr<SumiModel::Animation> createAnimation = std::make_shared<SumiModel::Animation>();
+			std::unique_ptr<SumiModel::Animation> createAnimation = std::make_unique<SumiModel::Animation>();
 			createAnimation->name = animation.name.empty() ?
 				 std::to_string(data.animations.size()) : animation.name;
 
@@ -402,7 +402,7 @@ namespace sumire::loaders {
 				}
 
 				createChannel.samplerIdx = channel.sampler;
-				createChannel.node = getGLTFnode(channel.target_node, data).get();
+				createChannel.node = getGLTFnode(channel.target_node, data);
 				assert(createChannel.node != nullptr && "Animation reffered to a non-existant model node");
 
 				createAnimation->channels.push_back(createChannel);
@@ -445,7 +445,7 @@ namespace sumire::loaders {
 		SumiModel::Data &data,
 		bool genTangents
 	) {
-		std::shared_ptr<SumiModel::Node> createNode = std::make_shared<SumiModel::Node>();
+		std::unique_ptr<SumiModel::Node> createNode = std::make_unique<SumiModel::Node>();
 		createNode->idx = nodeIdx;
 		createNode->parent = parent;
 		createNode->name = node.name;
@@ -477,7 +477,7 @@ namespace sumire::loaders {
 		// Load mesh if node has it
 		if (node.mesh > -1) {
 			const tinygltf::Mesh mesh = model.meshes[node.mesh];
-			std::shared_ptr createMesh = std::make_shared<SumiModel::Mesh>(device, createNode->matrix);
+			std::unique_ptr createMesh = std::make_unique<SumiModel::Mesh>(device, createNode->matrix);
 			
 			for (size_t i = 0; i < mesh.primitives.size(); i++) {
 
@@ -709,7 +709,7 @@ namespace sumire::loaders {
 				}
 				
 				// Assign primitive to mesh
-				std::shared_ptr<SumiModel::Primitive> createPrimitive = std::make_shared<SumiModel::Primitive>(
+				std::unique_ptr<SumiModel::Primitive> createPrimitive = std::make_unique<SumiModel::Primitive>(
 					indexStart, 
 					indexCount, 
 					vertexCount, 
@@ -722,23 +722,24 @@ namespace sumire::loaders {
 			createNode->mesh = std::move(createMesh);
 		}
 
-		// Update node tree
+		// Flattened node tree for ownership of nodes and skinning
+		data.flatNodes.push_back(std::move(createNode));
+
+		// Update node tree (careful not to reference createNode as it was moved to the flatNodes vector)
 		if (parent) 
-			parent->children.push_back(createNode.get());
+			parent->children.push_back(data.flatNodes.back().get());
 		else
-			data.nodes.push_back(createNode);
+			data.nodes.push_back(data.flatNodes.back().get());
 		
-		// Flattened node tree for skinning
-		data.flatNodes.push_back(createNode);
 	}
 
-	std::shared_ptr<SumiModel::Node> GLTFloader::getGLTFnode(uint32_t idx, SumiModel::Data &data) {
+	SumiModel::Node* GLTFloader::getGLTFnode(uint32_t idx, SumiModel::Data &data) {
 		// TODO: This linear (O(n)) search is pretty slow for objects with lots of nodes.
 		//		 Would recommend making another field for data: nodeMap which has <idx, Node*> pairs
 		//		 to reduce this to O(1).
 		for (auto& node : data.flatNodes) {
 			if (node->idx == idx) {
-				return node;
+				return node.get();
 			}
 		}
 		return nullptr;

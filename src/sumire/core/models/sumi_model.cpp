@@ -13,10 +13,22 @@
 
 namespace sumire {
 
-	// TODO: Can the data copy here be optimised to not copy the large materials and texture arrays?
-	SumiModel::SumiModel(SumiDevice &device, SumiModel::Data data) 
-		: sumiDevice{ device }, modelData{ data }
+	// Creates a model. 
+	// Note: loader data is *moved* after being passed to this constructor and should NOT be reaccessed.
+	SumiModel::SumiModel(SumiDevice &device, SumiModel::Data &data) 
+		: sumiDevice{ device }
 	{
+		// Move data from loader struct into member variables.
+		//  This is necessary as loader struct contains unique_ptrs, 
+		//  as well as being generally more memory-efficient (No temp vars required while moving large arrays)
+		nodes = std::move(data.nodes);
+		flatNodes = std::move(data.flatNodes);
+		meshCount = std::move(data.meshCount);
+		skins = std::move(data.skins);
+		animations = std::move(data.animations);
+		materials = std::move(data.materials);
+
+		// Init resources on the GPU
 		createVertexBuffers(data.vertices);
 		createIndexBuffer(data.indices);
 		createDefaultTextures();
@@ -119,11 +131,11 @@ namespace sumire {
 		// Per-Node descriptor pool
 		meshNodeDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
 			.setMaxSets(
-				modelData.meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+				meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			// Local matrices
 			.addPoolSize(
 				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-				modelData.meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+				meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.build();
 
 		// Nodes descriptor set layout
@@ -131,7 +143,7 @@ namespace sumire {
 
 		// Per-Node Descriptor Sets for local matrices
 		//   Iterate flat nodes to skip doing recursion here on children.
-		for (auto &node : modelData.flatNodes) {
+		for (auto &node : flatNodes) {
 			if (node->mesh) {
 				auto bufferInfo = node->mesh->uniformBuffer->descriptorInfo();
 				SumiDescriptorWriter(*meshNodeDescriptorSetLayout, *meshNodeDescriptorPool)
@@ -146,11 +158,11 @@ namespace sumire {
 		// TODO: Offload this descriptor pool to a material manager class for the whole scene.
 		materialDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
 			.setMaxSets(
-				(1 + modelData.materials.size() * SumiMaterial::MAT_TEX_COUNT) * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+				(1 + materials.size() * SumiMaterial::MAT_TEX_COUNT) * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			// Texture samplers
 			.addPoolSize(
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
-				modelData.materials.size() * SumiMaterial::MAT_TEX_COUNT * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+				materials.size() * SumiMaterial::MAT_TEX_COUNT * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			// Single SSBO for materials
 			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1)
 			.build();
@@ -159,7 +171,7 @@ namespace sumire {
 		auto materialDescriptorLayout = SumiMaterial::getDescriptorSetLayout(sumiDevice);
 
 		// Per-Material Descriptor Sets for Texture Samplers
-		for (auto& mat : modelData.materials) {
+		for (auto& mat : materials) {
 			// Write to images
 			mat->writeDescriptorSet(*materialDescriptorPool, *materialDescriptorLayout, emptyTexture.get());
 		}
@@ -169,7 +181,7 @@ namespace sumire {
 
 		// Gather material info
 		std::vector<SumiMaterial::MaterialShaderData> matShaderData;
-		for (auto& mat : modelData.materials) {
+		for (auto& mat : materials) {
 			matShaderData.push_back(mat->getMaterialShaderData());
 		}
 
@@ -287,14 +299,14 @@ namespace sumire {
 
 	// Draw a model node tree. *Starts binding descriptors from set 1*
 	void SumiModel::draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
-		for (auto& node : modelData.nodes) {
-			drawNode(node.get(), commandBuffer, pipelineLayout);
+		for (auto& node : nodes) {
+			drawNode(node, commandBuffer, pipelineLayout);
 		}
 	}
 
 	// Update a range of animations for this model.
 	void SumiModel::updateAnimations(const std::vector<uint32_t> indices, float time, bool loop) {
-		if (modelData.animations.empty() || indices.empty()) return;
+		if (animations.empty() || indices.empty()) return;
 
 		for (const uint32_t &i : indices) {
 			updateAnimation(i, time, loop);
@@ -302,9 +314,9 @@ namespace sumire {
 	}
 
 	void SumiModel::updateAnimation(uint32_t animIdx, float time, bool loop) {
-		assert(animIdx < modelData.animations.size() && animIdx >= 0 && "Animation index out of range");
+		assert(animIdx < animations.size() && animIdx >= 0 && "Animation index out of range");
 		
-		std::shared_ptr<Animation> animation = modelData.animations[animIdx];
+		std::unique_ptr<Animation>& animation = animations[animIdx];
 
 		// loop animation
 		// TODO: I'm not sure this works if time < animation->start
@@ -421,7 +433,7 @@ namespace sumire {
 	}
 
 	void SumiModel::updateNodes() {
-		for (auto& node : modelData.nodes) {
+		for (auto& node : nodes) {
 			node->applyTransformHierarchy();
 			node->updateRecursive();
 		}

@@ -45,7 +45,7 @@ namespace sumire::loaders {
                 SumiModel::Data &data,
                 bool genTangents
             );
-            static std::shared_ptr<SumiModel::Node> getGLTFnode(uint32_t idx, SumiModel::Data &data);
+            static SumiModel::Node* getGLTFnode(uint32_t idx, SumiModel::Data &data);
             static uint32_t getLowestUnreservedGLTFNodeIdx(SumiModel::Data &data);
 
             // TODO: Move this to a material manager
