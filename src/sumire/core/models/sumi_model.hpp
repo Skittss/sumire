@@ -21,7 +21,7 @@
 #include <string>
 
 // TODO: Pass this in to shaders as a specialization constant
-#define MODEL_MAX_JOINTS 512u
+#define MODEL_MAX_JOINTS 256u
 
 namespace sumire {
 
@@ -52,6 +52,7 @@ namespace sumire {
 			struct UniformData {
 				glm::mat4 matrix;
 				glm::mat4 jointMatrices[MODEL_MAX_JOINTS] {};
+				glm::mat4 jointNormalMatrices[MODEL_MAX_JOINTS] {};
 				int nJoints{ 0 };
 			} uniforms;
 			

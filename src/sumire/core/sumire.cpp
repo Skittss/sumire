@@ -128,7 +128,7 @@ namespace sumire {
 
 		// Camera Control
 		SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
-		camera.transform.setTranslation(glm::vec3{0.0f, -0.5f, -3.0f});
+		camera.transform.setTranslation(glm::vec3{0.0f, 1.0f, 3.0f});
 		SumiKBMcontroller cameraController{
 			sumiWindow,
 			SumiKBMcontroller::ControllerType::FPS
@@ -140,12 +140,17 @@ namespace sumire {
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		float cumulativeFrameTime = 0.0f;
 
+		// Poll Mouse pos once directly before starting loop to prevent an incorrect
+		//  Mouse update on start.
+		sumiWindow.pollMousePos();
+
 		// Draw loop
 		while (!sumiWindow.shouldClose()) {
 			sumiWindow.pollMousePos(); // if manual polling mouse pos
 			// sumiWindow.clearMouseDelta(); // if using event-based polling
 			sumiWindow.clearKeypressEvents();
 			glfwPollEvents();
+
 			// TODO:
 			//  Prevent inputs from passthrough to application when ImGui wants to consume them...
 			//  i.e. check io.WantCaptureMouse, etc.
@@ -253,7 +258,7 @@ namespace sumire {
 	void Sumire::loadObjects() {
 		// TODO: Load objects in asynchronously
 		std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, "../assets/models/obj/clorinde.obj");
-		//std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/test/NormalTangentMirrorTest.glb");
+		// std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/test/NormalTangentMirrorTest.glb");
 		auto obj1 = SumiObject::createObject();
 		obj1.model = modelObj1;
 		obj1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});

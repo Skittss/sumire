@@ -521,6 +521,7 @@ namespace sumire {
 					glm::mat4 jointMat = invWorldTransform * jointNode->worldTransform * skin->inverseBindMatrices[i];
 					glm::mat4 jointNormalMat = glm::transpose(glm::inverse(jointMat));
 					mesh->uniforms.jointMatrices[i] = jointMat;
+					mesh->uniforms.jointNormalMatrices[i] = jointNormalMat;
 				}
 				mesh->uniforms.nJoints = static_cast<int>(nJoints);
 
