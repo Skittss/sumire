@@ -54,6 +54,7 @@ namespace sumire {
 
 		PipelineConfigInfo pipelineConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
+		pipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE; // no culling
 		pipelineConfig.attributeDescriptions.clear(); // do not use vertex attributes or bindings
 		pipelineConfig.bindingDescriptions.clear();
 		pipelineConfig.renderPass = renderPass;

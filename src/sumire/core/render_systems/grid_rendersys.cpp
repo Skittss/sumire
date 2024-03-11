@@ -183,6 +183,7 @@ namespace sumire {
 		PipelineConfigInfo pipelineConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
 		SumiPipeline::enableAlphaBlending(pipelineConfig); // use alpha blending
+		pipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE; // no culling as it messes with the fs quad.
 		pipelineConfig.attributeDescriptions = GridMinimalVertex::getAttributeDescriptions();
 		pipelineConfig.bindingDescriptions = GridMinimalVertex::getBindingDescriptions();
 		pipelineConfig.renderPass = renderPass;
