@@ -125,6 +125,7 @@ namespace sumire {
 		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, samplerInfo, stagingBuffer);
 	}
 
+	// Image create info for a linear RGBA (UNORM) image.
 	void SumiTexture::defaultImageCreateInfo(VkImageCreateInfo &createInfo) {
 		VkImageCreateInfo imageInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -134,7 +135,7 @@ namespace sumire {
 		createInfo.extent.depth = 1;
 		createInfo.mipLevels = 1;
 		createInfo.arrayLayers = 1;
-		createInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+		createInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
 		createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		createInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
