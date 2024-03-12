@@ -1,4 +1,5 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
 
 layout(location = 0) in vec4 joint;
 layout(location = 1) in vec4 weight;
@@ -29,13 +30,19 @@ layout(set = 0, binding = 1) uniform Camera {
 	mat4 projectionViewMatrix;
 };
 
-#define MODEL_MAX_JOINTS 256
+// #define MODEL_MAX_JOINTS 256
 layout(set = 2, binding = 0) uniform MeshNode {
 	mat4 matrix;
-	mat4 jointMatrices[MODEL_MAX_JOINTS];
-	mat4 jointNormalMatrices[MODEL_MAX_JOINTS];
+	// mat4 jointMatrices[MODEL_MAX_JOINTS];
+	// mat4 jointNormalMatrices[MODEL_MAX_JOINTS];
 	int nJoints;
 } meshNode;
+
+#include "includes/inc_joint.glsl"
+
+layout(set = 2, binding = 1) buffer jointSSBO {
+	Joint jointMatrices[];
+};
 
 layout(push_constant) uniform Model {
 	mat4 modelMatrix;
@@ -48,16 +55,16 @@ void main() {
 	if (meshNode.nJoints > 0) {
 		// Calculated as per glTF 2.0 reference guide
 		mat4 skinMat = 
-			weight.x * meshNode.jointMatrices[int(joint.x)] +
-			weight.y * meshNode.jointMatrices[int(joint.y)] +
-			weight.z * meshNode.jointMatrices[int(joint.z)] +
-			weight.w * meshNode.jointMatrices[int(joint.w)];
+			weight.x * jointMatrices[int(joint.x)].matrix +
+			weight.y * jointMatrices[int(joint.y)].matrix +
+			weight.z * jointMatrices[int(joint.z)].matrix +
+			weight.w * jointMatrices[int(joint.w)].matrix;
 
 		mat4 skinNormalMat = 
-			weight.x * meshNode.jointNormalMatrices[int(joint.x)] +
-			weight.y * meshNode.jointNormalMatrices[int(joint.y)] +
-			weight.z * meshNode.jointNormalMatrices[int(joint.z)] +
-			weight.w * meshNode.jointNormalMatrices[int(joint.w)];
+			weight.x * jointMatrices[int(joint.x)].normalMatrix +
+			weight.y * jointMatrices[int(joint.y)].normalMatrix +
+			weight.z * jointMatrices[int(joint.z)].normalMatrix +
+			weight.w * jointMatrices[int(joint.w)].normalMatrix;
 
 		mat4 combinedTransform = modelMatrix * meshNode.matrix * skinMat;
 		localPos = modelMatrix * meshNode.matrix * skinMat * vec4(position, 1.0);

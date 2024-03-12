@@ -51,21 +51,31 @@ namespace sumire {
 
 			struct UniformData {
 				glm::mat4 matrix;
-				glm::mat4 jointMatrices[MODEL_MAX_JOINTS] {};
-				glm::mat4 jointNormalMatrices[MODEL_MAX_JOINTS] {};
+				// glm::mat4 jointMatrices[MODEL_MAX_JOINTS] {};
+				// glm::mat4 jointNormalMatrices[MODEL_MAX_JOINTS] {};
 				int nJoints{ 0 };
 			} uniforms;
+
+			struct JointData {
+				glm::mat4 jointMatrix;
+				glm::mat4 jointNormalMatrix;
+			};
 			
 			// Unform Buffer & Descriptor Set
-			std::unique_ptr<SumiBuffer> uniformBuffer; // Only one buffer as constant between swap-chain images
+			// Only one buffer as constant between swap-chain images
+			std::unique_ptr<SumiBuffer> uniformBuffer = VK_NULL_HANDLE; 
+			// for skinning & animation, stored in host-coherent memory not local gpu memory.
+			std::unique_ptr<SumiBuffer> jointBuffer = VK_NULL_HANDLE; 
+			// Note: This descriptor is PARTIALLY_BOUND as jointBuffer can be VK_NULL_HANDLE if there is no skin.
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			Mesh(SumiDevice &device, glm::mat4 matrix);
-
 			~Mesh() {
 				primitives.clear();
 				uniformBuffer = nullptr;
 			}
+
+			void initJointBuffer(SumiDevice &device, uint32_t nJoints);
 		};
 
 		struct Skin {
@@ -254,7 +264,7 @@ namespace sumire {
 		//	 and mesh node descriptor sets are stored in SumiModel::Mesh
 
 		// Buffers
-		std::unique_ptr<SumiBuffer> materialStorageBuffer;
+		std::unique_ptr<SumiBuffer> materialStorageBuffer; // for static materials
 
 		// Default Textures & Materials
 		// TODO: These could be cached

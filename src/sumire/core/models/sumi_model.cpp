@@ -131,11 +131,13 @@ namespace sumire {
 		// Per-Node descriptor pool
 		meshNodeDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
 			.setMaxSets(
-				meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+				1 + meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			// Local matrices
 			.addPoolSize(
 				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
 				meshCount * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			// Skinning information
+			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1)
 			.build();
 
 		// Nodes descriptor set layout
@@ -145,10 +147,18 @@ namespace sumire {
 		//   Iterate flat nodes to skip doing recursion here on children.
 		for (auto &node : flatNodes) {
 			if (node->mesh) {
-				auto bufferInfo = node->mesh->uniformBuffer->descriptorInfo();
-				SumiDescriptorWriter(*meshNodeDescriptorSetLayout, *meshNodeDescriptorPool)
-					.writeBuffer(0, &bufferInfo)
-					.build(node->mesh->descriptorSet);
+				auto uniformBufferInfo = node->mesh->uniformBuffer->descriptorInfo();
+				//auto jointBufferInfo = node->mesh->jointBuffer->descriptorInfo();
+				auto writer = SumiDescriptorWriter(*meshNodeDescriptorSetLayout, *meshNodeDescriptorPool);
+				writer.writeBuffer(0, &uniformBufferInfo);
+				if (node->mesh->jointBuffer) {
+					auto jointBufferInfo = node->mesh->jointBuffer->descriptorInfo();
+					writer.writeBuffer(1, &jointBufferInfo);
+				}
+				writer.build(node->mesh->descriptorSet);
+
+					//.writeBuffer(1, &jointBufferInfo)
+					//.build(node->mesh->descriptorSet);
 			}
 		}
 
@@ -158,7 +168,7 @@ namespace sumire {
 		// TODO: Offload this descriptor pool to a material manager class for the whole scene.
 		materialDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
 			.setMaxSets(
-				(1 + materials.size() * SumiMaterial::MAT_TEX_COUNT) * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+				1 + (materials.size() * SumiMaterial::MAT_TEX_COUNT) * SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
 			// Texture samplers
 			.addPoolSize(
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
@@ -222,6 +232,11 @@ namespace sumire {
 	std::unique_ptr<SumiDescriptorSetLayout> SumiModel::meshNodeDescriptorLayout(SumiDevice &device) {
 		return SumiDescriptorSetLayout::Builder(device)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			// Joint storage buffer can be partially bound (i.e. potentially null)
+			.addBinding(
+				1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1,
+				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
+			)
 			.build();
 	}
 
@@ -515,22 +530,29 @@ namespace sumire {
 
 			// Update joint matrix
 			if (skin) {
-				size_t nJoints = std::min(static_cast<uint32_t>(skin->joints.size()), MODEL_MAX_JOINTS);
-				for (size_t i = 0; i < nJoints; i++) {
+				uint32_t nJoints = static_cast<uint32_t>(skin->joints.size());
+				
+				auto jointData = std::vector<Mesh::JointData>(nJoints);
+				for (uint32_t i = 0; i < nJoints; i++) {
 					Node *jointNode = skin->joints[i];
 					glm::mat4 jointMat = invWorldTransform * jointNode->worldTransform * skin->inverseBindMatrices[i];
 					glm::mat4 jointNormalMat = glm::transpose(glm::inverse(jointMat));
-					mesh->uniforms.jointMatrices[i] = jointMat;
-					mesh->uniforms.jointNormalMatrices[i] = jointNormalMat;
+					// mesh->uniforms.jointMatrices[i] = jointMat;
+					// mesh->uniforms.jointNormalMatrices[i] = jointNormalMat;
+					jointData[i] = Mesh::JointData{jointMat, jointNormalMat};
 				}
 				mesh->uniforms.nJoints = static_cast<int>(nJoints);
 
 				// Write updated uniforms
 				mesh->uniformBuffer->writeToBuffer(&mesh->uniforms);
-				mesh->uniformBuffer->flush();
+
+				// Write joints to SSBO
+				// TODO: Currently we rewrite the whole joint buffer which may be quite slow if a lot of data
+				//		 is unchanged. It may be faster to rewrite on changed instances only (would require benchmark)
+				mesh->jointBuffer->writeToBuffer(jointData.data());
 			} else {
+				// Update only the meshnode matrix.
 				mesh->uniformBuffer->writeToBuffer(&mesh->uniforms.matrix, sizeof(glm::mat4), 0);
-				mesh->uniformBuffer->flush();
 			}
 		}
 	}
@@ -538,7 +560,7 @@ namespace sumire {
 	//==============Mesh========================================================================
 
 	SumiModel::Mesh::Mesh(SumiDevice &device, glm::mat4 matrix) {
-		// Set uniforms
+		// Create Uniform Buffer
 		uniforms.matrix = matrix;
 		
 		// Create mesh uniform buffer and descriptor
@@ -548,13 +570,27 @@ namespace sumire {
 			sizeof(Mesh::UniformData),
 			1,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 		uniformBuffer->map();
-		uniformBuffer->writeToBuffer(&uniforms); // initial buffer write
-		uniformBuffer->flush();
+		uniformBuffer->writeToBuffer(&uniforms); // initial uniform buffer write
 
 		// Descriptor is left unanitialized until the model initializes it.
+	}
+
+	void SumiModel::Mesh::initJointBuffer(SumiDevice &device, uint32_t nJoints) {
+		// Leave buffer as VK_NULL_HANDLE if no joints present
+		if (nJoints <= 0) return;
+
+		// Create Joint SSBO
+		jointBuffer = std::make_unique<SumiBuffer>(
+			device,
+			nJoints * sizeof(Mesh::JointData),
+			1,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		);
+		jointBuffer->map();
 	}
 
 }

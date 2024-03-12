@@ -125,6 +125,8 @@ namespace sumire::loaders {
 		for (auto& node : data.flatNodes) {
 			if(node->skinIdx > -1) {
 				node->skin = data.skins[node->skinIdx].get();
+				// Init joint storage buffer
+				node->mesh->initJointBuffer(device, node->skin->joints.size());
 			}
 		}
 

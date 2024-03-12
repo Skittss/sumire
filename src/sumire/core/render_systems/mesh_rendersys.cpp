@@ -135,6 +135,8 @@ namespace sumire {
 
 			// TODO: Link animation playback (e.g. index, timer, loop) to UI.
 			//		 For now, play all animations, looped.
+			// TODO: This update can and should be done on a separate thread.
+			//		 Updating joint matrices may need to be made thread safe / double buffered as a result.
 			if (obj.model->getAnimationCount() > 0) {
 				std::vector<uint32_t> indices(obj.model->getAnimationCount());
 				for (uint32_t i = 0; i < indices.size(); i++) indices[i] = i;

@@ -7,7 +7,7 @@ A lightweight graphics development engine built in vulkan.
 
 - [X] faster glTF animation updating
 - [X] model normal matrices (and normal matrices for skinning)
-- [ ] Pass joint matrices in to shader via SSBO as uniforms overflow.
+- [X] Pass joint matrices in to shader via SSBO as uniforms overflow.
 - [X] Model Normal Mapping from tangent space textures.
 - [X] Right handed and +y default camera.
     - Camera rotation would be better done with quaternions.
@@ -15,5 +15,6 @@ A lightweight graphics development engine built in vulkan.
 - [ ] Bitangent reading from glTF needs a fix (fails NormalMirrorTest.glb)
 - [ ] glTF Morph-target support (and their animation)
 - [ ] glTF texture mip-mapping support
+- [ ] Deferred Rendering
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
