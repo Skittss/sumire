@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+//#ifndef NDEBUG
+//#define NDEBUG
+//#endif
+
 namespace sumire {
 
 	struct SwapChainSupportDetails {

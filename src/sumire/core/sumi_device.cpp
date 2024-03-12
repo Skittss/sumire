@@ -102,6 +102,8 @@ namespace sumire {
 		else {
 			createInfo.enabledLayerCount = 0;
 			createInfo.pNext = nullptr;
+
+			std::cout << "[Sumire] Validation layers are DISABLED" << std::endl;
 		}
 
 		if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
@@ -152,11 +154,17 @@ namespace sumire {
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
 
+		// Enable descriptor indexing features
+		VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
+		descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+		descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+
 		VkPhysicalDeviceFeatures deviceFeatures = {};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 		VkDeviceCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		createInfo.pNext = &descriptorIndexingFeatures; // pass indexing features to device create info
 
 		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
