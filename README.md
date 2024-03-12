@@ -12,6 +12,7 @@ A lightweight graphics development engine built in vulkan.
 - [X] Right handed and +y default camera.
     - Camera rotation would be better done with quaternions.
     - Arbitrary orthonormal basis camera control support would be nice.
+- [ ] Proper handling of double-sided triangles (Currently all back-face tris are culled)
 - [ ] Bitangent reading from glTF needs a fix (fails NormalMirrorTest.glb)
 - [ ] glTF Morph-target support (and their animation)
 - [ ] glTF texture mip-mapping support
