@@ -30,11 +30,8 @@ layout(set = 0, binding = 1) uniform Camera {
 	mat4 projectionViewMatrix;
 };
 
-// #define MODEL_MAX_JOINTS 256
 layout(set = 2, binding = 0) uniform MeshNode {
 	mat4 matrix;
-	// mat4 jointMatrices[MODEL_MAX_JOINTS];
-	// mat4 jointNormalMatrices[MODEL_MAX_JOINTS];
 	int nJoints;
 } meshNode;
 
