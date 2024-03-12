@@ -19,16 +19,23 @@ namespace sumire {
 						uint32_t binding,
 						VkDescriptorType descriptorType,
 						VkShaderStageFlags stageFlags,
-						uint32_t count = 1);
+						uint32_t count = 1,
+						VkDescriptorBindingFlags bindingFlags = 0x0
+					);
+						
 					std::unique_ptr<SumiDescriptorSetLayout> build() const;
 				
 				private:
 					SumiDevice &sumiDevice;
 					std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings{};
+					std::unordered_map<uint32_t, VkDescriptorBindingFlags> bindingFlags{};
 			};
 		
 			SumiDescriptorSetLayout(
-					SumiDevice &sumiDevice, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings);
+				SumiDevice &sumiDevice, 
+				std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings,
+				std::unordered_map<uint32_t, VkDescriptorBindingFlags> bindingFlags
+			);
 			~SumiDescriptorSetLayout();
 			SumiDescriptorSetLayout(const SumiDescriptorSetLayout &) = delete;
 			SumiDescriptorSetLayout &operator=(const SumiDescriptorSetLayout &) = delete;
@@ -39,6 +46,7 @@ namespace sumire {
 			SumiDevice &sumiDevice;
 			VkDescriptorSetLayout descriptorSetLayout;
 			std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings;
+			std::unordered_map<uint32_t, VkDescriptorBindingFlags> bindingFlags;
 			
 			friend class SumiDescriptorWriter;
 	};
@@ -53,6 +61,7 @@ namespace sumire {
 					Builder &addPoolSize(VkDescriptorType descriptorType, uint32_t count);
 					Builder &setPoolFlags(VkDescriptorPoolCreateFlags flags);
 					Builder &setMaxSets(uint32_t count);
+
 					std::unique_ptr<SumiDescriptorPool> build() const;
 				
 				private:

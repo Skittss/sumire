@@ -11,34 +11,57 @@ SumiDescriptorSetLayout::Builder &SumiDescriptorSetLayout::Builder::addBinding(
 	uint32_t binding,
 	VkDescriptorType descriptorType,
 	VkShaderStageFlags stageFlags,
-	uint32_t count) {
+	uint32_t count,
+	VkDescriptorBindingFlags bindFlags
+) {
 	assert(bindings.count(binding) == 0 && "Binding already in use");
+	
+	// Binding
 	VkDescriptorSetLayoutBinding layoutBinding{};
 	layoutBinding.binding = binding;
 	layoutBinding.descriptorType = descriptorType;
 	layoutBinding.descriptorCount = count;
 	layoutBinding.stageFlags = stageFlags;
 	bindings[binding] = layoutBinding;
+
+	// Bind flags
+	bindingFlags[binding] = bindFlags;
+
 	return *this;
 }
  
 std::unique_ptr<SumiDescriptorSetLayout> SumiDescriptorSetLayout::Builder::build() const {
-	return std::make_unique<SumiDescriptorSetLayout>(sumiDevice, bindings);
+	return std::make_unique<SumiDescriptorSetLayout>(sumiDevice, bindings, bindingFlags);
 }
  
 // --------------- Descriptor Set Layout ---------------------
  
 SumiDescriptorSetLayout::SumiDescriptorSetLayout(
-		SumiDevice &sumiDevice, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings)
-	: sumiDevice{sumiDevice}, bindings{bindings} {
+	SumiDevice &sumiDevice, 
+	std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings,
+	std::unordered_map<uint32_t, VkDescriptorBindingFlags> bindingFlags
+) : sumiDevice{sumiDevice}, bindings{bindings}, bindingFlags{bindingFlags} {
 
+	// Binding flags create info
+	std::vector<VkDescriptorBindingFlags> setLayoutBindingFlags{};
+	for (auto kv : bindingFlags) {
+		setLayoutBindingFlags.push_back(kv.second);
+	}
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfo extendedInfo{};
+	extendedInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+	extendedInfo.bindingCount = static_cast<uint32_t>(setLayoutBindingFlags.size());
+	extendedInfo.pBindingFlags = setLayoutBindingFlags.data();
+
+	// Descriptor set layout create info
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings{};
 	for (auto kv : bindings) {
-	setLayoutBindings.push_back(kv.second);
+		setLayoutBindings.push_back(kv.second);
 	}
- 
+	
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
 	descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	descriptorSetLayoutInfo.pNext = &extendedInfo;
 	descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
 	descriptorSetLayoutInfo.pBindings = setLayoutBindings.data();
  
@@ -58,14 +81,15 @@ SumiDescriptorSetLayout::~SumiDescriptorSetLayout() {
 // --------------- Descriptor Pool Builder ---------------------
  
 SumiDescriptorPool::Builder &SumiDescriptorPool::Builder::addPoolSize(
-		VkDescriptorType descriptorType, uint32_t count) {
-
+	VkDescriptorType descriptorType, uint32_t count
+) {
 	poolSizes.push_back({descriptorType, count});
 	return *this;
 }
  
 SumiDescriptorPool::Builder &SumiDescriptorPool::Builder::setPoolFlags(
-		VkDescriptorPoolCreateFlags flags) {
+	VkDescriptorPoolCreateFlags flags
+) {
 
 	poolFlags = flags;
 	return *this;
@@ -82,11 +106,11 @@ std::unique_ptr<SumiDescriptorPool> SumiDescriptorPool::Builder::build() const {
 // --------------- Descriptor Pool ---------------------
  
 SumiDescriptorPool::SumiDescriptorPool(
-		SumiDevice &sumiDevice,
-		uint32_t maxSets,
-		VkDescriptorPoolCreateFlags poolFlags,
-		const std::vector<VkDescriptorPoolSize> &poolSizes)
-	: sumiDevice{sumiDevice} {
+	SumiDevice &sumiDevice,
+	uint32_t maxSets,
+	VkDescriptorPoolCreateFlags poolFlags,
+	const std::vector<VkDescriptorPoolSize> &poolSizes
+) : sumiDevice{sumiDevice} {
 			
 	VkDescriptorPoolCreateInfo descriptorPoolInfo{};
 	descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -109,8 +133,8 @@ SumiDescriptorPool::~SumiDescriptorPool() {
 }
  
 bool SumiDescriptorPool::allocateDescriptorSet(
-		const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet &descriptor) const {
-			
+	const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet &descriptor
+) const {
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool;
@@ -147,8 +171,8 @@ SumiDescriptorWriter::SumiDescriptorWriter(SumiDescriptorSetLayout &setLayout, S
 	: setLayout{setLayout}, pool{pool} {}
  
 SumiDescriptorWriter &SumiDescriptorWriter::writeBuffer(
-		uint32_t binding, VkDescriptorBufferInfo *bufferInfo) {
-
+	uint32_t binding, VkDescriptorBufferInfo *bufferInfo
+) {
 	assert(setLayout.bindings.count(binding) == 1 && "Layout does not contain specified binding");
  
 	auto &bindingDescription = setLayout.bindings[binding];
@@ -170,7 +194,8 @@ SumiDescriptorWriter &SumiDescriptorWriter::writeBuffer(
 }
  
 SumiDescriptorWriter &SumiDescriptorWriter::writeImage(
-		uint32_t binding, VkDescriptorImageInfo *imageInfo) {
+	uint32_t binding, VkDescriptorImageInfo *imageInfo
+) {
 
 	assert(setLayout.bindings.count(binding) == 1 && "Layout does not contain specified binding");
  
