@@ -64,11 +64,16 @@ void main() {
 	}
 
 	// Adjust geometrical properties of back-faces
+	vec3 geoTangent = inTangent;
+	vec3 geoBitangent = inBitangent;
+	vec3 geoNormal = inNorm;
+	if (gl_FrontFacing == false) {
+		geoTangent *= -1.0; 
+		geoBitangent *= -1.0; 
+		geoNormal *= -1.0;
+	}
 
 	// Normal Mapping
-	vec3 geoTangent = gl_FrontFacing ? inTangent : inTangent * -1.0;
-	vec3 geoBitangent = gl_FrontFacing ? inBitangent : inBitangent * -1.0;
-	vec3 geoNormal = gl_FrontFacing ? inNorm : inNorm * -1.0;
 	vec3 normal;
 	if (mat.normalTexCoord > -1) {
 		// Read tangent space normal from texture
@@ -90,15 +95,15 @@ void main() {
 
 	// outCol = vec4(albedo.rgb, 1.0);
 
-	// Debug Ouputs
+	// Debug Ouputss
 	// outCol = vec4(0.5 + 0.5 * inUvs[0], 0.0, 1.0);
 	// outCol = vec4(0.5 + 0.5 * inUvs[1], 0.0, 1.0);
-	outCol = vec4(0.5 + 0.5 * normal, 1.0);
+	// outCol = vec4(0.5 + 0.5 * normal, 1.0);
 	// outCol = vec4(0.5 + 0.5 * geoNormal, 1.0);
 	// outCol = vec4(0.5 + 0.5 * geoTangent, 1.0);
-	// outCol = vec4(0.5 + 0.5 * geoBitangent, 1.0);
+	outCol = vec4(0.5 + 0.5 * geoBitangent, 1.0);
 
-	// outCol = pow(outCol, vec4(2.2));
+	outCol = pow(outCol, vec4(2.2));
 
 	// outCol = vec4((ubo.ambientCol + diffuse))
 

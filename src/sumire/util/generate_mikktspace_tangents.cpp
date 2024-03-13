@@ -87,7 +87,7 @@ namespace sumire::util {
             tangentu[0],
             tangentu[1],
             tangentu[2],
-            fSign
+            -fSign // convert to right handedness of sumire
         };
     }
 }

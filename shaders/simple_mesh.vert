@@ -3,10 +3,10 @@
 
 layout(location = 0) in vec4 joint;
 layout(location = 1) in vec4 weight;
-layout(location = 2) in vec3 position;
-layout(location = 3) in vec3 col;
-layout(location = 4) in vec3 normal;
-layout(location = 5) in vec4 tangent;
+layout(location = 2) in vec4 tangent;
+layout(location = 3) in vec3 position;
+layout(location = 4) in vec3 col;
+layout(location = 5) in vec3 normal;
 layout(location = 6) in vec2 uv0;
 layout(location = 7) in vec2 uv1;
 
@@ -77,9 +77,9 @@ void main() {
 	}
 
 	// Computer per-vertex TBN so they are nicely interpolated in fragment shader
-	outTangent = normalize(combinedNormalMatrix * tangent.xyz);
+	outTangent = normalize(mat3(combinedTransform) * tangent.xyz);
 	outNorm = normalize(combinedNormalMatrix * normal);
-	outBitangent = cross(outNorm, outTangent) * -tangent.w;
+	outBitangent = cross(outNorm, outTangent) * tangent.w;
 
 	localPos = combinedTransform * vec4(position, 1.0);
 	localPos /= localPos.w;

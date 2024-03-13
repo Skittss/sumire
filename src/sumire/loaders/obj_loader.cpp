@@ -117,7 +117,7 @@ namespace sumire::loaders {
 					};
 				}
 
-				vertex.tangent = {0.0f, 0.0f, 0.0f};
+				vertex.tangent = {0.0f, 0.0f, 0.0f, 0.0f};
 
 				if (index.texcoord_index >= 0) {
 					vertex.uv0 = {

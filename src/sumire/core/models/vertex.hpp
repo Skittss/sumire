@@ -9,10 +9,10 @@ namespace sumire {
     struct Vertex {
         glm::vec4 joint{};
         glm::vec4 weight{};
+        glm::vec4 tangent{};
         glm::vec3 position{};
         glm::vec3 color{};
         glm::vec3 normal{};
-        glm::vec3 tangent{};
         glm::vec2 uv0{};
         glm::vec2 uv1{};
 
