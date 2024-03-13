@@ -51,8 +51,7 @@ namespace sumire {
 
 			struct UniformData {
 				glm::mat4 matrix;
-				// glm::mat4 jointMatrices[MODEL_MAX_JOINTS] {};
-				// glm::mat4 jointNormalMatrices[MODEL_MAX_JOINTS] {};
+				glm::mat4 normalMatrix;
 				int nJoints{ 0 };
 			} uniforms;
 

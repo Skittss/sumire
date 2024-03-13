@@ -34,6 +34,7 @@ layout(set = 0, binding = 1) uniform Camera {
 
 layout(set = 2, binding = 0) uniform MeshNode {
 	mat4 matrix;
+	mat4 normalMatrix;
 	int nJoints;
 } meshNode;
 
@@ -50,7 +51,10 @@ layout(push_constant) uniform Model {
 
 void main() {
 	vec4 localPos;
-	// Calculate skinning matrix if mesh has one
+	mat4 combinedTransform;
+	mat3 combinedNormalMatrix;
+
+	// Calculate and apply skinning matrix if mesh has one
 	if (meshNode.nJoints > 0) {
 		// Calculated as per glTF 2.0 reference guide
 		mat4 skinMat = 
@@ -65,26 +69,25 @@ void main() {
 			weight.z * jointMatrices[int(joint.z)].normalMatrix +
 			weight.w * jointMatrices[int(joint.w)].normalMatrix;
 
-		mat4 combinedTransform = modelMatrix * meshNode.matrix * skinMat;
-		localPos = modelMatrix * meshNode.matrix * skinMat * vec4(position, 1.0);
-		mat3 combinedNormalMatrix = mat3(normalMatrix * skinNormalMat);
-		outNorm = normalize(combinedNormalMatrix * normal);
-		outTangent = normalize(combinedNormalMatrix * tangent.xyz);
+		combinedTransform = modelMatrix * meshNode.matrix * skinMat;
+		combinedNormalMatrix = mat3(normalMatrix * meshNode.normalMatrix * skinNormalMat);
 	} else {
-		localPos = modelMatrix * meshNode.matrix * vec4(position, 1.0);
-		outNorm = normalize(mat3(normalMatrix) * normal);
-		outTangent = normalize(mat3(normalMatrix) * tangent.xyz);
+		combinedTransform = modelMatrix * meshNode.matrix;
+		combinedNormalMatrix = mat3(normalMatrix * meshNode.normalMatrix);
 	}
 
-	// Computer per-vertex bitangent so it is nicely interpolated in fragment shader
+	// Computer per-vertex TBN so they are nicely interpolated in fragment shader
+	outTangent = normalize(combinedNormalMatrix * tangent.xyz);
+	outNorm = normalize(combinedNormalMatrix * normal);
 	outBitangent = cross(outNorm, outTangent) * -tangent.w;
 
+	localPos = combinedTransform * vec4(position, 1.0);
 	localPos /= localPos.w;
 	// Standard Camera Projection
 	gl_Position = projectionViewMatrix * localPos;
 
 	// Pass remaining vertex attributes to frag shader
-	outPos = localPos.xyz / localPos.w;
+	outPos = localPos.xyz;
 	outColor = col;
 	outUv0 = uv0;
 	outUv1 = uv1;

@@ -539,6 +539,7 @@ namespace sumire {
 		// Update mesh nodes
 		if (mesh) {
 			mesh->uniforms.matrix = worldTransform;
+			mesh->uniforms.normalMatrix = normalMatrix;
 
 			// Update joint matrix
 			if (skin) {
@@ -563,8 +564,8 @@ namespace sumire {
 				//		 is unchanged. It may be faster to rewrite on changed instances only (would require benchmark)
 				mesh->jointBuffer->writeToBuffer(jointData.data());
 			} else {
-				// Update only the meshnode matrix.
-				mesh->uniformBuffer->writeToBuffer(&mesh->uniforms.matrix, sizeof(glm::mat4), 0);
+				// Update only the meshnode matrix & normal matrix.
+				mesh->uniformBuffer->writeToBuffer(&mesh->uniforms, 2 * sizeof(glm::mat4), 0);
 			}
 		}
 	}
