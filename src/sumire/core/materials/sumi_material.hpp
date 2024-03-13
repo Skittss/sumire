@@ -24,6 +24,14 @@ namespace sumire {
 
             static constexpr int MAT_TEX_COUNT = 5;
 
+            // This enum tells the render system what pipeline is needed to render this material.
+            //  different piplines are needed to render different material properties,
+            //    e.g. double sided triangles (no culling), or use of alpha-blending, etc.
+            enum RequiredPipelineType { 
+                DEFAULT, DOUBLE_SIDED 
+            };
+            RequiredPipelineType requiredPipelineType{RequiredPipelineType::DEFAULT};
+
             enum AlphaMode { MODE_OPAQUE, MODE_BLEND, MODE_MASK };
 
             // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#materials

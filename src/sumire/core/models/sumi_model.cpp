@@ -261,10 +261,18 @@ namespace sumire {
 		}
 	}
 
-	void SumiModel::drawNode(Node *node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
+	void SumiModel::drawNode(
+		Node *node, 
+		VkCommandBuffer commandBuffer, 
+		VkPipelineLayout pipelineLayout,
+		const std::unordered_map<SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>> &pipelines
+	) {
 		// Draw this node's primitives
 		if (node->mesh) {
 			for (auto& primitive : node->mesh->primitives) {
+
+				// Bind required pipeline
+				pipelines.at(primitive->material->requiredPipelineType)->bind(commandBuffer);
 
 				// Bind descriptor sets
 				const std::vector<VkDescriptorSet> descriptorSets{
@@ -308,14 +316,18 @@ namespace sumire {
 
 		// Draw children
 		for (auto& child : node->children) {
-			drawNode(child, commandBuffer, pipelineLayout);
+			drawNode(child, commandBuffer, pipelineLayout, pipelines);
 		}
 	}
 
 	// Draw a model node tree. *Starts binding descriptors from set 1*
-	void SumiModel::draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
+	void SumiModel::draw(
+		VkCommandBuffer commandBuffer, 
+		VkPipelineLayout pipelineLayout,
+		const std::unordered_map<SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>> &pipelines
+	) {
 		for (auto& node : nodes) {
-			drawNode(node, commandBuffer, pipelineLayout);
+			drawNode(node, commandBuffer, pipelineLayout, pipelines);
 		}
 	}
 

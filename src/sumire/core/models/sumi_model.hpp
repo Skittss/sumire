@@ -214,7 +214,13 @@ namespace sumire {
 		bool hasIndices() { return useIndexBuffer; }
 
 		void bind(VkCommandBuffer commandbuffer);
-		void draw(VkCommandBuffer commandbuffer, VkPipelineLayout pipelineLayout);
+		void draw(
+			VkCommandBuffer commandbuffer, 
+			VkPipelineLayout pipelineLayout,
+			const std::unordered_map<
+				SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>
+			> &pipelines
+		);
 
 		void updateAnimations(const std::vector<uint32_t> indices, float time, bool loop = true);
 		void updateAnimation(uint32_t animIdx, float time, bool loop = true);
@@ -223,7 +229,14 @@ namespace sumire {
 		std::string displayName{"Unnamed"};
 
 	private:
-		void drawNode(Node *node, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
+		void drawNode(
+			Node *node, 
+			VkCommandBuffer commandBuffer, 
+			VkPipelineLayout pipelineLayout,
+			const std::unordered_map<
+				SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>
+			> &pipelines
+		);
 
 		// Resource Initializers
 		void createVertexBuffers(const std::vector<Vertex> &vertices);

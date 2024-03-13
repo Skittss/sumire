@@ -26,7 +26,7 @@ namespace sumire {
 
 		private:
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
-			void createPipeline(VkRenderPass renderPass);
+			void createPipelines(VkRenderPass renderPass);
 
 			SumiDevice& sumiDevice;
 
@@ -35,7 +35,8 @@ namespace sumire {
 			std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorLayout;
 			std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout;
 
-			std::unique_ptr<SumiPipeline> sumiPipeline;
+			// Pipelines used all share the same layout, but are configured differently.
 			VkPipelineLayout pipelineLayout;
+			std::unordered_map<SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>> pipelines;
 		};
 }

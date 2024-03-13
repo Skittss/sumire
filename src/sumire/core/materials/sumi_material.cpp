@@ -6,7 +6,11 @@ namespace sumire {
 
     // TODO: Move this constructor to header for clarity if it remains empty
     SumiMaterial::SumiMaterial(id_t matId, SumiDevice &device, MaterialTextureData &data) 
-        : id{matId}, texData{data} {}
+        : id{matId}, texData{data} 
+    {
+        // Set non-pipeline required for rendering under certain material properties.
+        if (texData.doubleSided) requiredPipelineType = RequiredPipelineType::DOUBLE_SIDED;
+    }
     
     SumiMaterial::~SumiMaterial() {}
 
@@ -66,7 +70,7 @@ namespace sumire {
             texData.occlusionTexCoord,
             texData.emissiveTexCoord,
             texData.alphaMode == AlphaMode::MODE_MASK,
-            texData.alphaCutoff
+            texData.alphaCutoff,
         };
     }
 

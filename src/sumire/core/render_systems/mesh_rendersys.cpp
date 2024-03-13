@@ -36,7 +36,7 @@ namespace sumire {
 		}
 
 		createPipelineLayout(globalDescriptorSetLayout);
-		createPipeline(renderPass);
+		createPipelines(renderPass);
 	}
 
 	MeshRenderSys::~MeshRenderSys() {
@@ -88,22 +88,43 @@ namespace sumire {
 		}
 	}
 
-	void MeshRenderSys::createPipeline(VkRenderPass renderPass) {
+	void MeshRenderSys::createPipelines(VkRenderPass renderPass) {
 		assert(pipelineLayout != nullptr && "<MeshRenderSys>: Cannot create pipeline before pipeline layout.");
 
-		PipelineConfigInfo pipelineConfig{};
-		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
-		pipelineConfig.renderPass = renderPass;
-		pipelineConfig.pipelineLayout = pipelineLayout;
-		sumiPipeline = std::make_unique<SumiPipeline>(
+		// Default Pipeline
+		PipelineConfigInfo defaultConfig{};
+		SumiPipeline::defaultPipelineConfigInfo(defaultConfig);
+		defaultConfig.renderPass = renderPass;
+		defaultConfig.pipelineLayout = pipelineLayout;
+		std::unique_ptr<SumiPipeline> defaultPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,
-			"shaders/simple_mesh.vert.spv",
+			"shaders/simple_mesh.vert.spv", 
 			"shaders/simple_mesh.frag.spv",
-			pipelineConfig);
+			defaultConfig
+		);
+		pipelines.emplace(
+			SumiMaterial::RequiredPipelineType::DEFAULT, std::move(defaultPipeline));
+
+		// TODO: The following pipeline could be created with dynamic state to poke the 
+		//		cull-mode register, or as a derivative of the default pipeline. May be faster.
+
+		// Double-sided Pipeline
+		PipelineConfigInfo doubleSidedConfig{};
+		SumiPipeline::defaultPipelineConfigInfo(doubleSidedConfig);
+		doubleSidedConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+		doubleSidedConfig.renderPass = renderPass;
+		doubleSidedConfig.pipelineLayout = pipelineLayout;
+		std::unique_ptr<SumiPipeline> doubleSidedPipeline = std::make_unique<SumiPipeline>(
+			sumiDevice,
+			"shaders/simple_mesh.vert.spv", 
+			"shaders/simple_mesh.frag.spv",
+			doubleSidedConfig
+		);
+		pipelines.emplace(
+			SumiMaterial::RequiredPipelineType::DOUBLE_SIDED, std::move(doubleSidedPipeline));
 	}
 
 	void MeshRenderSys::renderObjects(FrameInfo &frameInfo) {
-		sumiPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,
@@ -145,7 +166,7 @@ namespace sumire {
 			
 			// SumiModel handles the binding of descriptor sets 1-3 and frag push constants
 			obj.model->bind(frameInfo.commandBuffer);
-			obj.model->draw(frameInfo.commandBuffer, pipelineLayout);
+			obj.model->draw(frameInfo.commandBuffer, pipelineLayout, pipelines);
 		}
 	}
 }
