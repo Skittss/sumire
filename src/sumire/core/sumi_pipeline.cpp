@@ -14,6 +14,9 @@
 
 namespace sumire {
 
+	// Initialize reference to currently bound pipeline as nullptr
+	SumiPipeline* SumiPipeline::boundPipeline = nullptr;
+
 	SumiPipeline::SumiPipeline(
 		SumiDevice& device,
 		const std::string& vertFilepath,
@@ -27,6 +30,9 @@ namespace sumire {
 		vkDestroyShaderModule(sumiDevice.device(), vertShaderModule, nullptr);
 		vkDestroyShaderModule(sumiDevice.device(), fragShaderModule, nullptr);
 		vkDestroyPipeline(sumiDevice.device(), graphicsPipeline, nullptr);
+
+		// nullify binding reference if this pipeline is currently bound.
+		if (boundPipeline == this) boundPipeline = nullptr;
 	}
 
 	std::vector<char> SumiPipeline::readFile(const std::string& filepath) {
@@ -77,7 +83,7 @@ namespace sumire {
 		shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		shaderStages[1].module = fragShaderModule;
-		shaderStages[1].pName = "main"; // Name of entry function in vert shader.
+		shaderStages[1].pName = "main"; // Name of entry function in frag shader.
 		shaderStages[1].flags = 0;
 		shaderStages[1].pNext = nullptr;
 		shaderStages[1].pSpecializationInfo = nullptr;
@@ -88,7 +94,6 @@ namespace sumire {
 		// How to interpret input vertex buffer data
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		// For now, supply no data
 		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 		vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size());
 		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
@@ -140,11 +145,18 @@ namespace sumire {
 	}
 
 	void SumiPipeline::bind(VkCommandBuffer commandBuffer) {
-		// Pipeline types are graphics, compute and raytracing.
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+		// TODO: This pipeline switching optimization is not perfect -
+		//       We currently don't check if pipelines are semantically the same but under different objects.
+		//       This mean pipelines will always swithc betwee render systems, etc.
+		//		 This could be fixed by comparing a hash of the pipeline state instead of a reference.
+		// TODO: It would also be beneficial to organise drawing code such that minimal pipeline
+		//		 switching is required in the first place.
+		if (boundPipeline != this) {
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+			boundPipeline = this;
+		}
 	}
 	void SumiPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
-		// NOTE: Reading the Vk Documentation is VERY IMPORTANT for configuring configs as you desire.
 
 		// Triangle list input assembly.
 		configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

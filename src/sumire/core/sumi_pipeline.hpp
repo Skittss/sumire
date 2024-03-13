@@ -61,5 +61,7 @@ namespace sumire {
 		VkShaderModule vertShaderModule;
 		VkShaderModule fragShaderModule;
 
+		static SumiPipeline* boundPipeline;
+
 	};
 }
