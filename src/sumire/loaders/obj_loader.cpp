@@ -19,7 +19,16 @@ namespace std {
 	struct hash<sumire::Vertex> {
 		size_t operator()(sumire::Vertex const &vertex) const {
 			size_t seed = 0;
-			sumire::hashCombine(seed, vertex.position, vertex.color, vertex.normal, vertex.uv);
+			sumire::hashCombine(seed,
+				vertex.joint,
+				vertex.weight,
+				vertex.position, 
+				vertex.color, 
+				vertex.normal, 
+				vertex.tangent,
+				vertex.uv0, 
+				vertex.uv1
+			);
 			return seed;
 		}
 	};
@@ -111,7 +120,7 @@ namespace sumire::loaders {
 				vertex.tangent = {0.0f, 0.0f, 0.0f};
 
 				if (index.texcoord_index >= 0) {
-					vertex.uv = {
+					vertex.uv0 = {
 						attrib.texcoords[2 * index.texcoord_index + 0], 
 						attrib.texcoords[2 * index.texcoord_index + 1], 
 					};

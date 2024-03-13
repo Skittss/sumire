@@ -545,15 +545,21 @@ namespace sumire::loaders {
 				}
 
 				// UVs
-				// TODO: I think this can be arbitrarily large depending on the materials the model uses?
-				//       Query no. of textures first and loop here if this is the case.
-				auto texCoordEntry = primitive.attributes.find("TEXCOORD_0");
-				if (texCoordEntry != primitive.attributes.end()) {
-					const tinygltf::Accessor& texCoordAccessor = model.accessors[texCoordEntry->second];
+				auto texCoordEntry0 = primitive.attributes.find("TEXCOORD_0");
+				if (texCoordEntry0 != primitive.attributes.end()) {
+					const tinygltf::Accessor& texCoordAccessor = model.accessors[texCoordEntry0->second];
 					const tinygltf::BufferView& texCoordBufferView = model.bufferViews[texCoordAccessor.bufferView];
 					const tinygltf::Buffer& texCoordBuffer = model.buffers[texCoordBufferView.buffer];
 					bufferTexCoord0 = reinterpret_cast<const float *>(&(texCoordBuffer.data[texCoordAccessor.byteOffset + texCoordBufferView.byteOffset]));
 					strideTexCoord0 = texCoordAccessor.ByteStride(texCoordBufferView) ? (texCoordAccessor.ByteStride(texCoordBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC2); 
+				}
+				auto texCoordEntry1 = primitive.attributes.find("TEXCOORD_1");
+				if (texCoordEntry1 != primitive.attributes.end()) {
+					const tinygltf::Accessor& texCoordAccessor = model.accessors[texCoordEntry1->second];
+					const tinygltf::BufferView& texCoordBufferView = model.bufferViews[texCoordAccessor.bufferView];
+					const tinygltf::Buffer& texCoordBuffer = model.buffers[texCoordBufferView.buffer];
+					bufferTexCoord1 = reinterpret_cast<const float *>(&(texCoordBuffer.data[texCoordAccessor.byteOffset + texCoordBufferView.byteOffset]));
+					strideTexCoord1 = texCoordAccessor.ByteStride(texCoordBufferView) ? (texCoordAccessor.ByteStride(texCoordBufferView) / sizeof(float)) : tinygltf::GetNumComponentsInType(TINYGLTF_TYPE_VEC2); 
 				}
 
 				// Vertex Colours
@@ -615,7 +621,8 @@ namespace sumire::loaders {
 					v.position = glm::make_vec3(&bufferPos[vIdx * stridePos]);
 					v.normal = glm::normalize(bufferNorm ? glm::make_vec3(&bufferNorm[vIdx * strideNorm]) : glm::vec3{0.0f});
 					v.tangent = glm::normalize(bufferTangent ? glm::make_vec4(&bufferTangent[vIdx * strideTangent]) : glm::vec4{0.0f});
-					v.uv = bufferTexCoord0 ? glm::make_vec2(&bufferTexCoord0[vIdx * strideTexCoord0]) : glm::vec3{0.0f};
+					v.uv0 = bufferTexCoord0 ? glm::make_vec2(&bufferTexCoord0[vIdx * strideTexCoord0]) : glm::vec3{0.0f};
+					v.uv1 = bufferTexCoord1 ? glm::make_vec2(&bufferTexCoord1[vIdx * strideTexCoord0]) : glm::vec3{0.0f};
 					v.color = bufferColor0 ? glm::make_vec3(&bufferColor0[vIdx * strideColor0]) : glm::vec3{1.0f};
 
 					// Skinning information

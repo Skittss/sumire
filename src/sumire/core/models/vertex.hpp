@@ -13,7 +13,8 @@ namespace sumire {
         glm::vec3 color{};
         glm::vec3 normal{};
         glm::vec3 tangent{};
-        glm::vec2 uv{};
+        glm::vec2 uv0{};
+        glm::vec2 uv1{};
 
         static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
         static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
@@ -26,7 +27,8 @@ namespace sumire {
                 color == other.color &&
                 normal == other.normal &&
                 tangent == other.tangent &&
-                uv == other.uv
+                uv0 == other.uv0 &&
+                uv1 == other.uv1
             );
         }
     };

@@ -73,7 +73,7 @@ namespace sumire::util {
         MikktspaceData *data = static_cast<MikktspaceData*>(context->m_pUserData);
 
         int vertIdx = getVertexIndex(data, iFace, iVert);
-        glm::vec2 vertUv = data->verts[vertIdx].uv;
+        glm::vec2 vertUv = data->verts[vertIdx].uv0;
 
         outuv[0] = vertUv.x;
         outuv[1] = vertUv.y;

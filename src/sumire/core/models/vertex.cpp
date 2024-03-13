@@ -18,7 +18,8 @@ namespace sumire {
         attributeDescriptions.push_back({3, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
         attributeDescriptions.push_back({4, 0 , VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
         attributeDescriptions.push_back({5, 0 , VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, tangent)});
-        attributeDescriptions.push_back({6, 0 , VK_FORMAT_R32G32_SFLOAT,    offsetof(Vertex, uv)});
+        attributeDescriptions.push_back({6, 0 , VK_FORMAT_R32G32_SFLOAT,    offsetof(Vertex, uv0)});
+        attributeDescriptions.push_back({7, 0 , VK_FORMAT_R32G32_SFLOAT,    offsetof(Vertex, uv1)});
 
         return attributeDescriptions;
     }

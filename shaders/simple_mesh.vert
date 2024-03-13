@@ -7,14 +7,16 @@ layout(location = 2) in vec3 position;
 layout(location = 3) in vec3 col;
 layout(location = 4) in vec3 normal;
 layout(location = 5) in vec4 tangent;
-layout(location = 6) in vec2 uv;
+layout(location = 6) in vec2 uv0;
+layout(location = 7) in vec2 uv1;
 
 layout(location = 0) out vec3 outPos;
 layout(location = 1) out vec3 outColor;
 layout(location = 2) out vec3 outNorm;
 layout(location = 3) out vec3 outTangent;
 layout(location = 4) out vec3 outBitangent;
-layout(location = 5) out vec2 outUv;
+layout(location = 5) out vec2 outUv0;
+layout(location = 6) out vec2 outUv1;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
@@ -84,5 +86,6 @@ void main() {
 	// Pass remaining vertex attributes to frag shader
 	outPos = localPos.xyz / localPos.w;
 	outColor = col;
-	outUv = uv;
+	outUv0 = uv0;
+	outUv1 = uv1;
 }
