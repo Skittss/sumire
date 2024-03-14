@@ -111,16 +111,16 @@ namespace sumire {
 
 		// All permutations (including default)
 		const uint32_t pipelinePermutations = 2 * SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_HIGHEST;
-		for (uint32_t i = 0; i <= pipelinePermutations; i++) {
+		for (uint32_t i = 0; i < pipelinePermutations; i++) {
 			SumiPipelineStateFlags permutationFlags = static_cast<SumiPipelineStateFlags>(i);
 			PipelineConfigInfo permutationConfig = defaultConfig;
 			std::string permutationVertShader = defaultVertShader;
 			std::string permutationFragShader = defaultFragShader;
 
 			// Deal with each bit flag
-			if (permutationFlags && SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT)
+			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT)
 				permutationFragShader = "shaders/mesh_unlit.frag.spv";
-			if (permutationFlags && SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
+			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
 				permutationConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 
 			// Create pipeline and map it
