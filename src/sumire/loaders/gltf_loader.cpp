@@ -255,6 +255,11 @@ namespace sumire::loaders {
 			}
 			if (!mat.name.empty()) mat.name = material.name;
 
+			// Extensions
+			if (material.extensions.find("KHR_materials_unlit") != material.extensions.end()) {
+				mat.unlit = true;
+			}
+
 			data.materials.push_back(SumiMaterial::createMaterial(device, mat));
 		}
 
