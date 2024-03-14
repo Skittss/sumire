@@ -12,6 +12,8 @@
 #include <memory>
 #include <string>
 
+#include <sumire/core/flags/sumi_pipeline_state_flags.hpp>
+
 namespace sumire {
 
     class SumiMaterial {
@@ -27,15 +29,13 @@ namespace sumire {
             // This enum tells the render system what pipeline is needed to render this material.
             //  different piplines are needed to render different material properties,
             //    e.g. double sided triangles (no culling), or use of alpha-blending, etc.
-            enum RequiredPipelineType { 
-                DEFAULT, DOUBLE_SIDED 
-            };
-            RequiredPipelineType requiredPipelineType{RequiredPipelineType::DEFAULT};
+            SumiPipelineStateFlags requiredPipelineState = SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DEFAULT;
 
             enum AlphaMode { MODE_OPAQUE, MODE_BLEND, MODE_MASK };
 
             // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#materials
             struct MaterialTextureData {
+
                 // PBR Metallic Roughness
                 std::shared_ptr<SumiTexture> baseColorTexture;
                 glm::vec4 baseColorFactors{1.0f};
@@ -43,6 +43,7 @@ namespace sumire {
                 std::shared_ptr<SumiTexture> metallicRoughnessTexture;
                 glm::vec2 metallicRoughnessFactors{1.0f};
                 int metallicRoughnessTexCoord{-1};
+
                 // Lighting properties
                 std::shared_ptr<SumiTexture> normalTexture;
                 float normalScale{1.0f};
@@ -53,10 +54,14 @@ namespace sumire {
                 std::shared_ptr<SumiTexture> emissiveTexture;
                 glm::vec3 emissiveFactors{1.0f};
                 int emissiveTexCoord{-1};
+
                 // Other properties
                 bool doubleSided{true};
                 AlphaMode alphaMode{AlphaMode::MODE_OPAQUE};
                 float alphaCutoff{0.0f};
+                bool unlit{false};
+
+                // Metadata
                 std::string name{"Unnamed Material"};
             };
 

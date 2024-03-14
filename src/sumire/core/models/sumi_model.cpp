@@ -265,14 +265,14 @@ namespace sumire {
 		Node *node, 
 		VkCommandBuffer commandBuffer, 
 		VkPipelineLayout pipelineLayout,
-		const std::unordered_map<SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>> &pipelines
+		const std::unordered_map<SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>> &pipelines
 	) {
 		// Draw this node's primitives
 		if (node->mesh) {
 			for (auto& primitive : node->mesh->primitives) {
 
 				// Bind required pipeline
-				pipelines.at(primitive->material->requiredPipelineType)->bind(commandBuffer);
+				pipelines.at(primitive->material->requiredPipelineState)->bind(commandBuffer);
 
 				// Bind descriptor sets
 				const std::vector<VkDescriptorSet> descriptorSets{
@@ -324,7 +324,7 @@ namespace sumire {
 	void SumiModel::draw(
 		VkCommandBuffer commandBuffer, 
 		VkPipelineLayout pipelineLayout,
-		const std::unordered_map<SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>> &pipelines
+		const std::unordered_map<SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>> &pipelines
 	) {
 		for (auto& node : nodes) {
 			drawNode(node, commandBuffer, pipelineLayout, pipelines);

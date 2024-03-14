@@ -1,6 +1,8 @@
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
+#include <sumire/core/flags/sumi_pipeline_state_flags.hpp>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -91,37 +93,45 @@ namespace sumire {
 	void MeshRenderSys::createPipelines(VkRenderPass renderPass) {
 		assert(pipelineLayout != nullptr && "<MeshRenderSys>: Cannot create pipeline before pipeline layout.");
 
-		// Default Pipeline
+		// TODO: This pipeline creation step should be moved to a common location so that it can be
+		//		 re-used by different render systems. This would also allow for efficient caching
+		//		 of these pipelines (i.e. do not recreate if it already exists.)
+		// TODO: For now, we can generate all permutations of required pipelines during initialization
+		//		 so long as the number of flags remains small. If/when it gets larger, we should generate the
+		//		 required pipelines at runtime, with (runtime) caching, and generate a common (serialized) 
+		//		 pipeline cache that can load up frequently used pipelines from disk.
+
+		// Default pipeline config used as base of permutations
 		PipelineConfigInfo defaultConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(defaultConfig);
 		defaultConfig.renderPass = renderPass;
 		defaultConfig.pipelineLayout = pipelineLayout;
-		std::unique_ptr<SumiPipeline> defaultPipeline = std::make_unique<SumiPipeline>(
-			sumiDevice,
-			"shaders/simple_mesh.vert.spv", 
-			"shaders/simple_mesh.frag.spv",
-			defaultConfig
-		);
-		pipelines.emplace(
-			SumiMaterial::RequiredPipelineType::DEFAULT, std::move(defaultPipeline));
+		std::string defaultVertShader = "shaders/mesh.vert.spv";
+		std::string defaultFragShader = "shaders/mesh.frag.spv";
 
-		// TODO: The following pipeline could be created with dynamic state to poke the 
-		//		cull-mode register, or as a derivative of the default pipeline. May be faster.
+		// All permutations (including default)
+		const uint32_t pipelinePermutations = 2 * SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_HIGHEST;
+		for (uint32_t i = 0; i <= pipelinePermutations; i++) {
+			SumiPipelineStateFlags permutationFlags = static_cast<SumiPipelineStateFlags>(i);
+			PipelineConfigInfo permutationConfig = defaultConfig;
+			std::string permutationVertShader = defaultVertShader;
+			std::string permutationFragShader = defaultFragShader;
 
-		// Double-sided Pipeline
-		PipelineConfigInfo doubleSidedConfig{};
-		SumiPipeline::defaultPipelineConfigInfo(doubleSidedConfig);
-		doubleSidedConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
-		doubleSidedConfig.renderPass = renderPass;
-		doubleSidedConfig.pipelineLayout = pipelineLayout;
-		std::unique_ptr<SumiPipeline> doubleSidedPipeline = std::make_unique<SumiPipeline>(
-			sumiDevice,
-			"shaders/simple_mesh.vert.spv", 
-			"shaders/simple_mesh.frag.spv",
-			doubleSidedConfig
-		);
-		pipelines.emplace(
-			SumiMaterial::RequiredPipelineType::DOUBLE_SIDED, std::move(doubleSidedPipeline));
+			// Deal with each bit flag
+			if (permutationFlags && SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT)
+				permutationFragShader = "shaders/mesh_unlit.frag.spv";
+			if (permutationFlags && SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
+				permutationConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+
+			// Create pipeline and map it
+			std::unique_ptr<SumiPipeline> permutationPipeline = std::make_unique<SumiPipeline>(
+				sumiDevice,
+				permutationVertShader, 
+				permutationFragShader,
+				permutationConfig
+			);
+			pipelines.emplace(permutationFlags, std::move(permutationPipeline));
+		}
 	}
 
 	void MeshRenderSys::renderObjects(FrameInfo &frameInfo) {

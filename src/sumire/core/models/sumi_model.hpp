@@ -9,6 +9,7 @@
 // Model components
 #include <sumire/core/models/vertex.hpp>
 
+#include <sumire/core/flags/sumi_pipeline_state_flags.hpp>
 #include <sumire/util/gltf_interpolators.hpp>
 
 #define GLM_FORCE_RADIANS
@@ -19,9 +20,6 @@
 #include <memory>
 #include <vector>
 #include <string>
-
-// TODO: Pass this in to shaders as a specialization constant
-#define MODEL_MAX_JOINTS 256u
 
 namespace sumire {
 
@@ -217,8 +215,7 @@ namespace sumire {
 			VkCommandBuffer commandbuffer, 
 			VkPipelineLayout pipelineLayout,
 			const std::unordered_map<
-				SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>
-			> &pipelines
+				SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>> &pipelines
 		);
 
 		void updateAnimations(const std::vector<uint32_t> indices, float time, bool loop = true);
@@ -233,7 +230,7 @@ namespace sumire {
 			VkCommandBuffer commandBuffer, 
 			VkPipelineLayout pipelineLayout,
 			const std::unordered_map<
-				SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>
+				SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>
 			> &pipelines
 		);
 

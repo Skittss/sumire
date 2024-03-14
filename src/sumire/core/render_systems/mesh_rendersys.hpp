@@ -37,6 +37,6 @@ namespace sumire {
 
 			// Pipelines used all share the same layout, but are configured differently.
 			VkPipelineLayout pipelineLayout;
-			std::unordered_map<SumiMaterial::RequiredPipelineType, std::unique_ptr<SumiPipeline>> pipelines;
+			std::unordered_map<SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>> pipelines;
 		};
 }

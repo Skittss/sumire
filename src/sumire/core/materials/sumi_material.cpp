@@ -8,8 +8,9 @@ namespace sumire {
     SumiMaterial::SumiMaterial(id_t matId, SumiDevice &device, MaterialTextureData &data) 
         : id{matId}, texData{data} 
     {
-        // Set non-pipeline required for rendering under certain material properties.
-        if (texData.doubleSided) requiredPipelineType = RequiredPipelineType::DOUBLE_SIDED;
+        // Set flags for using non-default pipelines depending on material properties
+        if (texData.doubleSided) requiredPipelineState |= SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT;
+        if (texData.unlit) requiredPipelineState |= SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT;
     }
     
     SumiMaterial::~SumiMaterial() {}

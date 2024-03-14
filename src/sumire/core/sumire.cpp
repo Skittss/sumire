@@ -265,12 +265,12 @@ namespace sumire {
 		obj1.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(obj1.getId(), std::move(obj1));
 
-		// std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/clorinde.glb");
-		// auto glb1 = SumiObject::createObject();
-		// glb1.model = modelGlb1;
-		// glb1.transform.setTranslation(glm::vec3{-2.0f, 0.0f, 0.0f});
-		// glb1.transform.setScale(glm::vec3{1.0f});
-		// objects.emplace(glb1.getId(), std::move(glb1));
+		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/clorinde.glb");
+		auto glb1 = SumiObject::createObject();
+		glb1.model = modelGlb1;
+		glb1.transform.setTranslation(glm::vec3{-2.0f, 0.0f, 0.0f});
+		glb1.transform.setScale(glm::vec3{1.0f});
+		objects.emplace(glb1.getId(), std::move(glb1));
 
 		// std::shared_ptr<SumiModel> modelGlb2 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/doomslayer.glb");
 		// auto glb2 = SumiObject::createObject();
@@ -279,11 +279,11 @@ namespace sumire {
 		// glb2.transform.setScale(glm::vec3{1.0f});
 		// objects.emplace(glb2.getId(), std::move(glb2));
 
-		// std::shared_ptr<SumiModel> modelGlb3 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
-		// auto glb3 = SumiObject::createObject();
-		// glb3.model = modelGlb3;
-		// glb3.transform.setTranslation(glm::vec3{2.0f, 0.0f, 0.0f});
-		// glb3.transform.setScale(glm::vec3{1.0f});
-		// objects.emplace(glb3.getId(), std::move(glb3));
+		std::shared_ptr<SumiModel> modelGlb3 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
+		auto glb3 = SumiObject::createObject();
+		glb3.model = modelGlb3;
+		glb3.transform.setTranslation(glm::vec3{2.0f, 0.0f, 0.0f});
+		glb3.transform.setScale(glm::vec3{1.0f});
+		objects.emplace(glb3.getId(), std::move(glb3));
 	}
 }

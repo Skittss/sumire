@@ -56,56 +56,5 @@ void main() {
 		: vec4(1.0);
 	albedo *= mat.baseColorFactors;
 
-	// Check if fragment needs to be alpha-masked before doing any other computations
-	// TODO: This simple implementation causes z-fighting.
-	if (mat.useAlphaMask) {
-		if (albedo.a < mat.alphaMaskCutoff) 
-			discard;
-	}
-
-	// Adjust geometrical properties of back-faces
-	vec3 geoTangent = inTangent;
-	vec3 geoBitangent = inBitangent;
-	vec3 geoNormal = inNorm;
-	if (gl_FrontFacing == false) {
-		geoTangent *= -1.0; 
-		geoBitangent *= -1.0; 
-		geoNormal *= -1.0;
-	}
-
-	// Normal Mapping
-	vec3 normal;
-	if (mat.normalTexCoord > -1) {
-		// Read tangent space normal from texture
-		vec3 Nt = texture(normalMap, inUvs[mat.normalTexCoord]).rgb * 2.0 - 1.0;
-		Nt *= vec3(mat.normalScale, mat.normalScale, 1.0); // Apply scale
-		Nt = normalize(Nt);
-
-		mat3 TBN = mat3(geoTangent, geoBitangent, geoNormal);
-		normal = normalize(TBN * Nt);		
-	} else {
-		normal = normalize(geoNormal);
-	}
-
-	vec3 pointLightDir = ubo.lightPos - inPos.xyz;
-	float dLight = length(pointLightDir);
-	float attenuation = ubo.lightIntensity / dLight * dLight;
-
-	vec3 diffuse = attenuation * ubo.lightCol * max(dot(normal, normalize(pointLightDir)), 0.0);
-
-	// outCol = vec4(albedo.rgb, 1.0);
-
-	// Debug Ouputss
-	// outCol = vec4(0.5 + 0.5 * inUvs[0], 0.0, 1.0);
-	// outCol = vec4(0.5 + 0.5 * inUvs[1], 0.0, 1.0);
-	// outCol = vec4(0.5 + 0.5 * normal, 1.0);
-	// outCol = vec4(0.5 + 0.5 * geoNormal, 1.0);
-	// outCol = vec4(0.5 + 0.5 * geoTangent, 1.0);
-	outCol = vec4(0.5 + 0.5 * geoBitangent, 1.0);
-
-	outCol = pow(outCol, vec4(2.2));
-
-	// outCol = vec4((ubo.ambientCol + diffuse))
-
-	// outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
+	outCol = vec4(albedo.rgb, 1.0);
 }
