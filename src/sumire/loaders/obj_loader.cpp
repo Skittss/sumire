@@ -82,11 +82,11 @@ namespace sumire::loaders {
 		data.vertices.clear();
 		data.indices.clear();
 
-		std::unique_ptr<SumiModel::Node> mainNode = std::make_unique<SumiModel::Node>();
+		std::unique_ptr<Node> mainNode = std::make_unique<Node>();
 		mainNode->idx = 0;
 		mainNode->parent = nullptr;
 		mainNode->name = "mesh";
-		mainNode->mesh = std::make_unique<SumiModel::Mesh>(device, glm::mat4{1.0});
+		mainNode->mesh = std::make_unique<Mesh>(device, glm::mat4{1.0});
 
 		std::unordered_map<Vertex, uint32_t> uniqueVertices{}; // map for calculating index buffer from obj
 
@@ -160,7 +160,7 @@ namespace sumire::loaders {
 		// Push default material
 		data.materials.push_back(OBJloader::createDefaultMaterial(device));
 
-		std::unique_ptr<SumiModel::Primitive> mainPrimitive = std::make_unique<SumiModel::Primitive>(
+		std::unique_ptr<Primitive> mainPrimitive = std::make_unique<Primitive>(
 			0, 
 			indexCount, 
 			vertexCount, 

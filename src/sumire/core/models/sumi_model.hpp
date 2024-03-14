@@ -8,6 +8,11 @@
 
 // Model components
 #include <sumire/core/models/vertex.hpp>
+#include <sumire/core/models/node.hpp>
+#include <sumire/core/models/mesh.hpp>
+#include <sumire/core/models/primitive.hpp>
+#include <sumire/core/models/skin.hpp>
+#include <sumire/core/models/animation.hpp>
 
 #include <sumire/core/flags/sumi_pipeline_state_flags.hpp>
 #include <sumire/util/gltf_interpolators.hpp>
@@ -26,141 +31,6 @@ namespace sumire {
 	class SumiModel {
 
 	public:
-
-		struct Node;
-
-		struct Primitive {
-			uint32_t firstIndex;
-			uint32_t indexCount;
-			uint32_t vertexCount;
-			SumiMaterial *material{nullptr};
-			uint32_t materialIdx;
-
-			Primitive(
-				uint32_t firstIndex, 
-				uint32_t indexCount, uint32_t vertexCount, 
-				SumiMaterial *material, uint32_t materialIdx
-			) : firstIndex{firstIndex}, indexCount{indexCount}, vertexCount{vertexCount},
-				material{material}, materialIdx{materialIdx} {}
-		};
-
-		struct Mesh {
-			std::vector<std::unique_ptr<Primitive>> primitives;
-
-			struct UniformData {
-				glm::mat4 matrix;
-				glm::mat4 normalMatrix;
-				int nJoints{ 0 };
-			} uniforms;
-
-			struct JointData {
-				glm::mat4 jointMatrix;
-				glm::mat4 jointNormalMatrix;
-			};
-			
-			// Unform Buffer & Descriptor Set
-			// Only one buffer as constant between swap-chain images
-			std::unique_ptr<SumiBuffer> uniformBuffer = VK_NULL_HANDLE; 
-			// for skinning & animation, stored in host-coherent memory not local gpu memory.
-			std::unique_ptr<SumiBuffer> jointBuffer = VK_NULL_HANDLE; 
-			// Note: This descriptor is PARTIALLY_BOUND as jointBuffer can be VK_NULL_HANDLE if there is no skin.
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-
-			Mesh(SumiDevice &device, glm::mat4 matrix);
-			~Mesh() {
-				primitives.clear();
-				uniformBuffer = nullptr;
-			}
-
-			void initJointBuffer(SumiDevice &device, uint32_t nJoints);
-		};
-
-		struct Skin {
-			std::string name;
-			Node *skeletonRoot{nullptr};
-			std::vector<glm::mat4> inverseBindMatrices;
-			std::vector<Node*> joints;
-
-			~Skin() {
-				skeletonRoot = nullptr;
-				joints.clear();
-			}
-		};
-
-		// TODO: Node is significant enough to maybe warrant its own sub-class
-		//         to hold static members for its descriptor layout, etc.
-		struct Node {
-			uint32_t idx;
-			Node *parent;
-			std::vector<Node*> children;
-			std::string name;
-			std::unique_ptr<Mesh> mesh; // Optional
-
-			// Node transform properties
-			glm::mat4 matrix{ 1.0f };
-			glm::vec3 translation{ 0.0f };
-			glm::quat rotation;
-			glm::vec3 scale{ 1.0f };
-
-			glm::mat4 cachedLocalTransform{ 1.0f };
-			glm::mat4 worldTransform{ 1.0f };
-			glm::mat4 invWorldTransform{ 1.0f };
-			glm::mat4 normalMatrix{ 1.0f };
-
-			void setMatrix(glm::mat4 matrix);
-			void setTranslation(glm::vec3 translation);
-			void setRotation(glm::quat rotation);
-			void setScale(glm::vec3 scale);
-
-			glm::mat4 getLocalTransform();
-			glm::mat4 getGlobalTransform();
-
-			// Skinning (Optional)
-			Skin *skin;
-			int32_t skinIdx{-1};
-
-			// Update matrices, skinning, and joints
-			void applyTransformHierarchy();
-			void updateRecursive();
-			void update();
-			bool needsUpdate = true;
-
-			~Node() {
-				mesh = nullptr;
-				parent = nullptr;
-				skin = nullptr;
-				children.clear();
-			}
-		};
-
-		struct AnimationChannel {
-			enum PathType { TRANSLATION, ROTATION, SCALE, WEIGHTS };
-			PathType path;
-			Node *node;
-			uint32_t samplerIdx;
-			
-			~AnimationChannel() {
-				node = nullptr;
-			};
-		};
-
-		struct AnimationSampler {
-			util::GLTFinterpolationType interpolation;
-			std::vector<float> inputs;
-			std::vector<glm::vec4> outputs;
-		};
-
-		struct Animation {
-			std::string name;
-			std::vector<AnimationSampler> samplers;
-			std::vector<AnimationChannel> channels;
-			float start = std::numeric_limits<float>::max();
-			float end = std::numeric_limits<float>::min();
-
-			~Animation() {
-				channels.clear();
-			}
-		};
 
 		// Data loader struct for SumiModel constructor.
 		struct Data {

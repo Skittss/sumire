@@ -40,12 +40,12 @@ namespace sumire::loaders {
             );
             static void loadGLTFnode(
                 SumiDevice &device, 
-                SumiModel::Node *parent, const tinygltf::Node &node, uint32_t nodeIdx, 
+                Node *parent, const tinygltf::Node &node, uint32_t nodeIdx, 
                 const tinygltf::Model &model, 
                 SumiModel::Data &data,
                 bool genTangents
             );
-            static SumiModel::Node* getGLTFnode(uint32_t idx, SumiModel::Data &data);
+            static Node* getGLTFnode(uint32_t idx, SumiModel::Data &data);
             static uint32_t getLowestUnreservedGLTFNodeIdx(SumiModel::Data &data);
 
             // TODO: Move this to a material manager

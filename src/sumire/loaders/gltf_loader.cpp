@@ -273,7 +273,7 @@ namespace sumire::loaders {
 		
 		static int cnt = 0;
 		for (tinygltf::Skin &skin : model.skins) {
-			std::unique_ptr<SumiModel::Skin> createSkin = std::make_unique<SumiModel::Skin>();
+			std::unique_ptr<Skin> createSkin = std::make_unique<Skin>();
 			createSkin->name = skin.name;
 
 			// Skeleton Root Node
@@ -283,7 +283,7 @@ namespace sumire::loaders {
 
 			// Joint Nodes
 			for (int jointIdx : skin.joints) {
-				SumiModel::Node *jointNode = getGLTFnode(jointIdx, data);
+				Node *jointNode = getGLTFnode(jointIdx, data);
 				if (jointNode != nullptr) {
 					createSkin->joints.push_back(jointNode);
 				}
@@ -311,13 +311,13 @@ namespace sumire::loaders {
 		assert(data.flatNodes.size() > 0 && "Flattened model nodes array was uninitialized when loading animations.");
 
 		for (tinygltf::Animation &animation : model.animations) {
-			std::unique_ptr<SumiModel::Animation> createAnimation = std::make_unique<SumiModel::Animation>();
+			std::unique_ptr<Animation> createAnimation = std::make_unique<Animation>();
 			createAnimation->name = animation.name.empty() ?
 				 std::to_string(data.animations.size()) : animation.name;
 
 			// Sampler Information
 			for (auto &sampler : animation.samplers) {
-				SumiModel::AnimationSampler createSampler{};
+				AnimationSampler createSampler{};
 
 				// Interpolation Type
 				if (sampler.interpolation == "LINEAR") {
@@ -392,20 +392,20 @@ namespace sumire::loaders {
 			
 			// Animation Channels
 			for (auto& channel : animation.channels) {
-				SumiModel::AnimationChannel createChannel{};
+				AnimationChannel createChannel{};
 
 				if (channel.target_path == "rotation") {
-					createChannel.path = SumiModel::AnimationChannel::PathType::ROTATION;
+					createChannel.path = AnimationChannel::PathType::ROTATION;
 				}
 				if (channel.target_path == "translation") {
-					createChannel.path = SumiModel::AnimationChannel::PathType::TRANSLATION;
+					createChannel.path = AnimationChannel::PathType::TRANSLATION;
 				}
 				if (channel.target_path == "scale") {
-					createChannel.path = SumiModel::AnimationChannel::PathType::SCALE;
+					createChannel.path = AnimationChannel::PathType::SCALE;
 				}
 				if (channel.target_path == "weights") {
 					std::runtime_error("TODO: Animation via weights & morph targets");
-					createChannel.path = SumiModel::AnimationChannel::PathType::WEIGHTS;
+					createChannel.path = AnimationChannel::PathType::WEIGHTS;
 				}
 
 				createChannel.samplerIdx = channel.sampler;
@@ -447,12 +447,12 @@ namespace sumire::loaders {
 
 	void GLTFloader::loadGLTFnode(
 		SumiDevice &device,
-		SumiModel::Node *parent, const tinygltf::Node &node, uint32_t nodeIdx, 
+		Node *parent, const tinygltf::Node &node, uint32_t nodeIdx, 
 		const tinygltf::Model &model, 
 		SumiModel::Data &data,
 		bool genTangents
 	) {
-		std::unique_ptr<SumiModel::Node> createNode = std::make_unique<SumiModel::Node>();
+		std::unique_ptr<Node> createNode = std::make_unique<Node>();
 		createNode->idx = nodeIdx;
 		createNode->parent = parent;
 		createNode->name = node.name;
@@ -484,7 +484,7 @@ namespace sumire::loaders {
 		// Load mesh if node has it
 		if (node.mesh > -1) {
 			const tinygltf::Mesh mesh = model.meshes[node.mesh];
-			std::unique_ptr createMesh = std::make_unique<SumiModel::Mesh>(device, createNode->matrix);
+			std::unique_ptr<Mesh> createMesh = std::make_unique<Mesh>(device, createNode->matrix);
 			
 			for (size_t i = 0; i < mesh.primitives.size(); i++) {
 
@@ -723,7 +723,7 @@ namespace sumire::loaders {
 				}
 				
 				// Assign primitive to mesh
-				std::unique_ptr<SumiModel::Primitive> createPrimitive = std::make_unique<SumiModel::Primitive>(
+				std::unique_ptr<Primitive> createPrimitive = std::make_unique<Primitive>(
 					indexStart, 
 					indexCount, 
 					vertexCount, 
@@ -747,7 +747,7 @@ namespace sumire::loaders {
 		
 	}
 
-	SumiModel::Node* GLTFloader::getGLTFnode(uint32_t idx, SumiModel::Data &data) {
+	Node* GLTFloader::getGLTFnode(uint32_t idx, SumiModel::Data &data) {
 		// TODO: This linear (O(n)) search is pretty slow for objects with lots of nodes.
 		//		 Would recommend making another field for data: nodeMap which has <idx, Node*> pairs
 		//		 to reduce this to O(1).

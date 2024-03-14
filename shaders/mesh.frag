@@ -98,7 +98,7 @@ void main() {
 	// Debug Ouputss
 	// outCol = vec4(0.5 + 0.5 * inUvs[0], 0.0, 1.0);
 	// outCol = vec4(0.5 + 0.5 * inUvs[1], 0.0, 1.0);
-	// outCol = vec4(0.5 + 0.5 * normal, 1.0);
+	outCol = vec4(0.5 + 0.5 * normal, 1.0);
 	// outCol = vec4(0.5 + 0.5 * geoNormal, 1.0);
 	// outCol = vec4(0.5 + 0.5 * geoTangent, 1.0);
 	// outCol = vec4(0.5 + 0.5 * geoBitangent, 1.0);
@@ -107,5 +107,5 @@ void main() {
 
 	// outCol = vec4((ubo.ambientCol + diffuse))
 
-	outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
+	// outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
 }
