@@ -18,6 +18,7 @@ namespace sumire {
                 SumiDevice &device, 
                 VkMemoryPropertyFlags memoryPropertyFlags,
                 VkImageCreateInfo &imageInfo, 
+                bool generateMips,
                 VkSamplerCreateInfo &samplerInfo,
                 SumiBuffer &imageStagingBuffer
             );
@@ -26,17 +27,20 @@ namespace sumire {
             static std::unique_ptr<SumiTexture> createFromFile(
                 SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
                 VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
-                const std::string &filepath
+                const std::string &filepath,
+                bool generateMips = true
             );
             static std::unique_ptr<SumiTexture> createFromRGBA(
                 SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
                 VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
-                int width, int height, unsigned char *data
+                uint32_t width, uint32_t height, unsigned char *data,
+                bool generateMips = true
             );
             static std::unique_ptr<SumiTexture> createFromRGB(
                 SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
                 VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
-                int width, int height, unsigned char *data
+                uint32_t width, uint32_t height, unsigned char *data,
+                bool generateMips = true
             );
             static void defaultImageCreateInfo(VkImageCreateInfo &createInfo);
             static void defaultSamplerCreateInfo(SumiDevice &device, VkSamplerCreateInfo &createInfo);
@@ -48,8 +52,10 @@ namespace sumire {
             void createTextureImage(
                 VkMemoryPropertyFlags memoryPropertyFlags, 
                 VkImageCreateInfo &imageInfo,
-                SumiBuffer &stagingBuffer
+                SumiBuffer &stagingBuffer,
+                bool generateMips
             );
+            void generateMipChain(VkImageCreateInfo &imageInfo);
             void createTextureImageView(VkFormat format);
             void createTextureSampler(VkSamplerCreateInfo &samplerInfo);
             void writeDescriptorInfo();

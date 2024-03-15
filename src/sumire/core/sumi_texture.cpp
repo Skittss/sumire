@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include <cassert>
+#include <math.h>
 
 namespace sumire {
 
@@ -11,11 +12,22 @@ namespace sumire {
 		SumiDevice &device, 
 		VkMemoryPropertyFlags memoryPropertyFlags, 
 		VkImageCreateInfo &imageInfo,
+		bool generateMips,
 		VkSamplerCreateInfo &samplerInfo,
 		SumiBuffer &imageStagingBuffer
 	): sumiDevice{ device }, memoryPropertyFlags{ memoryPropertyFlags }
 	{
-		createTextureImage(memoryPropertyFlags, imageInfo, imageStagingBuffer);
+		if (generateMips) {
+			// Check that linear filtering is supported for mipmap generation (using VkCmdBlitImage)
+			VkFormatProperties formatProperties;
+			vkGetPhysicalDeviceFormatProperties(sumiDevice.getPhysicalDevice(), imageInfo.format, &formatProperties);
+		
+			if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+				throw std::runtime_error("Could not generate mip map textures: Linear bitting (for filtering) is not supported by the device used.");
+			}
+		}
+
+		createTextureImage(memoryPropertyFlags, imageInfo, imageStagingBuffer, generateMips);
 		createTextureImageView(imageInfo.format);
 		createTextureSampler(samplerInfo);
 		writeDescriptorInfo();
@@ -31,7 +43,8 @@ namespace sumire {
 	std::unique_ptr<SumiTexture> SumiTexture::createFromFile(
 		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
 		VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
-		const std::string &filepath
+		const std::string &filepath,
+		bool generateMips
 	) {
 		int textureWidth, textureHeight, textureChannels;
 		stbi_uc *imageData = stbi_load(filepath.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
@@ -58,14 +71,22 @@ namespace sumire {
 		// Cleanup image in system memory from load
 		stbi_image_free(imageData);
 
-		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, samplerInfo, stagingBuffer);
+		return std::make_unique<SumiTexture>(
+			device,
+			memoryPropertyFlags, 
+			imageInfo, 
+			generateMips,
+			samplerInfo,
+			stagingBuffer
+		);
 	}
 
 	// Creates a RGBA texture from RGBA data.
 	std::unique_ptr<SumiTexture> SumiTexture::createFromRGBA(
 		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
 		VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
-		int width, int height, unsigned char *data
+		uint32_t width, uint32_t height, unsigned char *data,
+		bool generateMips
 	) {
 		VkDeviceSize imageSize = width * height * 4;
 		imageInfo.extent.width = width;
@@ -83,14 +104,22 @@ namespace sumire {
 		stagingBuffer.map();
 		stagingBuffer.writeToBuffer((void *)data);
 
-		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, samplerInfo, stagingBuffer);
+		return std::make_unique<SumiTexture>(
+			device,
+			memoryPropertyFlags, 
+			imageInfo, 
+			generateMips,
+			samplerInfo, 
+			stagingBuffer
+		);
 	}
 
 	// Creates a RGBA texture from RGB data.
 	std::unique_ptr<SumiTexture> SumiTexture::createFromRGB(
 		SumiDevice &device, VkMemoryPropertyFlags memoryPropertyFlags, 
 		VkImageCreateInfo &imageInfo, VkSamplerCreateInfo &samplerInfo,
-		int width, int height, unsigned char *data
+		uint32_t width, uint32_t height, unsigned char *data,
+		bool generateMips
 	) {		
 		VkDeviceSize imageSize = width * height * 4;
 		imageInfo.extent.width = width;
@@ -122,7 +151,14 @@ namespace sumire {
 		stagingBuffer.writeToBuffer((void *)convertedData);
 		delete[] convertedData;
 
-		return std::make_unique<SumiTexture>(device, memoryPropertyFlags, imageInfo, samplerInfo, stagingBuffer);
+		return std::make_unique<SumiTexture>(
+			device, 
+			memoryPropertyFlags, 
+			imageInfo, 
+			generateMips,
+			samplerInfo, 
+			stagingBuffer
+		);
 	}
 
 	// Image create info for a linear RGBA (UNORM) image.
@@ -172,32 +208,130 @@ namespace sumire {
 	void SumiTexture::createTextureImage(
 		VkMemoryPropertyFlags memoryPropertyFlags, 
 		VkImageCreateInfo &imageInfo, 
-		SumiBuffer &stagingBuffer
+		SumiBuffer &stagingBuffer,
+		bool generateMips
 	) {
 		// Ensure image dimensions are set
 		assert(imageInfo.extent.width > 0 && imageInfo.extent.height > 0 && "Texture image dimensions not set");
 		// Do not allow image creation if already created
 		assert(!(image || memory) && "Image already created for texture");
 
+		// Ensure correct bit flags are set for mip mapping and transfer to shader format
+		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+		if (generateMips) {
+			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+			// Also set number of required mip map levels based on max image extent. 
+			imageInfo.mipLevels = static_cast<uint32_t>(
+				floor(log2(std::max(imageInfo.extent.width, imageInfo.extent.height))) + 1.0f);
+		}
+
 		sumiDevice.createImageWithInfo(imageInfo, memoryPropertyFlags, image, memory);
-		
+
 		// Image to TRANSFER_DST_OPTIMAL for buffer copying
 		sumiDevice.transitionImageLayout(
 			image, 
-			imageInfo.format, 
+			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 		);
 		// Copy image from staging buffer to GPU handle
 		sumiDevice.copyBufferToImage(stagingBuffer.getBuffer(), image, imageInfo.extent.height, imageInfo.extent.height, 1);
+
+		// Generate Mip map if needed
+		if (generateMips) {
+			generateMipChain(imageInfo);
+		}
+		else {
+			// if not generating mip maps, need to manually transition top level mip back to
+			//  TRANSFER_SRC for the shader read transition below. (Mip map generator does this transition if called)
+			sumiDevice.transitionImageLayout(
+				image,
+				{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+			);
+		}
 		
-		// Image to shader compatible layout
+		// Image to shader compatible layout (all mip levels)
 		sumiDevice.transitionImageLayout(
 			image,
-			imageInfo.format, 
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, imageInfo.mipLevels , 0, 1 },
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		);
+	}
+
+	void SumiTexture::generateMipChain(VkImageCreateInfo &imageInfo) {
+		if (imageInfo.mipLevels <= 1) return;
+		assert(image != VK_NULL_HANDLE && "Attempted to generate texture mips before image was created");
+
+		// TODO: Could this be done it a separate VkQueue to the graphics rendering queue?
+
+		// Prepare layout of base mip level for copy (from mipMap 0 -> 1)
+		sumiDevice.transitionImageLayout(
+			image,
+			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+		);
+
+		// Generate via image blit to make use of GPU image downsampling
+		VkCommandBuffer commandBuffer = sumiDevice.beginSingleTimeCommands();
+
+		// Ping pong type behaviour between layers for generating subsequent mip map levels
+		// https://docs.vulkan.org/samples/latest/samples/api/texture_mipmap_generation/README.html#_generating_the_mip_chain
+		for (uint32_t i = 1; i < imageInfo.mipLevels; i++) {
+			VkImageBlit imageBlit{};
+
+			// Src
+			imageBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBlit.srcSubresource.layerCount = 1;
+			imageBlit.srcSubresource.mipLevel   = i - 1;
+			imageBlit.srcOffsets[1].x           = int32_t(imageInfo.extent.width  >> (i - 1));
+			imageBlit.srcOffsets[1].y           = int32_t(imageInfo.extent.height >> (i - 1));
+			imageBlit.srcOffsets[1].z           = 1;
+
+			// Dst
+			imageBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBlit.dstSubresource.layerCount = 1;
+			imageBlit.dstSubresource.mipLevel   = i;
+			imageBlit.dstOffsets[1].x           = int32_t(imageInfo.extent.width  >> i);
+			imageBlit.dstOffsets[1].y           = int32_t(imageInfo.extent.height >> i);
+			imageBlit.dstOffsets[1].z           = 1;
+
+			// Make current mip map level able to be transferred to
+			sumiDevice.transitionImageLayout(
+				image,
+				{ VK_IMAGE_ASPECT_COLOR_BIT, i, 1, 0, 1 },
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				commandBuffer
+			);
+
+			vkCmdBlitImage(
+				commandBuffer,
+				image,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				image,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&imageBlit,
+				VK_FILTER_LINEAR
+			);
+
+			// Prepare the mip map level written just now for transfer to the subsequent mip map level
+			sumiDevice.transitionImageLayout(
+				image,
+				{ VK_IMAGE_ASPECT_COLOR_BIT, i, 1, 0, 1 },
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				commandBuffer
+			);
+		}
+
+		sumiDevice.endSingleTimeCommands(commandBuffer);
 	}
 
 	void SumiTexture::createTextureImageView(VkFormat format) {
