@@ -72,6 +72,8 @@ namespace sumire {
 
             // Descriptor
             VkDescriptorImageInfo descriptorInfo;
+
+            uint32_t mipLevels = 0;
     };
     
 }

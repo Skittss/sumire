@@ -130,7 +130,7 @@ namespace sumire {
 		unsigned char *rgbaPtr = convertedData;
 		unsigned char *rgbPtr = data;
 
-		for (int i = 0; i < width * height; i++) {
+		for (uint32_t i = 0; i < width * height; i++) {
 			for (int j = 0; j < 3; j++) {
 				rgbaPtr[j] = rgbPtr[j];
 			}
@@ -225,6 +225,7 @@ namespace sumire {
 			// Also set number of required mip map levels based on max image extent. 
 			imageInfo.mipLevels = static_cast<uint32_t>(
 				floor(log2(std::max(imageInfo.extent.width, imageInfo.extent.height))) + 1.0f);
+			this->mipLevels = imageInfo.mipLevels; // store for later use in sampler creation.
 		}
 
 		sumiDevice.createImageWithInfo(imageInfo, memoryPropertyFlags, image, memory);
@@ -342,7 +343,7 @@ namespace sumire {
 		viewInfo.format = format;
 		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.levelCount = mipLevels;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
 
@@ -352,6 +353,8 @@ namespace sumire {
 	}
 
 	void SumiTexture::createTextureSampler(VkSamplerCreateInfo &samplerInfo) {
+		samplerInfo.maxLod = static_cast<float>(mipLevels);
+
 		if (vkCreateSampler(sumiDevice.device(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create texture sampler");
 		}
