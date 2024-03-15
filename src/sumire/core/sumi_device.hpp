@@ -79,9 +79,10 @@ namespace sumire {
 			VkDeviceMemory& imageMemory);
 		void transitionImageLayout(
 			VkImage image, 
-			VkFormat format, 
+			VkImageSubresourceRange subresourceRange,
 			VkImageLayout oldLayout, 
-			VkImageLayout newLayout
+			VkImageLayout newLayout,
+			VkCommandBuffer commandBuffer = VK_NULL_HANDLE // Optionally provide single-time command buffer
 		);
 
 		VkPhysicalDeviceProperties properties;
