@@ -16,8 +16,10 @@ A lightweight graphics development engine built in vulkan.
     - Solved via dynamic pipeline binding in model draw calls.
 - [X] Bitangent reading from glTF needs a fix (fails NormalMirrorTest.glb)
 - [X] Mesh Rendering multi-pipeline support
+- [X] glTF texture mip-mapping support (runtime)
+    - [ ] Loading in mip maps from files
+    - [ ] Mip map generation could be moved to compute shader if anything more complicated than linear downsampling is needed
 - [ ] glTF Morph-target support (and their animation)
-- [ ] glTF texture mip-mapping support
 - [ ] Deferred Rendering
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
