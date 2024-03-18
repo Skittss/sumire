@@ -16,7 +16,8 @@ namespace sumire {
 	}
 
 	SumiSwapChain::SumiSwapChain(SumiDevice& deviceRef, VkExtent2D extent, std::shared_ptr<SumiSwapChain> previous)
-		: device{ deviceRef }, windowExtent{ extent }, oldSwapChain{ previous } {
+		: device{ deviceRef }, windowExtent{ extent }, oldSwapChain{ previous } 
+	{
 		init();
 
 		// Only use old swap chain ptr to init a new one to potentially save resources

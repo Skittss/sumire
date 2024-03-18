@@ -2,6 +2,7 @@
 
 #include <sumire/core/windowing/sumi_window.hpp>
 #include <sumire/core/rendering/sumi_swap_chain.hpp>
+#include <sumire/core/rendering/sumi_gbuffer.hpp>
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 
 #include <memory>
@@ -49,6 +50,7 @@ namespace sumire {
 		void createCommandBuffers();
 		void freeCommandBuffers();
 		void recreateSwapChain();
+        void recreateGbuffer();
 
         bool scRecreatedFlag{false};
 
@@ -56,6 +58,7 @@ namespace sumire {
 		SumiDevice& sumiDevice;
 		std::unique_ptr<SumiSwapChain> sumiSwapChain;
 		std::vector<VkCommandBuffer> commandBuffers;
+        std::unique_ptr<SumiGbuffer> gbuffer;
 
         uint32_t currentImageIdx;
         int currentFrameIdx{0};

@@ -7,6 +7,7 @@ namespace sumire {
 
 	SumiRenderer::SumiRenderer(SumiWindow &window, SumiDevice &device) : sumiWindow{window}, sumiDevice{device} {
 		recreateSwapChain();
+		recreateGbuffer();
 		createCommandBuffers();
 	}
 
@@ -37,9 +38,21 @@ namespace sumire {
 		}
 
 		scRecreatedFlag = true;
+	}
 
-		// TODO: If new render pass is compatible, we needn't create a new pipeline.
-		//createPipeline();
+	void SumiRenderer::recreateGbuffer() {
+		// TODO: The default behaviour of the gbuffer is to match the window size, but it may be useful
+		//        To have a gbuffer which doesn't match the window dimensions (i.e. higher res, etc).
+		auto extent = sumiWindow.getExtent();
+		while (extent.width == 0 || extent.height == 0) {
+			// Wait on minimization
+			extent = sumiWindow.getExtent();
+			glfwWaitEvents();
+		}
+
+		vkDeviceWaitIdle(sumiDevice.device());
+
+		gbuffer = std::make_unique<SumiGbuffer>(sumiDevice, extent.width, extent.height);
 	}
 
 	void SumiRenderer::createCommandBuffers() {
