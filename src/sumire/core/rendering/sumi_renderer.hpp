@@ -1,8 +1,8 @@
 #pragma once
 
-#include <sumire/core/sumi_window.hpp>
-#include <sumire/core/sumi_swap_chain.hpp>
-#include <sumire/core/sumi_device.hpp>
+#include <sumire/core/windowing/sumi_window.hpp>
+#include <sumire/core/rendering/sumi_swap_chain.hpp>
+#include <sumire/core/graphics_pipeline/sumi_device.hpp>
 
 #include <memory>
 #include <vector>

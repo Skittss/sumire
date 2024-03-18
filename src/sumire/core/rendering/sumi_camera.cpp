@@ -1,4 +1,4 @@
-#include <sumire/core/sumi_camera.hpp>
+#include <sumire/core/rendering/sumi_camera.hpp>
 
 #include <cassert>
 #include <limits.h>

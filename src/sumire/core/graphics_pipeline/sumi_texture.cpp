@@ -1,4 +1,4 @@
-#include <sumire/core/sumi_texture.hpp>
+#include <sumire/core/graphics_pipeline/sumi_texture.hpp>
 
 #include <stb_image.h>
 

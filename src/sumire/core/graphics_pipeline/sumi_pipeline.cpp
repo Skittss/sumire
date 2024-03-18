@@ -1,6 +1,6 @@
-#include <sumire/core/sumi_pipeline.hpp>
+#include <sumire/core/graphics_pipeline/sumi_pipeline.hpp>
 
-#include <sumire/core//models/vertex.hpp>
+#include <sumire/core/models/vertex.hpp>
 
 #include <fstream>
 #include <iostream>

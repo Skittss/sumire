@@ -1,4 +1,4 @@
-#include <sumire/core/sumi_buffer.hpp>
+#include <sumire/core/graphics_pipeline/sumi_buffer.hpp>
  
 // std
 #include <cassert>

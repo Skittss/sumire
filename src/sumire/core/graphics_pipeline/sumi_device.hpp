@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sumire/core/sumi_window.hpp>
+#include <sumire/core/windowing/sumi_window.hpp>
 
 #include <string>
 #include <vector>

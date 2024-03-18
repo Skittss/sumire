@@ -1,5 +1,5 @@
 #include <sumire/core/sumire.hpp>
-#include <sumire/core/sumi_buffer.hpp>
+#include <sumire/core/graphics_pipeline/sumi_buffer.hpp>
 
 // Render systems
 #include <sumire/core/render_systems/mesh_rendersys.hpp>

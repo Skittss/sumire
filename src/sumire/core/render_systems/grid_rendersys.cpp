@@ -1,7 +1,7 @@
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/grid_rendersys_structs.hpp>
 
-#include <sumire/core/sumi_swap_chain.hpp>
+#include <sumire/core/rendering/sumi_swap_chain.hpp>
 
 #include <stdexcept>
 #include <array>

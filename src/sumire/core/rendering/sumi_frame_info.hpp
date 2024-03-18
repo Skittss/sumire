@@ -1,7 +1,7 @@
 #pragma once
 
-#include <sumire/core/sumi_camera.hpp>
-#include <sumire/core/sumi_object.hpp>
+#include <sumire/core/rendering/sumi_camera.hpp>
+#include <sumire/core/rendering/sumi_object.hpp>
 
 #include <vulkan/vulkan.h>
 

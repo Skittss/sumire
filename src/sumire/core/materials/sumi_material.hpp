@@ -1,9 +1,9 @@
 #pragma once
 
-#include <sumire/core/sumi_device.hpp>
-#include <sumire/core/sumi_pipeline.hpp>
-#include <sumire/core/sumi_texture.hpp>
-#include <sumire/core/sumi_descriptors.hpp>
+#include <sumire/core/graphics_pipeline/sumi_device.hpp>
+#include <sumire/core/graphics_pipeline/sumi_pipeline.hpp>
+#include <sumire/core/graphics_pipeline/sumi_texture.hpp>
+#include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

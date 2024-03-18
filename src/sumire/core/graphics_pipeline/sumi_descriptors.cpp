@@ -1,4 +1,4 @@
-#include <sumire/core/sumi_descriptors.hpp>
+#include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
  
 #include <cassert>
 #include <stdexcept>

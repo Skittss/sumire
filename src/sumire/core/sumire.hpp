@@ -1,11 +1,11 @@
 #pragma once
 
-#include <sumire/core/sumi_window.hpp>
-#include <sumire/core/sumi_device.hpp>
-#include <sumire/core//models/sumi_model.hpp>
-#include <sumire/core/sumi_object.hpp>
-#include <sumire/core/sumi_renderer.hpp>
-#include <sumire/core/sumi_descriptors.hpp>
+#include <sumire/core/windowing/sumi_window.hpp>
+#include <sumire/core/graphics_pipeline/sumi_device.hpp>
+#include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
+#include <sumire/core/models/sumi_model.hpp>
+#include <sumire/core/rendering/sumi_object.hpp>
+#include <sumire/core/rendering/sumi_renderer.hpp>
 
 #include <memory>
 #include <vector>

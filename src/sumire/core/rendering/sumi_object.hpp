@@ -1,7 +1,7 @@
 #pragma once
 
-#include <sumire/core//models/sumi_model.hpp>
-#include <sumire/core/sumi_transform3d.hpp>
+#include <sumire/core/models/sumi_model.hpp>
+#include <sumire/core/rendering/sumi_transform3d.hpp>
 
 #include <glm/gtc/matrix_transform.hpp>
 

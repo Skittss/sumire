@@ -1,4 +1,4 @@
-#include <sumire/core/sumi_device.hpp>
+#include <sumire/core/graphics_pipeline/sumi_device.hpp>
 
 // std headers
 #include <cstring>
