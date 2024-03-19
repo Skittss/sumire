@@ -35,14 +35,23 @@ namespace sumire {
             assert(isFrameStarted && "Failed to get command buffer from a frame not in flight.");
             return commandBuffers[currentFrameIdx];
         }
+        VkCommandBuffer getCurrentDeferredCommandBuffer() const {
+            assert(isFrameStarted && "Failed to get deferred command buffer - no frame is in flight");
+            return deferredCommandBuffers[currentFrameIdx];
+        }
 
         int getFrameIdx() const {
             assert(isFrameStarted && "Failed to get frame index (frame not in flight).");
             return currentFrameIdx;
         }
 
+        // Recording of command buffers
         VkCommandBuffer beginFrame();
         void endFrame();
+
+        void beginGbufferRenderPass(VkCommandBuffer commandBuffer);
+        void endGbufferRenderPass(VkCommandBuffer commandBuffer);
+
         void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
         void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
 
@@ -56,9 +65,16 @@ namespace sumire {
 
 		SumiWindow& sumiWindow;
 		SumiDevice& sumiDevice;
+
+        // Swap chain
 		std::unique_ptr<SumiSwapChain> sumiSwapChain;
 		std::vector<VkCommandBuffer> commandBuffers;
+
+        // Offscreen Deferred Rendering
         std::unique_ptr<SumiGbuffer> gbuffer;
+        // We need multiple command buffers for recording per swapchain image,
+        //   but only one gbuffer due to execution dependency of the deferred renderpass.
+        std::vector<VkCommandBuffer> deferredCommandBuffers;
 
         uint32_t currentImageIdx;
         int currentFrameIdx{0};

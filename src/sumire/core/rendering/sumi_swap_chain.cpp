@@ -84,7 +84,12 @@ namespace sumire {
 	}
 
 	VkResult SumiSwapChain::submitCommandBuffers(
-		const VkCommandBuffer* buffers, uint32_t* imageIndex) {
+		const VkCommandBuffer* buffers, 
+		uint32_t* imageIndex,
+		const uint32_t waitSemaphoreCount,
+		const VkSemaphore* waitSemaphores,
+		const VkPipelineStageFlags* waitDstStageMask
+	) {
 		if (imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
 			vkWaitForFences(device.device(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
 		}
@@ -92,13 +97,9 @@ namespace sumire {
 
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-		VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.waitSemaphoreCount = waitSemaphoreCount;
 		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-
+		submitInfo.pWaitDstStageMask = waitDstStageMask;
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = buffers;
 

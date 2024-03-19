@@ -1,5 +1,7 @@
 #include <sumire/core/rendering/sumi_gbuffer.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #include <stdexcept>
 #include <array>
 
@@ -17,10 +19,22 @@ namespace sumire {
         destroyAttachment(albedo);
         destroyAttachment(normal);
         destroyAttachment(depth);
+
+        // Destroy framebuffer
+        vkDestroyFramebuffer(sumiDevice.device(), framebuffer, nullptr);
+
+        // Destroy render pass
+        vkDestroyRenderPass(sumiDevice.device(), renderPass, nullptr);
+
+        // Destroy signaling semaphore
+        vkDestroySemaphore(sumiDevice.device(), renderFinishedSemaphore, nullptr);
     }
 
     void SumiGbuffer::init() {
         createAttachments();
+        createRenderPass();
+        createFramebuffer();
+        createSyncObjects();
     }
 
     void SumiGbuffer::createAttachments() {
@@ -145,9 +159,9 @@ namespace sumire {
 
         // Initialize specific attachment formats
         attachmentDescriptions[0].format = position.format;
-        attachmentDescriptions[0].format = albedo.format;
-        attachmentDescriptions[0].format = normal.format;
-        attachmentDescriptions[0].format = depth.format;
+        attachmentDescriptions[1].format = albedo.format;
+        attachmentDescriptions[2].format = normal.format;
+        attachmentDescriptions[3].format = depth.format;
 
         // Reference setup for RenderPassCreateInfo
         std::array<VkAttachmentReference, 3> colorAttachmentRefs{};
@@ -185,7 +199,7 @@ namespace sumire {
         dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
         dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-		VkRenderPassCreateInfo renderPassInfo = {};
+		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentDescriptions.size());
 		renderPassInfo.pAttachments = attachmentDescriptions.data();
@@ -197,7 +211,105 @@ namespace sumire {
 		if (vkCreateRenderPass(sumiDevice.device(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
 			throw std::runtime_error("[Sumire::SumiGbuffer] Failed to create g-buffer render pass.");
 		}
+    }
 
+    void SumiGbuffer::createFramebuffer() {
+        assert(renderPass != VK_NULL_HANDLE && "Cannot create framebuffer before renderpass is initialized");
+        
+        std::array<VkImageView, 4> attachments{};
+        attachments[0] = position.view;
+        attachments[1] = albedo.view;
+        attachments[2] = normal.view;
+        attachments[3] = depth.view;
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = renderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = width;
+        framebufferInfo.height = height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(
+            sumiDevice.device(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) 
+        {
+            throw std::runtime_error("[Sumire::SumiGbuffer] Failed to create framebuffer.");
+        }
+    }
+
+    void SumiGbuffer::createSyncObjects() {
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VK_CHECK_SUCCESS(
+            vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphore),
+            "[Sumire::SumiGbuffer] Failed to create render finish semaphore."
+        );
+    }
+
+    void SumiGbuffer::beginRenderPass(VkCommandBuffer commandBuffer) {
+        assert(renderPassStarted == false && "Tried to start a new render pass when another was already in progress.");
+
+        std::array<VkClearValue, 4> attachmentClearValues{};
+        attachmentClearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+        attachmentClearValues[1].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+        attachmentClearValues[2].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+        attachmentClearValues[3].depthStencil = { 1.0f, 0 };
+
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = renderPass;
+        renderPassInfo.framebuffer = framebuffer;
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = { width, height };
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(attachmentClearValues.size());
+        renderPassInfo.pClearValues = attachmentClearValues.data();
+
+        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = static_cast<float>(height);
+        viewport.width = static_cast<float>(width);
+        viewport.height = -static_cast<float>(height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        VkRect2D scissor{ {0, 0}, {width, height}};
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+        renderPassStarted = true;
+    }
+
+    void SumiGbuffer::endRenderPass(VkCommandBuffer commandBuffer) {
+        assert(renderPassStarted == true && "Tried to end a render pass when none was started.");
+        vkCmdEndRenderPass(commandBuffer);
+        renderPassStarted = false;
+    }
+
+    void SumiGbuffer::submitCommandBuffer(
+        const VkCommandBuffer *commandBuffer,
+        const uint32_t waitSemaphoreCount,
+        const VkSemaphore *waitSemaphores,
+        const VkPipelineStageFlags *waitDstStageMask
+    ) {
+        VkSubmitInfo submitInfo{};
+        // (GPU->GPU) Synchronisation
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.waitSemaphoreCount = waitSemaphoreCount;
+        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.pWaitDstStageMask = waitDstStageMask;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
+        
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = commandBuffer;
+
+        VK_CHECK_SUCCESS(
+            vkQueueSubmit(sumiDevice.graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE),
+            "[Sumire::SumiGbuffer] Failed to submit command buffer."
+        );
     }
 
 }

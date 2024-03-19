@@ -1,5 +1,7 @@
 #include <sumire/core/rendering/sumi_renderer.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #include <stdexcept>
 #include <array>
 
@@ -56,34 +58,56 @@ namespace sumire {
 	}
 
 	void SumiRenderer::createCommandBuffers() {
-		// 1-to-1 relationship on command buffers -> frame buffers.
-		commandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+
+		deferredCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		// We allocate the memory for command buffers once beforehand in a *pool* to save on
-		//  the cost of creating a buffer at runtime, as this is a frequent operation.
 		allocInfo.commandPool = sumiDevice.getCommandPool();
-		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
+		allocInfo.commandBufferCount = static_cast<uint32_t>(deferredCommandBuffers.size());
 
+		// Deferred rendering command buffers
+		VK_CHECK_SUCCESS(
+			vkAllocateCommandBuffers(sumiDevice.device(), &allocInfo, deferredCommandBuffers.data()),
+			"[Sumire::SumiRenderer] Failed to allocate deferred command buffers."
+		);
+
+		// Swap Chain Command Buffers
+		// 1-to-1 relationship on command buffers -> frame buffers.
+		commandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+
+		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 		if (vkAllocateCommandBuffers(sumiDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate command buffers");
 		}
 	}
 
 	void SumiRenderer::freeCommandBuffers() {
+		VkCommandPool commandPool = sumiDevice.getCommandPool();
+
 		vkFreeCommandBuffers(
 			sumiDevice.device(),
-			sumiDevice.getCommandPool(),
+			commandPool,
 			static_cast<uint32_t>(commandBuffers.size()),
-			commandBuffers.data());
+			commandBuffers.data()
+		);
 
 		commandBuffers.clear();
+
+		vkFreeCommandBuffers(
+			sumiDevice.device(),
+			commandPool,
+			static_cast<uint32_t>(deferredCommandBuffers.size()),
+			deferredCommandBuffers.data()
+		);
+
+		deferredCommandBuffers.clear();
 	}
 
     VkCommandBuffer SumiRenderer::beginFrame(){
-        assert(!isFrameStarted && "Failed to start frame (frame is already in flight).");
+        assert(!isFrameStarted 
+			&& "Failed to start frame - frame is already in flight.");
 
 		auto result = sumiSwapChain->acquireNextImage(&currentImageIdx);
 
@@ -99,27 +123,66 @@ namespace sumire {
     
         isFrameStarted = true;
 
-        auto commandBuffer = getCurrentCommandBuffer();
-            VkCommandBufferBeginInfo beginInfo{};
+		// Begin buffer recording
+		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to begin recording command buffer");
-		}
+		auto deferredCommandBuffer = getCurrentDeferredCommandBuffer();
+		VK_CHECK_SUCCESS(
+			vkBeginCommandBuffer(deferredCommandBuffer, &beginInfo),
+			"[Sumire::SumiRenderer] Failed to beging recording of deferred command buffer."
+		)
+
+        auto commandBuffer = getCurrentCommandBuffer();
+		VK_CHECK_SUCCESS(
+			vkBeginCommandBuffer(commandBuffer, &beginInfo),
+			"[Sumire::SumiRenderer] Failed to beging recording of swapchain command buffer."
+		)
 
         return commandBuffer;
     }
 
     void SumiRenderer::endFrame() {
-        assert(isFrameStarted && "Failed to end frame (frame is not in flight).");
+        assert(isFrameStarted 
+			&& "Failed to end frame - no frame in flight.");
+
+		// End command buffer recording
+		auto deferredCommandBuffer = getCurrentDeferredCommandBuffer();
+		VK_CHECK_SUCCESS(
+			vkEndCommandBuffer(deferredCommandBuffer),
+			"[Sumire::SumiRenderer] Failed to end recording of deferred command buffer."
+		);
 
         auto commandBuffer = getCurrentCommandBuffer();
+		VK_CHECK_SUCCESS(
+			vkEndCommandBuffer(commandBuffer),
+			"[Sumire::SumiRenderer] Failed to end recording of swap chain command buffer."
+		)
 
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to end recording of command buffer.");
-		}
+		// Submitted work for the deferred pass needs to be executed first.
+		//   We wait for TODO: What do we wait for?
+		VkSemaphore imgAvailableSemaphore = sumiSwapChain->getCurrentImageAvailableSemaphore();
+		VkPipelineStageFlags defferedWaitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		gbuffer->submitCommandBuffer(
+			&deferredCommandBuffer,
+			1,
+			&imgAvailableSemaphore,
+			&defferedWaitFlags
+		);
 
-        auto result = sumiSwapChain->submitCommandBuffers(&commandBuffer, &currentImageIdx);
+		// Subsequent work needs to wait for the deffered work to be finished before it can start execution
+		//	 Internally, SumiSwapChain will wait for images to become available, so we just have to pass in
+		//	 any *additional* wait dependencies.
+		VkSemaphore deferredFinishedSemaphore = gbuffer->getRenderFinishedSemaphore();
+		VkPipelineStageFlags additionalSwapchainWaitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        auto result = sumiSwapChain->submitCommandBuffers(
+			&commandBuffer, 
+			&currentImageIdx,
+			1,
+			&deferredFinishedSemaphore,
+			&additionalSwapchainWaitFlags
+		);
+
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || 
 				result == VK_SUBOPTIMAL_KHR || 
 				sumiWindow.wasWindowResized()) {
@@ -133,12 +196,21 @@ namespace sumire {
         currentFrameIdx = (currentFrameIdx + 1) % SumiSwapChain::MAX_FRAMES_IN_FLIGHT;
     }
 
+	void SumiRenderer::beginGbufferRenderPass(VkCommandBuffer commandBuffer) {
+		assert(isFrameStarted && "Failed to begin deferred render pass - no frame in flight.");
+		gbuffer->beginRenderPass(commandBuffer);
+	}
+
+	void SumiRenderer::endGbufferRenderPass(VkCommandBuffer commandBuffer) {
+        assert(isFrameStarted && "Failed to end deferred render pass - no frame in flight.");
+		gbuffer->endRenderPass(commandBuffer);
+	}
+
     void SumiRenderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer) {
-        assert(isFrameStarted && "Failed to begin render pass (frame is not in flight).");
-        assert(
-            commandBuffer == getCurrentCommandBuffer() && 
-            "Failed to start render pass: beginSwapChainRenderPass() was given a command buffer from a different frame."
-        );
+        assert(isFrameStarted 
+			&& "Failed to begin render pass - no frame in flight.");
+        assert(commandBuffer == getCurrentCommandBuffer() 
+			&& "Failed to start render pass: beginSwapChainRenderPass() was given a command buffer from a different frame.");
 
         VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -169,10 +241,10 @@ namespace sumire {
     }
 
     void SumiRenderer::endSwapChainRenderPass(VkCommandBuffer commandBuffer) {
-        assert(isFrameStarted && "Failed to end render pass (frame is not in flight).");
-        assert(
-            commandBuffer == getCurrentCommandBuffer() && 
-            "Failed to end render pass: beginSwapChainRenderPass() was given a command buffer from a different frame."
+        assert(isFrameStarted 
+			&& "Failed to end render pass - no frame in flight.");
+        assert(commandBuffer == getCurrentCommandBuffer() 
+			&& "Failed to end render pass: beginSwapChainRenderPass() was given a command buffer from a different frame."
         );
 
         vkCmdEndRenderPass(commandBuffer);

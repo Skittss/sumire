@@ -38,12 +38,23 @@ namespace sumire {
 		VkFormat findDepthFormat();
 
 		VkResult acquireNextImage(uint32_t* imageIndex);
-		VkResult submitCommandBuffers(const VkCommandBuffer* buffers, uint32_t* imageIndex);
+		VkResult submitCommandBuffers(
+			const VkCommandBuffer* buffers, 
+			uint32_t* imageIndex,
+			const uint32_t waitSemaphoreCount,
+			const VkSemaphore* waitSemaphores,
+			const VkPipelineStageFlags* waitDstStageMask
+		);
 
 		bool compareSwapFormats(const SumiSwapChain& swapChain) const {
 			return swapChain.swapChainDepthFormat == swapChainDepthFormat && 
 				   swapChain.swapChainImageFormat == swapChainImageFormat;
 		}
+
+		// Expose synchronisation objects
+		VkSemaphore getImageAvailableSemaphore(int index) const { return imageAvailableSemaphores[index]; }
+		VkSemaphore getCurrentImageAvailableSemaphore() const { return imageAvailableSemaphores[currentFrame]; }
+		VkSemaphore getRenderFinishedSemaphore(int index) const { return renderFinishedSemaphores[index]; }
 
 	private:
 		void init();

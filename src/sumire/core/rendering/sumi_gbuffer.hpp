@@ -13,6 +13,18 @@ namespace sumire {
             SumiGbuffer(const SumiGbuffer&) = delete;
 		    SumiGbuffer& operator=(const SumiGbuffer&) = delete;
 
+            void beginRenderPass(VkCommandBuffer commandBuffer);
+            void endRenderPass(VkCommandBuffer commandBuffer);
+
+            void submitCommandBuffer(
+                const VkCommandBuffer* buffer,
+                const uint32_t waitSemaphoreCount,
+                const VkSemaphore *waitSemaphores,
+                const VkPipelineStageFlags *waitDstStageMask
+            );
+
+            VkSemaphore getRenderFinishedSemaphore() const { return renderFinishedSemaphore; }
+
         private:
             struct GbufferAttachment {
                 VkImage image;
@@ -22,14 +34,14 @@ namespace sumire {
             };
 
             void init();
-
             void createAttachments();
             void createAttachment(
                 VkFormat format, VkImageUsageFlagBits usage, GbufferAttachment &attachment);
             void destroyAttachment(GbufferAttachment &attachment);
-
             void createRenderPass();
-        
+            void createFramebuffer();
+            void createSyncObjects();
+
             SumiDevice &sumiDevice;
             uint32_t width;
             uint32_t height;
@@ -40,8 +52,13 @@ namespace sumire {
             GbufferAttachment normal;
             GbufferAttachment depth;
 
-            // Render pass
-            VkRenderPass renderPass;
+            // VK handles
+            VkRenderPass renderPass = VK_NULL_HANDLE;
+            VkFramebuffer framebuffer = VK_NULL_HANDLE;
+            VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
+            
+            // Render pass info
+            bool renderPassStarted = false;
     };
 
 }
