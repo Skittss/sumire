@@ -64,7 +64,7 @@ namespace sumire::loaders {
 		if (ext == ".obj") 
 			loadOBJ(device, filepath, data, genTangents);
 		else
-			throw std::runtime_error("Attempted to load unsupported OBJ type: <" + ext.u8string() + ">");
+			throw std::runtime_error("[Sumire::OBJloader] Attempted to load unsupported OBJ type: <" + ext.u8string() + ">");
 
 	}
 
@@ -76,7 +76,7 @@ namespace sumire::loaders {
 		std::string warn, err;
 
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
-			throw std::runtime_error(warn + err);
+			throw std::runtime_error("[Sumire::OBJloader] " + warn + err);
 		}
 
 		data.vertices.clear();

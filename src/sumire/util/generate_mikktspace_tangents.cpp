@@ -37,7 +37,8 @@ namespace sumire::util {
 
         int nVertInstances = data->indexCount > 0 ? data->indexCount : data->vertexCount;
 
-        assert(nVertInstances % 3 == 0 && "Could not calculate number of faces for tangent generation as model's vertex count was not divisible by 3.");
+        assert(nVertInstances % 3 == 0 
+            && "Could not calculate number of faces for tangent generation as model's vertex count was not divisible by 3.");
         
         return nVertInstances / 3;
     }

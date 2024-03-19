@@ -1,5 +1,7 @@
 #include <sumire/core/graphics_pipeline/sumi_texture.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #include <stb_image.h>
 
 #include <stdexcept>
@@ -23,7 +25,7 @@ namespace sumire {
 			vkGetPhysicalDeviceFormatProperties(sumiDevice.getPhysicalDevice(), imageInfo.format, &formatProperties);
 		
 			if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-				throw std::runtime_error("Could not generate mip map textures: Linear bitting (for filtering) is not supported by the device used.");
+				throw std::runtime_error("[Sumire::SumiTexture] Could not generate mip map textures: Linear bitting (for filtering) is not supported by the device used.");
 			}
 		}
 
@@ -50,7 +52,7 @@ namespace sumire {
 		stbi_uc *imageData = stbi_load(filepath.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 
 		if (!imageData) 
-			throw std::runtime_error("Failed to load image <" + filepath + ">");
+			throw std::runtime_error("[Sumire::SumiTexture] Failed to load image <" + filepath + ">");
 
 		VkDeviceSize imageSize = textureWidth * textureHeight * 4;
 		imageInfo.extent.width = textureWidth;
@@ -347,17 +349,19 @@ namespace sumire {
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
 
-		if (vkCreateImageView(sumiDevice.device(), &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create texture image view");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateImageView(sumiDevice.device(), &viewInfo, nullptr, &imageView),
+			"[Sumire::SumiTexture] Failed to create texture image view."
+		);
 	}
 
 	void SumiTexture::createTextureSampler(VkSamplerCreateInfo &samplerInfo) {
 		samplerInfo.maxLod = static_cast<float>(mipLevels);
 
-		if (vkCreateSampler(sumiDevice.device(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create texture sampler");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateSampler(sumiDevice.device(), &samplerInfo, nullptr, &sampler),
+			"[Sumire::SumiTexture] Failed to create texture sampler."
+		);
 	}
 
 	void SumiTexture::writeDescriptorInfo() {

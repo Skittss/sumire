@@ -1,6 +1,8 @@
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/point_light_rendersys_structs.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -40,17 +42,15 @@ namespace sumire {
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-		if (vkCreatePipelineLayout(
-				sumiDevice.device(), 
-				&pipelineLayoutInfo,
-				nullptr, 
-				&pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("<PointLightRenderSys>: Failed to create pipeline layout.");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreatePipelineLayout(
+				sumiDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout),
+			"[Sumire::PointLightRenderSys] Failed to create point light rendering pipeline layout."
+		);
 	}
 
 	void PointLightRenderSys::createPipeline(VkRenderPass renderPass) {
-		assert(pipelineLayout != nullptr && "<PointLightRenderSys>: Cannot create pipeline before pipeline layout.");
+		assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout.");
 
 		PipelineConfigInfo pipelineConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);

@@ -119,9 +119,10 @@ namespace sumire {
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(sumiDevice.device(), &viewInfo, nullptr, &attachment.view) != VK_SUCCESS) {
-            throw std::runtime_error("[Sumire::SumiGbuffer] Failed to create attachment image view");
-        }
+        VK_CHECK_SUCCESS(
+            vkCreateImageView(sumiDevice.device(), &viewInfo, nullptr, &attachment.view),
+            "[Sumire::SumiGbuffer] Failed to create attachment image view"
+        );
     }
 
     void SumiGbuffer::destroyAttachment(GbufferAttachment &attachment) {
@@ -208,9 +209,10 @@ namespace sumire {
 		renderPassInfo.dependencyCount = 2;
 		renderPassInfo.pDependencies = dependencies.data();
         
-		if (vkCreateRenderPass(sumiDevice.device(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-			throw std::runtime_error("[Sumire::SumiGbuffer] Failed to create g-buffer render pass.");
-		}
+        VK_CHECK_SUCCESS(
+            vkCreateRenderPass(sumiDevice.device(), &renderPassInfo, nullptr, &renderPass),
+            "[Sumire::SumiGbuffer] Failed to create g-buffer render pass."
+        );
     }
 
     void SumiGbuffer::createFramebuffer() {
@@ -231,11 +233,10 @@ namespace sumire {
         framebufferInfo.height = height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(
-            sumiDevice.device(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) 
-        {
-            throw std::runtime_error("[Sumire::SumiGbuffer] Failed to create framebuffer.");
-        }
+        VK_CHECK_SUCCESS(
+            vkCreateFramebuffer(sumiDevice.device(), &framebufferInfo, nullptr, &framebuffer),
+            "[Sumire::SumiGbuffer] Failed to create framebuffer."
+        );
     }
 
     void SumiGbuffer::createSyncObjects() {

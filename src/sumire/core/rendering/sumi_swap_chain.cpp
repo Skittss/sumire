@@ -1,5 +1,7 @@
 #include <sumire/core/rendering/sumi_swap_chain.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #include <array>
 #include <cstdlib>
 #include <cstring>
@@ -108,10 +110,10 @@ namespace sumire {
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		vkResetFences(device.device(), 1, &inFlightFences[currentFrame]);
-		if (vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) !=
-			VK_SUCCESS) {
-			throw std::runtime_error("failed to submit draw command buffer!");
-		}
+		VK_CHECK_SUCCESS(
+			vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]),
+			"[Sumire::SumiSwapChain] Failed to submit swap chain command buffer."
+		);
 
 		VkPresentInfoKHR presentInfo = {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -178,9 +180,10 @@ namespace sumire {
 
 		createInfo.oldSwapchain = oldSwapChain == nullptr ? VK_NULL_HANDLE : oldSwapChain->swapChain;
 
-		if (vkCreateSwapchainKHR(device.device(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create swap chain!");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateSwapchainKHR(device.device(), &createInfo, nullptr, &swapChain),
+			"[Sumire::SumiSwapChain] Failed to create swap chain."
+		);
 
 		// we only specified a minimum number of images in the swap chain, so the implementation is
 		// allowed to create a swap chain with more. That's why we'll first query the final number of
@@ -208,10 +211,10 @@ namespace sumire {
 			viewInfo.subresourceRange.baseArrayLayer = 0;
 			viewInfo.subresourceRange.layerCount = 1;
 
-			if (vkCreateImageView(device.device(), &viewInfo, nullptr, &swapChainImageViews[i]) !=
-				VK_SUCCESS) {
-				throw std::runtime_error("failed to create texture image view!");
-			}
+			VK_CHECK_SUCCESS(
+				vkCreateImageView(device.device(), &viewInfo, nullptr, &swapChainImageViews[i]),
+				"[Sumire::SumiSwapChain] Failed to create color attachment image view."
+			);
 		}
 	}
 
@@ -272,9 +275,10 @@ namespace sumire {
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies = &dependency;
 
-		if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create render pass!");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &renderPass),
+			"[Sumire::SumiSwapChain] Failed to create render pass."
+		);
 	}
 
 	void SumiSwapChain::createFramebuffers() {
@@ -292,13 +296,10 @@ namespace sumire {
 			framebufferInfo.height = swapChainExtent.height;
 			framebufferInfo.layers = 1;
 
-			if (vkCreateFramebuffer(
-				device.device(),
-				&framebufferInfo,
-				nullptr,
-				&swapChainFramebuffers[i]) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create framebuffer!");
-			}
+			VK_CHECK_SUCCESS(
+				vkCreateFramebuffer(device.device(), &framebufferInfo, nullptr, &swapChainFramebuffers[i]),
+				"[Sumire::SumiSwapChain] Failed to create framebuffer."
+			);
 		}
 	}
 
@@ -345,9 +346,10 @@ namespace sumire {
 			viewInfo.subresourceRange.baseArrayLayer = 0;
 			viewInfo.subresourceRange.layerCount = 1;
 
-			if (vkCreateImageView(device.device(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create texture image view!");
-			}
+			VK_CHECK_SUCCESS(
+				vkCreateImageView(device.device(), &viewInfo, nullptr, &depthImageViews[i]),
+				"[Sumire::SumiSwapChain] Failed to create depth attachment image view."
+			);
 		}
 	}
 
@@ -365,13 +367,18 @@ namespace sumire {
 		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-			if (vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) !=
-				VK_SUCCESS ||
-				vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) !=
-				VK_SUCCESS ||
-				vkCreateFence(device.device(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create synchronization objects for a frame!");
-			}
+			VK_CHECK_SUCCESS(
+				vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]),
+				"[Sumire::SumiSwapChain] Failed to create swap chain wait semaphores."
+			);
+			VK_CHECK_SUCCESS(
+				vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]),
+				"[Sumire::SumiSwapChain] Failed to create swap chain signaling semaphores."
+			);
+			VK_CHECK_SUCCESS(
+				vkCreateFence(device.device(), &fenceInfo, nullptr, &inFlightFences[i]),
+				"[Sumire::SumiSwapChain] Failed to create swap chain frame fences."
+			);
 		}
 	}
 

@@ -1,6 +1,8 @@
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/grid_rendersys_structs.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #include <sumire/core/rendering/sumi_swap_chain.hpp>
 
 #include <stdexcept>
@@ -151,13 +153,11 @@ namespace sumire {
 		pipelineLayoutInfo.pushConstantRangeCount = pushConstantRanges.size();
 		pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
-		if (vkCreatePipelineLayout(
-				sumiDevice.device(), 
-				&pipelineLayoutInfo,
-				nullptr, 
-				&pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("<GridRenderSys>: Failed to create pipeline layout.");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreatePipelineLayout(
+				sumiDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout),
+			"[Sumire::GridRenderSys] Failed to create grid rendering pipeline layout."
+		);
 	}
 
 	std::vector<VkVertexInputAttributeDescription> GridRendersys::GridMinimalVertex::getAttributeDescriptions() {

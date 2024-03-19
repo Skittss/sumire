@@ -1,5 +1,7 @@
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 // std headers
 #include <cstring>
 #include <iostream>
@@ -72,14 +74,14 @@ namespace sumire {
 
 	void SumiDevice::createInstance() {
 		if (enableValidationLayers && !checkValidationLayerSupport()) {
-			throw std::runtime_error("validation layers requested, but not available!");
+			throw std::runtime_error("[Sumire::SumiDevice] Validation layers requested, but not available.");
 		}
 
 		VkApplicationInfo appInfo = {};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.pApplicationName = "Skitts Development Engine";
+		appInfo.pApplicationName = "Sumire";
 		appInfo.applicationVersion = VK_MAKE_API_VERSION(0, 1, 0, 0);
-		appInfo.pEngineName = "No Engine";
+		appInfo.pEngineName = "Sumire";
 		appInfo.engineVersion = VK_MAKE_API_VERSION(0, 1, 0, 0);
 		appInfo.apiVersion = VK_API_VERSION_1_3;
 
@@ -103,13 +105,13 @@ namespace sumire {
 			createInfo.enabledLayerCount = 0;
 			createInfo.pNext = nullptr;
 
-			std::cout << "[Sumire] Validation layers are DISABLED" << std::endl;
+			std::cout << "[Sumire::SumiDevice] Validation layers are DISABLED" << std::endl;
 		}
 
-		if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create instance!");
-		}
-
+		VK_CHECK_SUCCESS(
+			vkCreateInstance(&createInfo, nullptr, &instance),
+			"[Sumire::SumiDevice] Failed to create a vulkan instance."
+		);
 		hasGflwRequiredInstanceExtensions();
 	}
 
@@ -117,7 +119,7 @@ namespace sumire {
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 		if (deviceCount == 0) {
-			throw std::runtime_error("failed to find GPUs with Vulkan support!");
+			throw std::runtime_error("[Sumire::SumiDevice] Failed to find GPUs with Vulkan support.");
 		}
 		std::cout << "Device count: " << deviceCount << std::endl;
 		std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -131,7 +133,7 @@ namespace sumire {
 		}
 
 		if (physicalDevice == VK_NULL_HANDLE) {
-			throw std::runtime_error("failed to find a suitable GPU!");
+			throw std::runtime_error("[Sumire::SumiDevice] Failed to find a suitable GPU.");
 		}
 
 		vkGetPhysicalDeviceProperties(physicalDevice, &properties);
@@ -183,9 +185,10 @@ namespace sumire {
 			createInfo.enabledLayerCount = 0;
 		}
 
-		if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device_) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create logical device!");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateDevice(physicalDevice, &createInfo, nullptr, &device_),
+			"[Sumire::SumiDevice] Failed to create logical device."
+		);
 
 		vkGetDeviceQueue(device_, indices.graphicsFamily, 0, &graphicsQueue_);
 		vkGetDeviceQueue(device_, indices.presentFamily, 0, &presentQueue_);
@@ -200,9 +203,10 @@ namespace sumire {
 		poolInfo.flags =
 			VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		if (vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create command pool!");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool),
+			"[Sumire::SumiDevice] Failed to create command pool."
+		);
 	}
 
 	void SumiDevice::createSurface() { window.createWindowSurface(instance, &surface_); }
@@ -242,9 +246,11 @@ namespace sumire {
 		if (!enableValidationLayers) return;
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		populateDebugMessengerCreateInfo(createInfo);
-		if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
-			throw std::runtime_error("failed to set up debug messenger!");
-		}
+
+		VK_CHECK_SUCCESS(
+			CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger),
+			"[Sumire::SumiDevice] Failed to set up debug messenger."
+		);
 	}
 
 	bool SumiDevice::checkValidationLayerSupport() {
@@ -304,7 +310,7 @@ namespace sumire {
 		for (const auto& required : requiredExtensions) {
 			std::cout << "\t" << required << std::endl;
 			if (available.find(required) == available.end()) {
-				throw std::runtime_error("Missing required glfw extension");
+				throw std::runtime_error("[Sumire::SumiDevice] Missing required glfw extension.");
 			}
 		}
 	}
@@ -400,7 +406,7 @@ namespace sumire {
 				return format;
 			}
 		}
-		throw std::runtime_error("failed to find supported format!");
+		throw std::runtime_error("[Sumire::SumiDevice] Failed to find supported format from candidates.");
 	}
 
 	uint32_t SumiDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -413,7 +419,7 @@ namespace sumire {
 			}
 		}
 
-		throw std::runtime_error("failed to find suitable memory type!");
+		throw std::runtime_error("[Sumire::SumiDevice] Failed to find suitable memory type requested.");
 	}
 
 	void SumiDevice::createBuffer(
@@ -421,16 +427,18 @@ namespace sumire {
 		VkBufferUsageFlags usage,
 		VkMemoryPropertyFlags properties,
 		VkBuffer& buffer,
-		VkDeviceMemory& bufferMemory) {
+		VkDeviceMemory& bufferMemory
+	) {
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = size;
 		bufferInfo.usage = usage;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(device_, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create vertex buffer!");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateBuffer(device_, &bufferInfo, nullptr, &buffer),
+			"[Sumire::SumiDevice] Failed to create requested buffer."
+		);
 
 		VkMemoryRequirements memRequirements;
 		vkGetBufferMemoryRequirements(device_, buffer, &memRequirements);
@@ -440,9 +448,10 @@ namespace sumire {
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-		if (vkAllocateMemory(device_, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate vertex buffer memory!");
-		}
+		VK_CHECK_SUCCESS(
+			vkAllocateMemory(device_, &allocInfo, nullptr, &bufferMemory),
+			"[Sumire::SumiDevice] Failed to allocate memory for requested buffer."
+		);
 
 		vkBindBufferMemory(device_, buffer, bufferMemory, 0);
 	}
@@ -523,10 +532,13 @@ namespace sumire {
 		const VkImageCreateInfo& imageInfo,
 		VkMemoryPropertyFlags properties,
 		VkImage& image,
-		VkDeviceMemory& imageMemory) {
-		if (vkCreateImage(device_, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create image!");
-		}
+		VkDeviceMemory& imageMemory
+	) {
+		
+		VK_CHECK_SUCCESS(
+			vkCreateImage(device_, &imageInfo, nullptr, &image),
+			"[Sumire::SumiDevice] Failed to create requested image."
+		);
 
 		VkMemoryRequirements memRequirements;
 		vkGetImageMemoryRequirements(device_, image, &memRequirements);
@@ -536,13 +548,14 @@ namespace sumire {
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-		if (vkAllocateMemory(device_, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate image memory!");
-		}
-
-		if (vkBindImageMemory(device_, image, imageMemory, 0) != VK_SUCCESS) {
-			throw std::runtime_error("failed to bind image memory!");
-		}
+		VK_CHECK_SUCCESS(
+			vkAllocateMemory(device_, &allocInfo, nullptr, &imageMemory),
+			"[Sumire::SumiDevice] Failed to allocate memory for requested image."
+		);
+		VK_CHECK_SUCCESS(
+			vkBindImageMemory(device_, image, imageMemory, 0),
+			"[Sumire::SumiDevice] Failed to bind memory for requested image."
+		);
 	}
 
 	void SumiDevice::transitionImageLayout(
@@ -595,7 +608,7 @@ namespace sumire {
 			break;
 
 			default:
-				throw std::invalid_argument("Unsupported SumiDevice Image Transition: LAYOUT_UNDEFINED -> LAYOUT ID [" 
+				throw std::invalid_argument("[Sumire::SumiDevice] Unsupported Image Transition: LAYOUT_UNDEFINED -> LAYOUT ID [" 
 					+ std::to_string(newLayout) + "]");
 			}
 		}
@@ -624,7 +637,7 @@ namespace sumire {
 			break;
 
 			default:
-				throw std::invalid_argument("Unsupported SumiDevice Image Transition: LAYOUT_TRASNFER_SRC_OPTIMAL -> LAYOUT ID ["
+				throw std::invalid_argument("[Sumire::SumiDevice] Unsupported Image Transition: LAYOUT_TRASNFER_SRC_OPTIMAL -> LAYOUT ID ["
 					+ std::to_string(newLayout) + "]");
 			}
 		}
@@ -653,7 +666,7 @@ namespace sumire {
 			break;
 
 			default: 
-				throw std::invalid_argument("Unsupported SumiDevice Image Transition: LAYOUT_TRANSFER_DST_OPTIMAL -> LAYOUT ID [" 
+				throw std::invalid_argument("[Sumire::SumiDevice] Unsupported Image Transition: LAYOUT_TRANSFER_DST_OPTIMAL -> LAYOUT ID [" 
 					+ std::to_string(newLayout) + "]");
 
 			}
@@ -661,7 +674,7 @@ namespace sumire {
 		break;
 
 		default:
-			throw std::invalid_argument("Unsupported SumiDevice Image Transition: LAYOUT ID ["
+			throw std::invalid_argument("[Sumire::SumiDevice] Unsupported Image Transition: LAYOUT ID ["
 				+ std::to_string(oldLayout) + "] -> LAYOUT ID [" + std::to_string(newLayout) + "]");
 
 		}

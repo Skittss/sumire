@@ -35,7 +35,7 @@ namespace sumire {
 			sumiSwapChain = std::make_unique<SumiSwapChain>(sumiDevice, extent, oldSwapChain);
 
             if (!oldSwapChain->compareSwapFormats(*sumiSwapChain.get())) {
-                throw std::runtime_error("Swap chain image / depth format has changed!");
+                throw std::runtime_error("[Sumire::SumiRenderer] Swap chain image / depth format has changed!");
             }
 		}
 
@@ -78,9 +78,10 @@ namespace sumire {
 		commandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 
 		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
-		if (vkAllocateCommandBuffers(sumiDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate command buffers");
-		}
+		VK_CHECK_SUCCESS(
+			vkAllocateCommandBuffers(sumiDevice.device(), &allocInfo, commandBuffers.data()),
+			"[Sumire::SumiRenderer] Failed to allocate swap chain command buffers."
+		);
 	}
 
 	void SumiRenderer::freeCommandBuffers() {
@@ -118,7 +119,7 @@ namespace sumire {
 
 		if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 			// TODO: Handle this error properly - can occur on window resize.
-			throw std::runtime_error("Failed to acquire swap chain image");
+			throw std::runtime_error("[Sumire::SumiRenderer] Failed to acquire swap chain image");
 		}
     
         isFrameStarted = true;
@@ -160,7 +161,6 @@ namespace sumire {
 		)
 
 		// Submitted work for the deferred pass needs to be executed first.
-		//   We wait for TODO: What do we wait for?
 		VkSemaphore imgAvailableSemaphore = sumiSwapChain->getCurrentImageAvailableSemaphore();
 		VkPipelineStageFlags defferedWaitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		gbuffer->submitCommandBuffer(
@@ -183,13 +183,14 @@ namespace sumire {
 			&additionalSwapchainWaitFlags
 		);
 
+		// TODO: Need to consider gbuffer resize too.
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || 
 				result == VK_SUBOPTIMAL_KHR || 
 				sumiWindow.wasWindowResized()) {
 			sumiWindow.resetWindowResizedFlag();
 			recreateSwapChain();
 		} else if (result != VK_SUCCESS) {
-            throw std::runtime_error("Failed to present swap chain image.");
+            throw std::runtime_error("[Sumire::SumiRenderer] Failed to present swap chain image.");
         }
 
         isFrameStarted = false;

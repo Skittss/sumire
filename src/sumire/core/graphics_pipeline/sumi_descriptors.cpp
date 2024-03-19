@@ -1,5 +1,7 @@
 #include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
- 
+
+#include <sumire/util/vk_check_success.hpp>
+
 #include <cassert>
 #include <stdexcept>
  
@@ -65,13 +67,11 @@ SumiDescriptorSetLayout::SumiDescriptorSetLayout(
 	descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
 	descriptorSetLayoutInfo.pBindings = setLayoutBindings.data();
  
-	if (vkCreateDescriptorSetLayout(
-			sumiDevice.device(),
-			&descriptorSetLayoutInfo,
-			nullptr,
-			&descriptorSetLayout) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create descriptor set layout!");
-	}
+	VK_CHECK_SUCCESS(
+		vkCreateDescriptorSetLayout(
+			sumiDevice.device(), &descriptorSetLayoutInfo, nullptr, &descriptorSetLayout),
+		"[Sumire::SumiDescriptorSetLayout] Failed to create descriptor set layout."
+	);
 }
  
 SumiDescriptorSetLayout::~SumiDescriptorSetLayout() {
@@ -119,13 +119,11 @@ SumiDescriptorPool::SumiDescriptorPool(
 	descriptorPoolInfo.maxSets = maxSets;
 	descriptorPoolInfo.flags = poolFlags;
  
-	if (vkCreateDescriptorPool(
-			sumiDevice.device(), 
-			&descriptorPoolInfo, 
-			nullptr, 
-			&descriptorPool) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create descriptor pool!");
-	}
+	VK_CHECK_SUCCESS(
+		vkCreateDescriptorPool(
+			sumiDevice.device(), &descriptorPoolInfo, nullptr, &descriptorPool),
+		"[Sumire::SumiDescriptorPool] Failed to create descriptor pool."
+	);
 }
  
 SumiDescriptorPool::~SumiDescriptorPool() {
@@ -177,10 +175,8 @@ SumiDescriptorWriter &SumiDescriptorWriter::writeBuffer(
  
 	auto &bindingDescription = setLayout.bindings[binding];
  
-	assert(
-		bindingDescription.descriptorCount == 1 &&
-		"Binding single descriptor info, but binding expects multiple"
-	);
+	assert(bindingDescription.descriptorCount == 1 
+		&& "Binding single descriptor info, but binding expects multiple");
  
 	VkWriteDescriptorSet write{};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -201,9 +197,8 @@ SumiDescriptorWriter &SumiDescriptorWriter::writeImage(
  
 	auto &bindingDescription = setLayout.bindings[binding];
  
-	assert(
-		bindingDescription.descriptorCount == 1 &&
-		"Binding single descriptor info, but binding expects multiple");
+	assert(bindingDescription.descriptorCount == 1 
+		&& "Binding single descriptor info, but binding expects multiple");
  
 	VkWriteDescriptorSet write{};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

@@ -1,6 +1,8 @@
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #include <sumire/core/flags/sumi_pipeline_state_flags.hpp>
 
 #define GLM_FORCE_RADIANS
@@ -81,13 +83,11 @@ namespace sumire {
 		pipelineLayoutInfo.pushConstantRangeCount = pushConstantRanges.size();
 		pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
-		if (vkCreatePipelineLayout(
-				sumiDevice.device(), 
-				&pipelineLayoutInfo,
-				nullptr, 
-				&pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("<MeshRenderSys>: Failed to create pipeline layout.");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreatePipelineLayout(
+				sumiDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout),
+			"[Sumire::MeshRenderSys] Failed to create mesh rendering pipeline layout."
+		);
 	}
 
 	void MeshRenderSys::createPipelines(VkRenderPass renderPass) {

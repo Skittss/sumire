@@ -1,6 +1,7 @@
 #include <sumire/core/graphics_pipeline/sumi_pipeline.hpp>
 
 #include <sumire/core/models/vertex.hpp>
+#include <sumire/util/vk_check_success.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -40,7 +41,7 @@ namespace sumire {
 		std::ifstream file{ enginePath, std::ios::ate | std::ios::binary };
 
 		if (!file.is_open()) {
-			throw std::runtime_error("Could not open file: " + enginePath);
+			throw std::runtime_error("[Sumire::SumiPipeline] Could not open file: " + enginePath);
 		}
 
 		size_t fileSize = static_cast<size_t>(file.tellg());
@@ -58,12 +59,10 @@ namespace sumire {
 		const std::string& fragFilepath,
 		const PipelineConfigInfo& configInfo
 	) {
-		assert(
-			configInfo.pipelineLayout != VK_NULL_HANDLE &&
-			"Cannot create graphics pipeline: pipelineLayout is not provided in configInfo");
-		assert(
-			configInfo.renderPass != VK_NULL_HANDLE &&
-			"Cannot create graphics pipeline: renderPass is not provided in configInfo");
+		assert(configInfo.pipelineLayout != VK_NULL_HANDLE
+			&& "Cannot create graphics pipeline: pipelineLayout is not provided in configInfo");
+		assert(configInfo.renderPass != VK_NULL_HANDLE
+			&& "Cannot create graphics pipeline: renderPass is not provided in configInfo");
 
 		auto vertCode = readFile(vertFilepath);
 		auto fragCode = readFile(fragFilepath);
@@ -122,15 +121,11 @@ namespace sumire {
 		pipelineInfo.basePipelineIndex = -1;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-		if (vkCreateGraphicsPipelines(
-				sumiDevice.device(),
-				VK_NULL_HANDLE,
-				1,
-				&pipelineInfo,
-				nullptr,
-				&graphicsPipeline) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create graphics pipeline");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateGraphicsPipelines(
+				sumiDevice.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline),
+			"[Sumire::SumiPipeline] Failed to create graphics pipeline."
+		);
 	}
 
 	void SumiPipeline::createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) {
@@ -139,9 +134,10 @@ namespace sumire {
 		createInfo.codeSize = code.size();
 		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-		if (vkCreateShaderModule(sumiDevice.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create shader module");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreateShaderModule(sumiDevice.device(), &createInfo, nullptr, shaderModule),
+			"[Sumire::SumiPipeline] Failed to create shader module."
+		);
 	}
 
 	void SumiPipeline::bind(VkCommandBuffer commandBuffer) {

@@ -1,5 +1,7 @@
 #include <sumire/gui/sumi_imgui.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -61,9 +63,10 @@ namespace sumire {
         poolInfo.poolSizeCount = (uint32_t)std::size(poolSizes);
         poolInfo.pPoolSizes = poolSizes;
 
-        if (vkCreateDescriptorPool(sumiRenderer.getDevice().device(), &poolInfo, nullptr, &imguiDescriptorPool) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create descriptor pool for ImGui");
-        }
+        VK_CHECK_SUCCESS(
+            vkCreateDescriptorPool(sumiRenderer.getDevice().device(), &poolInfo, nullptr, &imguiDescriptorPool),
+            "[Sumire::SumiImgui] Failed to create ImGui's required descriptor pool."
+        );
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
