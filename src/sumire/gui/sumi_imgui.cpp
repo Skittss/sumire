@@ -256,8 +256,6 @@ namespace sumire {
                 ImGui::Combo("Type", &projTypeIdx, projTypes, IM_ARRAYSIZE(projTypes));
                 frameInfo.camera.setCameraType(static_cast<SmCameraType>(projTypeIdx));
 
-                ImGui::Text("Matrix needs update? : %s", frameInfo.camera.projMatrixNeedsUpdate ? "true" : "false");
-
                 ImGui::Spacing();
 
                 if (projTypeIdx == 0) {
@@ -290,6 +288,10 @@ namespace sumire {
                     ImGui::InputFloat("Bottom", &varOrthoB);
                     frameInfo.camera.setOrthoBot(varOrthoB);
 
+                    float varOrthoZoom = frameInfo.camera.getOrthoZoom();
+                    ImGui::DragFloat("Zoom", &varOrthoZoom, 0.01f, 0.01f, 4.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                    frameInfo.camera.setOrthoZoom(varOrthoZoom);
+
                 } else {
                     ImGui::Text("Oopsie - Something went wrong! Please reload.");
                 }
@@ -298,11 +300,11 @@ namespace sumire {
                 
                 // Near and Far planes
                 float tNear = frameInfo.camera.near();
-                ImGui::DragFloat("Near", &tNear, 0.01f, 0.01f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Near", &tNear, 0.01f, 0.00f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                 frameInfo.camera.setNear(tNear);
 
                 float tFar = frameInfo.camera.far();
-                ImGui::DragFloat("Far", &tFar, 1.0f, 1.0f, 10000.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Far", &tFar, 1.0f, 0.01f, 10000.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                 frameInfo.camera.setFar(tFar);
 
                 frameInfo.camera.calculateProjectionMatrix();

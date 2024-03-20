@@ -26,13 +26,14 @@ namespace sumire {
     };
 
     // Creates an orthographic camera
-    SumiCamera::SumiCamera(float l, float r, float top, float bot, float aspect) {
+    SumiCamera::SumiCamera(float l, float r, float top, float bot, float aspect, float zoom) {
         camType = CAM_TYPE_ORTHOGRAPHIC;
         setDefaultProjectionParams(aspect);
         ortho_l = l;
         ortho_r = r;
         ortho_top = top;
         ortho_bot = bot;
+        ortho_zoom = zoom;
         FORCE_calculateProjectionMatrix();
     };
 
@@ -46,8 +47,9 @@ namespace sumire {
         // Orthographic
         ortho_l = -aspect; 
         ortho_r =  aspect;
-        ortho_top = -1.0f;
-        ortho_bot =  1.0f;
+        ortho_top = 1.0f;
+        ortho_bot = -1.0f;
+        ortho_zoom = 1.0f;
 
         nearPlane = 0.1f;
         farPlane = 1000.0f;
@@ -56,21 +58,14 @@ namespace sumire {
         if (recomputeProjMatrix) calculateProjectionMatrix();
     }
 
-    void SumiCamera::setOrthographicProjection(float l, float r, float top, float bot) {
+    void SumiCamera::setOrthographicProjection(float l, float r, float top, float bot, float zoom) {
         camType = CAM_TYPE_ORTHOGRAPHIC;
 
-        projectionMatrix = glm::ortho(l, r, bot, top);
-        return;
-
-        // Note: y and x are negated from a normal projection matrix in order to go 
-        //       from vulkan (clip space) left hand convention -> right hand convention.
-        projectionMatrix = glm::mat4{1.0f};
-        projectionMatrix[0][0] = 2.0f / (r - l);
-        projectionMatrix[1][1] = 2.0f / (bot - top);
-        projectionMatrix[2][2] = 1.0f / (farPlane - nearPlane);
-        projectionMatrix[3][0] = -(r + l) / (r - l);
-        projectionMatrix[3][1] = -(bot + top) / (bot - top);
-        projectionMatrix[3][2] = -nearPlane / (farPlane - nearPlane);
+        projectionMatrix = glm::ortho(
+            l / zoom, r / zoom, 
+            bot / zoom, top / zoom,
+            nearPlane, farPlane
+        );
     }
     
     void SumiCamera::setPerspectiveProjection(float fovy, float aspect) {
@@ -78,18 +73,10 @@ namespace sumire {
 
         camType = CAM_TYPE_PERSPECTIVE;
         
-        projectionMatrix = glm::perspective(fovy, aspect, nearPlane, farPlane);
-        return;
-
-        // Note: y and x are negated from a normal projection matrix in order to go 
-        //       from vulkan (clip space) left hand convention -> right hand convention.
-        const float tanHalfFovy = tan(fovy / 2.0f);
-        projectionMatrix = glm::mat4{0.0f};
-        projectionMatrix[0][0] = 1.0f / (aspect * tanHalfFovy);
-        projectionMatrix[1][1] = 1.0f / (tanHalfFovy);
-        projectionMatrix[2][2] = farPlane / (farPlane - nearPlane);
-        projectionMatrix[2][3] = 1.0f;
-        projectionMatrix[3][2] = -(farPlane * nearPlane) / (farPlane - nearPlane);
+        projectionMatrix = glm::perspective(
+            fovy, aspect, 
+            nearPlane, farPlane
+        );
     }
 
     void SumiCamera::setNear(float dist, bool recomputeProjMatrix) {
@@ -152,6 +139,14 @@ namespace sumire {
         if (ortho_bot == orthoBot) return;
 
         ortho_bot = orthoBot;
+        projMatrixNeedsUpdate = true;
+        if (recomputeProjMatrix) calculateProjectionMatrix();
+    }
+
+    void SumiCamera::setOrthoZoom(float orthoZoom, bool recomputeProjMatrix) {
+        if (ortho_zoom == orthoZoom) return;
+
+        ortho_zoom = orthoZoom;
         projMatrixNeedsUpdate = true;
         if (recomputeProjMatrix) calculateProjectionMatrix();
     }
@@ -225,7 +220,7 @@ namespace sumire {
         if (camType == CAM_TYPE_PERSPECTIVE)
             setPerspectiveProjection(persp_fovy, persp_aspect);
         else 
-            setOrthographicProjection(ortho_l, ortho_r, ortho_top, ortho_bot);
+            setOrthographicProjection(ortho_l, ortho_r, ortho_top, ortho_bot, ortho_zoom);
 
         projMatrixNeedsUpdate = false;
     }
@@ -235,7 +230,7 @@ namespace sumire {
         if (camType == CAM_TYPE_PERSPECTIVE)
             setPerspectiveProjection(persp_fovy, persp_aspect);
         else 
-            setOrthographicProjection(ortho_l, ortho_r, ortho_top, ortho_bot);
+            setOrthographicProjection(ortho_l, ortho_r, ortho_top, ortho_bot, ortho_zoom);
 
         projMatrixNeedsUpdate = false;
     }
