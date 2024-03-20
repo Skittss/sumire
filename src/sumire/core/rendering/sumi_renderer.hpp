@@ -22,6 +22,15 @@ namespace sumire {
         SumiWindow& getWindow() const { return sumiWindow; }
         SumiDevice& getDevice() const { return sumiDevice; }
 
+        struct FrameCommandBuffers {
+            VkCommandBuffer deferred = VK_NULL_HANDLE;
+            VkCommandBuffer swapChain = VK_NULL_HANDLE;
+
+            bool hasNonNull() const {
+                return (deferred || swapChain);
+            }
+        };
+
         VkRenderPass getSwapChainRenderPass() const { return sumiSwapChain->getRenderPass(); }
         float getAspect() const { return sumiSwapChain->extentAspectRatio(); }
         VkFormat getSwapChainImageFormat () const { return sumiSwapChain->getSwapChainImageFormat(); }
@@ -31,14 +40,7 @@ namespace sumire {
 
         bool isFrameInProgress() const { return isFrameStarted; }
         
-        VkCommandBuffer getCurrentCommandBuffer() const { 
-            assert(isFrameStarted && "Failed to get command buffer from a frame not in flight.");
-            return commandBuffers[currentFrameIdx];
-        }
-        VkCommandBuffer getCurrentDeferredCommandBuffer() const {
-            assert(isFrameStarted && "Failed to get deferred command buffer - no frame is in flight");
-            return deferredCommandBuffers[currentFrameIdx];
-        }
+        FrameCommandBuffers getCurrentCommandBuffers() const;
 
         int getFrameIdx() const {
             assert(isFrameStarted && "Failed to get frame index (frame not in flight).");
@@ -46,7 +48,7 @@ namespace sumire {
         }
 
         // Recording of command buffers
-        VkCommandBuffer beginFrame();
+        FrameCommandBuffers beginFrame();
         void endFrame();
 
         void beginGbufferRenderPass(VkCommandBuffer commandBuffer);

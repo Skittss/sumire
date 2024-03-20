@@ -210,13 +210,18 @@ namespace sumire {
 			gui.drawStatWindow(frameInfo, cameraController);
 			gui.endFrame();
 
-			if (auto commandBuffer = sumiRenderer.beginFrame()) {
+			SumiRenderer::FrameCommandBuffers frameCommandBuffers = sumiRenderer.beginFrame();
+
+			// If all cmd buffers are null, then the frame was not started.
+			if (frameCommandBuffers.hasNonNull()) {
+
+				// frameInfo.commandBuffer = frameCommandBuffers.deferred;
 
 				int frameIdx = sumiRenderer.getFrameIdx();
 
 				// Fill in rest of frame-specific frameinfo props
 				frameInfo.frameIdx = frameIdx;
-				frameInfo.commandBuffer = commandBuffer;
+				frameInfo.commandBuffer = frameCommandBuffers.swapChain;
 				frameInfo.globalDescriptorSet = globalDescriptorSets[frameIdx];
 
 				// Populate uniform buffers with data
@@ -231,7 +236,8 @@ namespace sumire {
 				globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
 				globalUniformBuffers[frameIdx]->flush();
 
-				sumiRenderer.beginSwapChainRenderPass(commandBuffer);
+				if (frameCommandBuffers.swapChain) {
+				sumiRenderer.beginSwapChainRenderPass(frameCommandBuffers.swapChain);
 
 				meshRenderSystem.renderObjects(frameInfo);
 				pointLightSystem.render(frameInfo);
@@ -242,10 +248,11 @@ namespace sumire {
 				}
 
 				// GUI should *ALWAYS* render last.
-				gui.renderToCmdBuffer(commandBuffer);
+				gui.renderToCmdBuffer(frameCommandBuffers.swapChain);
 				
-				sumiRenderer.endSwapChainRenderPass(commandBuffer);
+				sumiRenderer.endSwapChainRenderPass(frameCommandBuffers.swapChain);
 
+				}
 				sumiRenderer.endFrame();
 			}
 		}

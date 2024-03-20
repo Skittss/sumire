@@ -106,7 +106,17 @@ namespace sumire {
 		deferredCommandBuffers.clear();
 	}
 
-    VkCommandBuffer SumiRenderer::beginFrame(){
+	SumiRenderer::FrameCommandBuffers SumiRenderer::getCurrentCommandBuffers() const {
+		assert(isFrameStarted && "Failed to get command buffers - no frame in flight.");
+
+		FrameCommandBuffers frameCommandBuffers{};
+		frameCommandBuffers.deferred = deferredCommandBuffers[currentFrameIdx];
+		frameCommandBuffers.swapChain = commandBuffers[currentFrameIdx];
+
+		return frameCommandBuffers;
+	}
+
+    SumiRenderer::FrameCommandBuffers SumiRenderer::beginFrame() {
         assert(!isFrameStarted 
 			&& "Failed to start frame - frame is already in flight.");
 
@@ -114,7 +124,7 @@ namespace sumire {
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 			recreateSwapChain();
-			return nullptr;
+			return FrameCommandBuffers{};
 		}
 
 		if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -128,19 +138,19 @@ namespace sumire {
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-		auto deferredCommandBuffer = getCurrentDeferredCommandBuffer();
+		FrameCommandBuffers frameCommandBuffers = getCurrentCommandBuffers();
+
 		VK_CHECK_SUCCESS(
-			vkBeginCommandBuffer(deferredCommandBuffer, &beginInfo),
+			vkBeginCommandBuffer(frameCommandBuffers.deferred, &beginInfo),
 			"[Sumire::SumiRenderer] Failed to beging recording of deferred command buffer."
 		)
 
-        auto commandBuffer = getCurrentCommandBuffer();
 		VK_CHECK_SUCCESS(
-			vkBeginCommandBuffer(commandBuffer, &beginInfo),
+			vkBeginCommandBuffer(frameCommandBuffers.swapChain, &beginInfo),
 			"[Sumire::SumiRenderer] Failed to beging recording of swapchain command buffer."
 		)
 
-        return commandBuffer;
+		return frameCommandBuffers;
     }
 
     void SumiRenderer::endFrame() {
@@ -148,15 +158,15 @@ namespace sumire {
 			&& "Failed to end frame - no frame in flight.");
 
 		// End command buffer recording
-		auto deferredCommandBuffer = getCurrentDeferredCommandBuffer();
+		FrameCommandBuffers frameCommandBuffers = getCurrentCommandBuffers();
+
 		VK_CHECK_SUCCESS(
-			vkEndCommandBuffer(deferredCommandBuffer),
+			vkEndCommandBuffer(frameCommandBuffers.deferred),
 			"[Sumire::SumiRenderer] Failed to end recording of deferred command buffer."
 		);
 
-        auto commandBuffer = getCurrentCommandBuffer();
 		VK_CHECK_SUCCESS(
-			vkEndCommandBuffer(commandBuffer),
+			vkEndCommandBuffer(frameCommandBuffers.swapChain),
 			"[Sumire::SumiRenderer] Failed to end recording of swap chain command buffer."
 		)
 
@@ -164,7 +174,7 @@ namespace sumire {
 		VkSemaphore imgAvailableSemaphore = sumiSwapChain->getCurrentImageAvailableSemaphore();
 		VkPipelineStageFlags defferedWaitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		gbuffer->submitCommandBuffer(
-			&deferredCommandBuffer,
+			&frameCommandBuffers.deferred,
 			1,
 			&imgAvailableSemaphore,
 			&defferedWaitFlags
@@ -176,7 +186,7 @@ namespace sumire {
 		VkSemaphore deferredFinishedSemaphore = gbuffer->getRenderFinishedSemaphore();
 		VkPipelineStageFlags additionalSwapchainWaitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         auto result = sumiSwapChain->submitCommandBuffers(
-			&commandBuffer, 
+			&frameCommandBuffers.swapChain, 
 			&currentImageIdx,
 			1,
 			&deferredFinishedSemaphore,
@@ -210,7 +220,7 @@ namespace sumire {
     void SumiRenderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer) {
         assert(isFrameStarted 
 			&& "Failed to begin render pass - no frame in flight.");
-        assert(commandBuffer == getCurrentCommandBuffer() 
+        assert(commandBuffer == getCurrentCommandBuffers().swapChain
 			&& "Failed to start render pass: beginSwapChainRenderPass() was given a command buffer from a different frame.");
 
         VkRenderPassBeginInfo renderPassInfo{};
@@ -244,7 +254,7 @@ namespace sumire {
     void SumiRenderer::endSwapChainRenderPass(VkCommandBuffer commandBuffer) {
         assert(isFrameStarted 
 			&& "Failed to end render pass - no frame in flight.");
-        assert(commandBuffer == getCurrentCommandBuffer() 
+        assert(commandBuffer == getCurrentCommandBuffers().swapChain
 			&& "Failed to end render pass: beginSwapChainRenderPass() was given a command buffer from a different frame."
         );
 
