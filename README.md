@@ -24,6 +24,3 @@ A lightweight graphics development engine built in vulkan.
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
 - [ ] Pipeline caching (if pipeline initialisation becomes slow)
-
-- [X] Fix orthographic camera
-- [ ] Fix object transform UI

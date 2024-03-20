@@ -8,6 +8,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <charconv>
 
 namespace sumire {
 
@@ -320,8 +321,9 @@ namespace sumire {
                 ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
                 for (auto& kv : frameInfo.objects) {
                     auto& obj = kv.second;
-                    const char *nodeStrId = std::to_string(kv.first).c_str();
-                    if (ImGui::TreeNode(nodeStrId, obj.model->displayName.c_str())) {
+                    const std::string nodeStrId = std::to_string(kv.first);
+                    const char* nodeCharId = nodeStrId.c_str();
+                    if (ImGui::TreeNode(nodeCharId, obj.model->displayName.c_str())) {
                         // Transform
                         drawTransformUI(obj.transform);
 
