@@ -2,7 +2,7 @@ build/*
 .env.cmake
 .vscode
 
-shaders/*.spv
+shaders/**/*.spv
 
 assets/models/*
 !assets/models/primitives

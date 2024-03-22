@@ -91,7 +91,7 @@ namespace sumire {
 	}
 
 	void MeshRenderSys::createPipelines(VkRenderPass renderPass) {
-		assert(pipelineLayout != nullptr && "<MeshRenderSys>: Cannot create pipeline before pipeline layout.");
+		assert(pipelineLayout != nullptr && "[Sumire::MeshRenderSys]: Cannot create pipeline before pipeline layout.");
 
 		// TODO: This pipeline creation step should be moved to a common location so that it can be
 		//		 re-used by different render systems. This would also allow for efficient caching
@@ -106,8 +106,8 @@ namespace sumire {
 		SumiPipeline::defaultPipelineConfigInfo(defaultConfig);
 		defaultConfig.renderPass = renderPass;
 		defaultConfig.pipelineLayout = pipelineLayout;
-		std::string defaultVertShader = "shaders/mesh.vert.spv";
-		std::string defaultFragShader = "shaders/mesh.frag.spv";
+		std::string defaultVertShader = "shaders/forward/mesh.vert.spv";
+		std::string defaultFragShader = "shaders/forward/mesh.frag.spv";
 
 		// All permutations (including default)
 		const uint32_t pipelinePermutations = 2 * SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_HIGHEST;
@@ -119,7 +119,7 @@ namespace sumire {
 
 			// Deal with each bit flag
 			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT)
-				permutationFragShader = "shaders/mesh_unlit.frag.spv";
+				permutationFragShader = "shaders/forward/mesh_unlit.frag.spv";
 			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
 				permutationConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 
