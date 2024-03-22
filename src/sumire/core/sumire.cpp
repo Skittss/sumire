@@ -119,7 +119,12 @@ namespace sumire {
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
 		DeferredMeshRenderSys deferredMeshRenderSystem{
-			sumiDevice, sumiRenderer.getGbufferRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
+			sumiDevice,
+			sumiRenderer.getGbuffer(),
+			sumiRenderer.getGbufferRenderPass(), 
+			sumiRenderer.getSwapChainRenderPass(),
+			globalDescriptorSetLayout->getDescriptorSetLayout()
+		};
 
 		PointLightRenderSys pointLightSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
@@ -242,7 +247,7 @@ namespace sumire {
 				frameInfo.commandBuffer = frameCommandBuffers.deferred;
 				sumiRenderer.beginGbufferRenderPass(frameCommandBuffers.deferred);
 				
-				deferredMeshRenderSystem.renderObjects(frameInfo);
+				deferredMeshRenderSystem.renderGbuffer(frameInfo);
 
 				sumiRenderer.endGbufferRenderPass(frameCommandBuffers.deferred);
 
@@ -250,7 +255,10 @@ namespace sumire {
 				frameInfo.commandBuffer = frameCommandBuffers.swapChain;
 				sumiRenderer.beginSwapChainRenderPass(frameCommandBuffers.swapChain);
 
-				meshRenderSystem.renderObjects(frameInfo);
+				// Finish deferred lighting composite
+				deferredMeshRenderSystem.renderObjects(frameInfo);
+				
+				// meshRenderSystem.renderObjects(frameInfo);
 				pointLightSystem.render(frameInfo);
 				
 				if (gui.showGrid && gui.gridOpacity > 0.0f) {

@@ -160,8 +160,8 @@ namespace sumire {
 
         // Initialize specific attachment formats
         attachmentDescriptions[0].format = position.format;
-        attachmentDescriptions[1].format = albedo.format;
-        attachmentDescriptions[2].format = normal.format;
+        attachmentDescriptions[1].format = normal.format;
+        attachmentDescriptions[2].format = albedo.format;
         attachmentDescriptions[3].format = depth.format;
 
         // Reference setup for RenderPassCreateInfo
@@ -220,8 +220,8 @@ namespace sumire {
         
         std::array<VkImageView, 4> attachments{};
         attachments[0] = position.view;
-        attachments[1] = albedo.view;
-        attachments[2] = normal.view;
+        attachments[1] = normal.view;
+        attachments[2] = albedo.view;
         attachments[3] = depth.view;
 
         VkFramebufferCreateInfo framebufferInfo{};
@@ -276,7 +276,7 @@ namespace sumire {
         viewport.height = -static_cast<float>(height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
-        VkRect2D scissor{ {0, 0}, {width, height}};
+        VkRect2D scissor{ {0, 0}, {width, height} };
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 

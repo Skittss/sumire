@@ -12,6 +12,7 @@
 
 namespace sumire {
 
+	// A Forward-rendering system for rendering mesh data
 	class MeshRenderSys {
 		public:
 			MeshRenderSys(

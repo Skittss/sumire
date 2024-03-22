@@ -15,9 +15,6 @@
 
 namespace sumire {
 
-	// Note: If any more Frag push constants are needed, create a struct here with 
-	//		 SumiMaterial::MaterialPushConstantData as an internal struct.
-
 	MeshRenderSys::MeshRenderSys(
 			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
 		) : sumiDevice{device} {

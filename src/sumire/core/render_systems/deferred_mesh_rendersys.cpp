@@ -1,5 +1,5 @@
 #include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
-#include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
+#include <sumire/core/render_systems/data_structs/deferred_mesh_rendersys_structs.hpp>
 
 #include <sumire/util/vk_check_success.hpp>
 
@@ -15,12 +15,13 @@
 
 namespace sumire {
 
-	// Note: If any more Frag push constants are needed, create a struct here with 
-	//		 SumiMaterial::MaterialPushConstantData as an internal struct.
-
 	DeferredMeshRenderSys::DeferredMeshRenderSys(
-			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
-		) : sumiDevice{device} {
+		SumiDevice& device, 
+		SumiGbuffer* gbuffer,
+		VkRenderPass gbufferRenderPass, 
+		VkRenderPass compositeRenderPass,
+		VkDescriptorSetLayout globalDescriptorSetLayout
+	) : sumiDevice{device} {
 		
 		// Check physical device can support the size of push constants for this pipeline.
 		//  VK min guarantee is 128 bytes, this pipeline targets 256 bytes.
@@ -30,7 +31,7 @@ namespace sumire {
 			sizeof(structs::VertPushConstantData) + sizeof(structs::FragPushConstantData
 		));
 		if (deviceProperties.limits.maxPushConstantsSize < requiredPushConstantSize) {
-			std::runtime_error(
+			throw std::runtime_error(
 				"Mesh rendering requires at least" + 
 				std::to_string(requiredPushConstantSize) +
 				" bytes of push constant storage. Physical device used supports only " +
@@ -39,17 +40,85 @@ namespace sumire {
 			);
 		}
 
-		createPipelineLayout(globalDescriptorSetLayout);
-		createPipelines(renderPass);
+		createGbufferSampler();
+		initCompositeDescriptors(gbuffer);
+		createPipelineLayouts(globalDescriptorSetLayout);
+		createPipelines(gbufferRenderPass, compositeRenderPass);
 	}
 
 	DeferredMeshRenderSys::~DeferredMeshRenderSys() {
-		// TODO: Destroy pipeline at this line??
+		vkDestroyPipelineLayout(sumiDevice.device(), compositePipelineLayout, nullptr);
 		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
+		
+		vkDestroySampler(sumiDevice.device(), gbufferSampler, nullptr);
 	}
 
-	void DeferredMeshRenderSys::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
+	void DeferredMeshRenderSys::createGbufferSampler() {
+		VkSamplerCreateInfo samplerCreateInfo{};
+		samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+		samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+		samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerCreateInfo.anisotropyEnable = VK_FALSE;
+		samplerCreateInfo.maxAnisotropy = 1.0f;
+		samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+		samplerCreateInfo.compareEnable = VK_FALSE;
+		samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerCreateInfo.mipLodBias = 0.0f;
+		samplerCreateInfo.minLod = 0.0f;
+		samplerCreateInfo.maxLod = 1.0f;
 
+		VK_CHECK_SUCCESS(
+			vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &gbufferSampler),
+			"[Sumire::DeferredMeshRenderSys] Failed to create gbuffer sampler."
+		);
+	}
+
+	void DeferredMeshRenderSys::initCompositeDescriptors(SumiGbuffer* gbuffer) {
+		assert(gbufferSampler != VK_NULL_HANDLE && "Cannot create gbuffer descriptors before creating a gbuffer sampler.");
+
+		compositeDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
+			.setMaxSets(3)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3)
+			// .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
+			.build();
+
+		compositeDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			// .addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.build();
+
+		// Gbuffer attachment descriptors
+		VkDescriptorImageInfo positionDescriptor{};
+		positionDescriptor.sampler = gbufferSampler;
+		positionDescriptor.imageView = gbuffer->position.view;
+		positionDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkDescriptorImageInfo normalDescriptor{};
+		normalDescriptor.sampler = gbufferSampler;
+		normalDescriptor.imageView = gbuffer->normal.view;
+		normalDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkDescriptorImageInfo albedoDescriptor{};
+		albedoDescriptor.sampler = gbufferSampler;
+		albedoDescriptor.imageView = gbuffer->albedo.view;
+		albedoDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		SumiDescriptorWriter(*compositeDescriptorSetLayout, *compositeDescriptorPool)
+			.writeImage(0, &positionDescriptor)
+			.writeImage(1, &normalDescriptor)
+			.writeImage(2, &albedoDescriptor)
+			.build(compositeDescriptorSet);
+	}
+
+	void DeferredMeshRenderSys::createPipelineLayouts(VkDescriptorSetLayout globalDescriptorSetLayout) {
+		// Gbuffer Pipelines (Mesh rendering)
 		VkPushConstantRange vertPushConstantRange{};
 		vertPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		vertPushConstantRange.offset = 0;
@@ -86,12 +155,36 @@ namespace sumire {
 		VK_CHECK_SUCCESS(
 			vkCreatePipelineLayout(
 				sumiDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout),
-			"[Sumire::DeferredMeshRenderSys] Failed to create mesh rendering pipeline layout."
+			"[Sumire::DeferredMeshRenderSys] Failed to create gbuffer rendering pipeline layout."
+		);
+
+		VkPushConstantRange compositePushConstantRange{};
+		compositePushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		compositePushConstantRange.offset = 0;
+		compositePushConstantRange.size = sizeof(structs::CompositePushConstantData);
+
+		// Composite Pipeline (Lighting)
+		std::vector<VkDescriptorSetLayout> compositeDescriptorSetLayouts{
+			compositeDescriptorSetLayout->getDescriptorSetLayout()
+		};
+
+		VkPipelineLayoutCreateInfo compositePipelineLayoutInfo{};
+		compositePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		compositePipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(compositeDescriptorSetLayouts.size());
+		compositePipelineLayoutInfo.pSetLayouts = compositeDescriptorSetLayouts.data();
+		compositePipelineLayoutInfo.pushConstantRangeCount = 1;
+		compositePipelineLayoutInfo.pPushConstantRanges = &compositePushConstantRange;
+
+		VK_CHECK_SUCCESS(
+			vkCreatePipelineLayout(
+				sumiDevice.device(), &compositePipelineLayoutInfo, nullptr, &compositePipelineLayout),
+			"[Sumire::DeferredMeshRenderSys] Failed to create lighting composition pipeline layout."
 		);
 	}
 
-	void DeferredMeshRenderSys::createPipelines(VkRenderPass renderPass) {
-		assert(pipelineLayout != nullptr && "[Sumire::DeferredMeshRenderSys]: Cannot create pipeline before pipeline layout.");
+	void DeferredMeshRenderSys::createPipelines(VkRenderPass gbufferRenderPass, VkRenderPass compositeRenderPass) {
+		assert(pipelineLayout != VK_NULL_HANDLE && compositePipelineLayout != VK_NULL_HANDLE
+			&& "[Sumire::DeferredMeshRenderSys]: Cannot create pipelines before pipeline layouts.");
 
 		// TODO: This pipeline creation step should be moved to a common location so that it can be
 		//		 re-used by different render systems. This would also allow for efficient caching
@@ -101,9 +194,13 @@ namespace sumire {
 		//		 required pipelines at runtime, with (runtime) caching, and generate a common (serialized) 
 		//		 pipeline cache that can load up frequently used pipelines from disk.
 
+		// Gbuffer Pipeline - 3 Color attachments
+
 		// Default pipeline config used as base of permutations
 		PipelineConfigInfo defaultConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(defaultConfig);
+		defaultConfig.renderPass = gbufferRenderPass;
+		defaultConfig.pipelineLayout = pipelineLayout;
 
 		// Modify color blending for 3 channels as we have 3 colour outputs for deferred rendering.
 		//  Validation errors will occur without this. (even though colour blending is not used for the attachments)
@@ -112,10 +209,8 @@ namespace sumire {
 		defaultConfig.colorBlendInfo.pAttachments = colorBlendAttachments.data();
 		defaultConfig.colorBlendInfo.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
 
-		defaultConfig.renderPass = renderPass;
-		defaultConfig.pipelineLayout = pipelineLayout;
-		std::string defaultVertShader = "shaders/deferred/mesh_mrt.vert.spv";
-		std::string defaultFragShader = "shaders/deferred/mesh_mrt.frag.spv";
+		std::string defaultVertShader = "shaders/deferred/mesh_gbuffer.vert.spv";
+		std::string defaultFragShader = "shaders/deferred/mesh_gbuffer.frag.spv";
 
 		// All permutations (including default)
 		const uint32_t pipelinePermutations = 2 * SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_HIGHEST;
@@ -126,6 +221,9 @@ namespace sumire {
 			std::string permutationFragShader = defaultFragShader;
 
 			// Deal with each bit flag
+			// TODO: We cannot handle unlit rendering in this way.
+			// 		 We should render these objects directly to the out color buffer to bypass the lighting
+			// 		 system entirely.
 			// if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT)
 			// 	permutationFragShader = "shaders/forward/mesh_unlit.frag.spv";
 			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
@@ -140,9 +238,56 @@ namespace sumire {
 			);
 			pipelines.emplace(permutationFlags, std::move(permutationPipeline));
 		}
+
+		// Composite pipeline
+		PipelineConfigInfo compositePipelineConfig{};
+		SumiPipeline::defaultPipelineConfigInfo(compositePipelineConfig);
+		compositePipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+		compositePipelineConfig.attributeDescriptions.clear();
+		compositePipelineConfig.bindingDescriptions.clear();
+		compositePipelineConfig.renderPass = compositeRenderPass;
+		compositePipelineConfig.pipelineLayout = compositePipelineLayout;
+
+		compositePipeline = std::make_unique<SumiPipeline>(
+			sumiDevice,
+			"shaders/deferred/mesh_composite.vert.spv",
+			"shaders/deferred/mesh_composite.frag.spv",
+			compositePipelineConfig
+		);
 	}
 
 	void DeferredMeshRenderSys::renderObjects(FrameInfo &frameInfo) {
+
+		// Bind composite pipeline
+		compositePipeline->bind(frameInfo.commandBuffer);
+
+		structs::CompositePushConstantData push{};
+		push.nLights = 1;
+
+		vkCmdPushConstants(
+			frameInfo.commandBuffer,
+			compositePipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(structs::CompositePushConstantData),
+			&push
+		);
+
+		// Bind descriptor sets (Gbuffer & lights)
+		vkCmdBindDescriptorSets(
+			frameInfo.commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			compositePipelineLayout,
+			0, 1,
+			&compositeDescriptorSet,
+			0, nullptr
+		);
+
+		// Composite with a FS quad
+		vkCmdDraw(frameInfo.commandBuffer, 3, 1, 0, 0);
+	}
+
+	void DeferredMeshRenderSys::renderGbuffer(FrameInfo &frameInfo) {
 
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,
@@ -184,6 +329,7 @@ namespace sumire {
 			
 			// SumiModel handles the binding of descriptor sets 1-3 and frag push constants
 			obj.model->bind(frameInfo.commandBuffer);
+			// Each draw command may need a different pipeline, so the model draw binds pipelines at call time.
 			obj.model->draw(frameInfo.commandBuffer, pipelineLayout, pipelines);
 		}
 	}

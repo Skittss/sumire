@@ -49,6 +49,7 @@ namespace sumire {
         void endGbufferRenderPass(VkCommandBuffer commandBuffer);
 
         VkRenderPass getGbufferRenderPass() const { return gbuffer->getRenderPass(); }
+        SumiGbuffer* getGbuffer() const { return gbuffer.get(); }
 
         // Swapchain renderpass data
         void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);

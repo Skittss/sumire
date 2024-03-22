@@ -26,13 +26,21 @@ namespace sumire {
 
             VkSemaphore getRenderFinishedSemaphore() const { return renderFinishedSemaphore; }
 
-        private:
             struct GbufferAttachment {
                 VkImage image;
                 VkImageView view;
                 VkDeviceMemory memory;
                 VkFormat format;
             };
+
+            // Color attachments for position/albedo/normal, & depth
+            GbufferAttachment position;
+            GbufferAttachment albedo;
+            GbufferAttachment normal;
+            GbufferAttachment depth;
+
+        private:
+
 
             void init();
             void createAttachments();
@@ -46,12 +54,6 @@ namespace sumire {
             SumiDevice &sumiDevice;
             uint32_t width;
             uint32_t height;
-
-            // Color attachments for position/albedo/normal, & depth
-            GbufferAttachment position;
-            GbufferAttachment albedo;
-            GbufferAttachment normal;
-            GbufferAttachment depth;
 
             // VK handles
             VkRenderPass renderPass = VK_NULL_HANDLE;
