@@ -135,8 +135,8 @@ namespace sumire {
         // Base attachment descriptions with format left empty for later initialization
         VkAttachmentDescription baseColorAttachment{};
         baseColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        baseColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        baseColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        baseColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        baseColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         baseColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         baseColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         baseColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -144,8 +144,8 @@ namespace sumire {
 
         VkAttachmentDescription baseDepthAttachment{};
         baseDepthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        baseDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        baseDepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        baseDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        baseDepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         baseDepthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         baseDepthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         baseDepthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -175,7 +175,7 @@ namespace sumire {
 
         VkSubpassDescription subpass{};
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
+        subpass.colorAttachmentCount = static_cast<uint32_t>(colorAttachmentRefs.size());
         subpass.pColorAttachments = colorAttachmentRefs.data();
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
