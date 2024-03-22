@@ -26,17 +26,10 @@ namespace sumire {
             VkCommandBuffer deferred = VK_NULL_HANDLE;
             VkCommandBuffer swapChain = VK_NULL_HANDLE;
 
-            bool hasNonNull() const {
-                return (deferred || swapChain);
+            bool validFrame() const {
+                return (deferred && swapChain);
             }
         };
-
-        VkRenderPass getSwapChainRenderPass() const { return sumiSwapChain->getRenderPass(); }
-        float getAspect() const { return sumiSwapChain->extentAspectRatio(); }
-        VkFormat getSwapChainImageFormat () const { return sumiSwapChain->getSwapChainImageFormat(); }
-
-        bool wasSwapChainRecreated() const { return scRecreatedFlag; }
-        void resetScRecreatedFlag() { scRecreatedFlag = false; }
 
         bool isFrameInProgress() const { return isFrameStarted; }
         
@@ -51,11 +44,21 @@ namespace sumire {
         FrameCommandBuffers beginFrame();
         void endFrame();
 
+        // Deffered renderpass data
         void beginGbufferRenderPass(VkCommandBuffer commandBuffer);
         void endGbufferRenderPass(VkCommandBuffer commandBuffer);
 
+        VkRenderPass getGbufferRenderPass() const { return gbuffer->getRenderPass(); }
+
+        // Swapchain renderpass data
         void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
         void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
+
+        VkRenderPass getSwapChainRenderPass() const { return sumiSwapChain->getRenderPass(); }
+        float getAspect() const { return sumiSwapChain->extentAspectRatio(); }
+        VkFormat getSwapChainImageFormat () const { return sumiSwapChain->getSwapChainImageFormat(); }
+        bool wasSwapChainRecreated() const { return scRecreatedFlag; }
+        void resetScRecreatedFlag() { scRecreatedFlag = false; }
 
 	private:
 		void createCommandBuffers();

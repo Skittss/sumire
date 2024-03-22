@@ -3,6 +3,7 @@
 
 // Render systems
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
+#include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 
@@ -117,6 +118,9 @@ namespace sumire {
 		MeshRenderSys meshRenderSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
+		DeferredMeshRenderSys deferredMeshRenderSystem{
+			sumiDevice, sumiRenderer.getGbufferRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
+
 		PointLightRenderSys pointLightSystem{
 			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
 
@@ -213,9 +217,7 @@ namespace sumire {
 			SumiRenderer::FrameCommandBuffers frameCommandBuffers = sumiRenderer.beginFrame();
 
 			// If all cmd buffers are null, then the frame was not started.
-			if (frameCommandBuffers.hasNonNull()) {
-
-				// frameInfo.commandBuffer = frameCommandBuffers.deferred;
+			if (frameCommandBuffers.validFrame()) {
 
 				int frameIdx = sumiRenderer.getFrameIdx();
 
@@ -236,7 +238,16 @@ namespace sumire {
 				globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
 				globalUniformBuffers[frameIdx]->flush();
 
-				if (frameCommandBuffers.swapChain) {
+				// Deferred Pass
+				frameInfo.commandBuffer = frameCommandBuffers.deferred;
+				sumiRenderer.beginGbufferRenderPass(frameCommandBuffers.deferred);
+				
+				deferredMeshRenderSystem.renderObjects(frameInfo);
+
+				sumiRenderer.endGbufferRenderPass(frameCommandBuffers.deferred);
+
+				// Swapchain pass
+				frameInfo.commandBuffer = frameCommandBuffers.swapChain;
 				sumiRenderer.beginSwapChainRenderPass(frameCommandBuffers.swapChain);
 
 				meshRenderSystem.renderObjects(frameInfo);
@@ -252,7 +263,6 @@ namespace sumire {
 				
 				sumiRenderer.endSwapChainRenderPass(frameCommandBuffers.swapChain);
 
-				}
 				sumiRenderer.endFrame();
 			}
 		}

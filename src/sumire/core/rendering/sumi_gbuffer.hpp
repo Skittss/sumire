@@ -15,6 +15,7 @@ namespace sumire {
 
             void beginRenderPass(VkCommandBuffer commandBuffer);
             void endRenderPass(VkCommandBuffer commandBuffer);
+            VkRenderPass getRenderPass() const { return renderPass; }
 
             void submitCommandBuffer(
                 const VkCommandBuffer* buffer,
