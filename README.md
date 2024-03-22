@@ -21,6 +21,8 @@ A lightweight graphics development engine built in vulkan.
     - [ ] Mip map generation could be moved to compute shader if anything more complicated than linear downsampling is needed
 - [ ] glTF Morph-target support (and their animation)
 - [ ] Deferred Rendering
+    - [ ] Copy depth buffer from gbuffer to subsequent forward rendering passes
+    - [ ] Enable alpha blending when doing the composite deferred render pass
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
 - [ ] Pipeline caching (if pipeline initialisation becomes slow)
