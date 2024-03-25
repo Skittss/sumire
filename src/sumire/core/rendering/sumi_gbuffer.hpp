@@ -1,67 +1,38 @@
 #pragma once
 
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
+#include <sumire/core/graphics_pipeline/sumi_attachment.hpp>
+
+#include <memory>
 
 namespace sumire {
 
     class SumiGbuffer {
         public:
 
-            SumiGbuffer(SumiDevice &device, uint32_t width, uint32_t height);
+            SumiGbuffer(
+                SumiDevice &device, 
+                VkExtent2D extent,
+                VkImageUsageFlags extraFlags = 0x0
+            );
             ~SumiGbuffer();
 
             SumiGbuffer(const SumiGbuffer&) = delete;
 		    SumiGbuffer& operator=(const SumiGbuffer&) = delete;
 
-            void beginRenderPass(VkCommandBuffer commandBuffer);
-            void endRenderPass(VkCommandBuffer commandBuffer);
-            VkRenderPass getRenderPass() const { return renderPass; }
-
-            void submitCommandBuffer(
-                const VkCommandBuffer* buffer,
-                const uint32_t waitSemaphoreCount,
-                const VkSemaphore *waitSemaphores,
-                const VkPipelineStageFlags *waitDstStageMask
-            );
-
-            VkSemaphore getRenderFinishedSemaphore() const { return renderFinishedSemaphore; }
-
-            struct GbufferAttachment {
-                VkImage image;
-                VkImageView view;
-                VkDeviceMemory memory;
-                VkFormat format;
-            };
-
-            // Color attachments for position/albedo/normal, & depth
-            GbufferAttachment position;
-            GbufferAttachment albedo;
-            GbufferAttachment normal;
-            GbufferAttachment depth;
+            SumiAttachment* positionAttachment() const { return position.get(); }
+            SumiAttachment* normalAttachment() const { return normal.get(); }
+            SumiAttachment* albedoAttachment() const { return albedo.get(); }
 
         private:
-
-
-            void init();
-            void createAttachments();
-            void createAttachment(
-                VkFormat format, VkImageUsageFlagBits usage, GbufferAttachment &attachment);
-            void destroyAttachment(GbufferAttachment &attachment);
-            void createRenderPass();
-            void createFramebuffer();
-            void createSyncObjects();
+            void createAttachments(VkImageUsageFlags extraFlags);
 
             SumiDevice &sumiDevice;
-            uint32_t width;
-            uint32_t height;
+            VkExtent2D extent;
 
-            // VK handles
-            VkRenderPass renderPass = VK_NULL_HANDLE;
-            VkFramebuffer framebuffer = VK_NULL_HANDLE;
-            VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
-            
-            // Render pass info
-            bool renderPassStarted = false;
+            std::unique_ptr<SumiAttachment> position;
+            std::unique_ptr<SumiAttachment> normal;
+            std::unique_ptr<SumiAttachment> albedo;
     };
 
 }
