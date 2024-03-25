@@ -9,9 +9,10 @@ layout (location = 4) in vec3 inBitangent;
 layout (location = 5) in vec2 inUv0;
 layout (location = 6) in vec2 inUv1;
 
-layout (location = 0) out vec4 outPosition;
-layout (location = 1) out vec4 outNormal;
-layout (location = 2) out vec4 outAlbedo;
+layout (location = 0) out vec4 outSwapChainCol;
+layout (location = 1) out vec4 outPosition;
+layout (location = 2) out vec4 outNormal;
+layout (location = 3) out vec4 outAlbedo;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
@@ -58,13 +59,6 @@ void main() {
 		: vec4(1.0);
 	albedo *= mat.baseColorFactors;
 
-	// Check if fragment needs to be alpha-masked before doing any other computations
-	// TODO: This simple implementation causes z-fighting.
-	if (mat.useAlphaMask) {
-		if (albedo.a < mat.alphaMaskCutoff) 
-			discard;
-	}
-
 	// Adjust geometrical properties of back-faces
 	vec3 geoTangent = inTangent;
 	vec3 geoBitangent = inBitangent;
@@ -87,6 +81,14 @@ void main() {
 		normal = normalize(TBN * Nt);		
 	} else {
 		normal = normalize(geoNormal);
+	}
+
+	// We do the fragment discard AFTER texture sampling as otherwise we get divergent control flow.
+	// More details in a similar issue from a khronos org repository:
+	// https://github.com/KhronosGroup/glTF-Sample-Viewer/issues/267
+	if (mat.useAlphaMask) {
+		if (albedo.a < mat.alphaMaskCutoff) 
+			discard;
 	}
 
 	outPosition = vec4(inPos, 1.0);
