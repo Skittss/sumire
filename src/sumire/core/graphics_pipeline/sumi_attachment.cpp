@@ -8,21 +8,41 @@ namespace sumire {
         SumiDevice &device, 
         VkExtent2D extent,
         VkFormat format,
-        VkImageUsageFlagBits usage
-    ) : sumiDevice{ device } {
-        createAttachment(extent, format, usage);
+        VkImageUsageFlags usage
+    ) : sumiDevice{ device }, format{ format } {
+        createImage(extent, usage);
+        
+        VkImageAspectFlags aspectMask = 0x0;
+        if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) 
+            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        else if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        assert(aspectMask > 0 && "Provided image usage does not have a corresponding aspect mask.");
+        createImageView(aspectMask);
     }
     
-    SumiAttachment::~SumiAttachment() {
-        vkDestroyImageView(sumiDevice.device(), view, nullptr);
-        vkDestroyImage(sumiDevice.device(), image, nullptr);
-        vkFreeMemory(sumiDevice.device(), memory, nullptr);
+    SumiAttachment::SumiAttachment(
+        SumiDevice &device,
+        VkImage image,
+        VkFormat format,
+        VkImageAspectFlags aspectMask
+    ) : sumiDevice{ device }, image{ image }, format{ format } {
+        createImageView(aspectMask);
     }
 
-    void SumiAttachment::createAttachment(VkExtent2D extent, VkFormat format, VkImageUsageFlagBits usage) {
-        this->format = format; // For setting up render pass & potentially querying from render pipeline
+    SumiAttachment::~SumiAttachment() {
+        vkDestroyImageView(sumiDevice.device(), view, nullptr);
 
-        // Allocate Memory & Create Image
+        // If the attachment was created from an existing image,
+        //   this class is *not responsible* for destructing the image.
+        if (memory != VK_NULL_HANDLE) {
+            vkDestroyImage(sumiDevice.device(), image, nullptr);
+            vkFreeMemory(sumiDevice.device(), memory, nullptr);
+        }
+    }
+
+    void SumiAttachment::createImage(VkExtent2D extent, VkImageUsageFlags usage) {
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -45,15 +65,9 @@ namespace sumire {
             image, 
             memory
         );
+    }
 
-        VkImageAspectFlags aspectMask = 0x0;
-        if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) 
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        else if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        assert(aspectMask > 0 && "No suitable aspect mask provided");
-
-        // Create Image View
+    void SumiAttachment::createImageView(VkImageAspectFlags aspectMask) {
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = image;
