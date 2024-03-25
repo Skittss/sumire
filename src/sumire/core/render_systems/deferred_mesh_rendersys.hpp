@@ -60,7 +60,6 @@ namespace sumire {
 			std::unique_ptr<SumiDescriptorPool> resolveDescriptorPool;
 			std::unique_ptr<SumiDescriptorSetLayout> resolveDescriptorSetLayout;
 			VkDescriptorSet resolveDescriptorSet = VK_NULL_HANDLE;
-			//VkSampler gbufferSampler = VK_NULL_HANDLE;
 
 			// Resolve Pipelines
 			VkPipelineLayout resolvePipelineLayout = VK_NULL_HANDLE;
