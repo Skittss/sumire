@@ -16,8 +16,11 @@
 namespace sumire {
 
 	MeshRenderSys::MeshRenderSys(
-			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
-		) : sumiDevice{device} {
+		SumiDevice& device, 
+		VkRenderPass renderPass, 
+		uint32_t subpassIdx,
+		VkDescriptorSetLayout globalDescriptorSetLayout
+	) : sumiDevice{device} {
 		
 		// Check physical device can support the size of push constants for this pipeline.
 		//  VK min guarantee is 128 bytes, this pipeline targets 256 bytes.
@@ -27,7 +30,7 @@ namespace sumire {
 			sizeof(structs::VertPushConstantData) + sizeof(structs::FragPushConstantData
 		));
 		if (deviceProperties.limits.maxPushConstantsSize < requiredPushConstantSize) {
-			std::runtime_error(
+			throw std::runtime_error(
 				"Mesh rendering requires at least" + 
 				std::to_string(requiredPushConstantSize) +
 				" bytes of push constant storage. Physical device used supports only " +
@@ -37,7 +40,7 @@ namespace sumire {
 		}
 
 		createPipelineLayout(globalDescriptorSetLayout);
-		createPipelines(renderPass);
+		createPipelines(renderPass, subpassIdx);
 	}
 
 	MeshRenderSys::~MeshRenderSys() {
@@ -87,7 +90,7 @@ namespace sumire {
 		);
 	}
 
-	void MeshRenderSys::createPipelines(VkRenderPass renderPass) {
+	void MeshRenderSys::createPipelines(VkRenderPass renderPass, uint32_t subpassIdx) {
 		assert(pipelineLayout != nullptr && "[Sumire::MeshRenderSys]: Cannot create pipeline before pipeline layout.");
 
 		// TODO: This pipeline creation step should be moved to a common location so that it can be
@@ -102,6 +105,7 @@ namespace sumire {
 		PipelineConfigInfo defaultConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(defaultConfig);
 		defaultConfig.renderPass = renderPass;
+		defaultConfig.subpass = subpassIdx;
 		defaultConfig.pipelineLayout = pipelineLayout;
 		std::string defaultVertShader = "shaders/forward/mesh.vert.spv";
 		std::string defaultFragShader = "shaders/forward/mesh.frag.spv";

@@ -12,11 +12,14 @@
 namespace sumire {
 
 	GridRendersys::GridRendersys(
-			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
-		) : sumiDevice{device} {
+		SumiDevice& device,
+		VkRenderPass renderPass,
+		uint32_t subpassIdx,
+		VkDescriptorSetLayout globalDescriptorSetLayout
+	) : sumiDevice{device} {
 		createGridQuadBuffers(); // Note: SumiBuffer cleans itself up.
 		createPipelineLayout(globalDescriptorSetLayout);
-		createPipeline(renderPass);
+		createPipeline(renderPass, subpassIdx);
 	}
 
 	GridRendersys::~GridRendersys() {
@@ -177,7 +180,7 @@ namespace sumire {
 		return bindingDescriptions;
 	}
 
-	void GridRendersys::createPipeline(VkRenderPass renderPass) {
+	void GridRendersys::createPipeline(VkRenderPass renderPass, uint32_t subpassIdx) {
 		assert(pipelineLayout != nullptr && "<GridRenderSys>: Cannot create pipeline before pipeline layout.");
 
 		PipelineConfigInfo pipelineConfig{};
@@ -187,6 +190,7 @@ namespace sumire {
 		pipelineConfig.attributeDescriptions = GridMinimalVertex::getAttributeDescriptions();
 		pipelineConfig.bindingDescriptions = GridMinimalVertex::getBindingDescriptions();
 		pipelineConfig.renderPass = renderPass;
+		pipelineConfig.subpass = subpassIdx;
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		sumiPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,

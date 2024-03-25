@@ -39,7 +39,10 @@ namespace sumire {
 			};
 
 			GridRendersys(
-				SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
+				SumiDevice& device, 
+				VkRenderPass renderPass,
+				uint32_t subpassIdx,
+				VkDescriptorSetLayout globalDescriptorSetLayout
 			);
 			~GridRendersys();
 
@@ -51,7 +54,7 @@ namespace sumire {
 		private:
 			void createGridQuadBuffers();
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
-			void createPipeline(VkRenderPass renderPass);
+			void createPipeline(VkRenderPass renderPass, uint32_t subpassIdx);
 
 			void bindGridQuadBuffers(VkCommandBuffer &commandBuffer);
 

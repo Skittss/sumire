@@ -16,7 +16,10 @@ namespace sumire {
 	class MeshRenderSys {
 		public:
 			MeshRenderSys(
-				SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
+				SumiDevice& device,
+				VkRenderPass renderPass,
+				uint32_t subpassIdx,
+				VkDescriptorSetLayout globalDescriptorSetLayout
 			);
 			~MeshRenderSys();
 
@@ -27,7 +30,7 @@ namespace sumire {
 
 		private:
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
-			void createPipelines(VkRenderPass renderPass);
+			void createPipelines(VkRenderPass renderPass, uint32_t subpassIdx);
 
 			SumiDevice& sumiDevice;
 

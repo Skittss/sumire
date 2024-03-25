@@ -14,7 +14,10 @@ namespace sumire {
 	class PointLightRenderSys {
 		public:
 			PointLightRenderSys(
-				SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
+				SumiDevice& device, 
+				VkRenderPass renderPass, 
+				uint32_t subpassIdx, 
+				VkDescriptorSetLayout globalDescriptorSetLayout
 			);
 			~PointLightRenderSys();
 
@@ -25,7 +28,7 @@ namespace sumire {
 
 		private:
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
-			void createPipeline(VkRenderPass renderPass);
+			void createPipeline(VkRenderPass renderPass, uint32_t subpassIdx);
 
 			SumiDevice& sumiDevice;
 

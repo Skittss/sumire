@@ -115,22 +115,37 @@ namespace sumire {
 				.build(globalDescriptorSets[i]);
 		}
 
+		// Render Systems
 		MeshRenderSys meshRenderSystem{
-			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
+			sumiDevice,
+			sumiRenderer.getRenderPass(), 
+			sumiRenderer.forwardRenderSubpassIdx(),
+			globalDescriptorSetLayout->getDescriptorSetLayout()
+		};
 
 		DeferredMeshRenderSys deferredMeshRenderSystem{
 			sumiDevice,
 			sumiRenderer.getGbuffer(),
-			sumiRenderer.getGbufferRenderPass(), 
-			sumiRenderer.getSwapChainRenderPass(),
+			sumiRenderer.getRenderPass(), 
+			sumiRenderer.gbufferFillSubpassIdx(),
+			sumiRenderer.getRenderPass(),
+			sumiRenderer.gbufferResolveSubpassIdx(),
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
 
 		PointLightRenderSys pointLightSystem{
-			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
+			sumiDevice, 
+			sumiRenderer.getRenderPass(), 
+			sumiRenderer.forwardRenderSubpassIdx(),
+			globalDescriptorSetLayout->getDescriptorSetLayout()
+		};
 
 		GridRendersys gridRenderSystem{
-			sumiDevice, sumiRenderer.getSwapChainRenderPass(), globalDescriptorSetLayout->getDescriptorSetLayout()};
+			sumiDevice, 
+			sumiRenderer.getRenderPass(),
+			sumiRenderer.forwardRenderSubpassIdx(),
+			globalDescriptorSetLayout->getDescriptorSetLayout()
+		};
 
 
 		sumiWindow.setMousePollMode(SumiWindow::MousePollMode::MANUAL);
@@ -243,22 +258,21 @@ namespace sumire {
 				globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
 				globalUniformBuffers[frameIdx]->flush();
 
-				// Deferred Pass
-				frameInfo.commandBuffer = frameCommandBuffers.deferred;
-				sumiRenderer.beginGbufferRenderPass(frameCommandBuffers.deferred);
-				
-				deferredMeshRenderSystem.renderGbuffer(frameInfo);
-
-				sumiRenderer.endGbufferRenderPass(frameCommandBuffers.deferred);
-
-				// Swapchain pass
+				// To swap chain render pass
 				frameInfo.commandBuffer = frameCommandBuffers.swapChain;
-				sumiRenderer.beginSwapChainRenderPass(frameCommandBuffers.swapChain);
+				sumiRenderer.beginRenderPass(frameCommandBuffers.swapChain);
 
-				// Finish deferred lighting composite
-				deferredMeshRenderSystem.renderObjects(frameInfo);
-				
-				// meshRenderSystem.renderObjects(frameInfo);
+				// Deferred fill subpass
+				deferredMeshRenderSystem.fillGbuffer(frameInfo);
+
+				sumiRenderer.nextSubpass(frameCommandBuffers.swapChain);
+
+				// Deferred resolve subpass
+				deferredMeshRenderSystem.resolveGbuffer(frameInfo);
+
+				sumiRenderer.nextSubpass(frameCommandBuffers.swapChain);
+
+				// Swapchain forward rendering subpass
 				pointLightSystem.render(frameInfo);
 				
 				if (gui.showGrid && gui.gridOpacity > 0.0f) {
@@ -269,7 +283,7 @@ namespace sumire {
 				// GUI should *ALWAYS* render last.
 				gui.renderToCmdBuffer(frameCommandBuffers.swapChain);
 				
-				sumiRenderer.endSwapChainRenderPass(frameCommandBuffers.swapChain);
+				sumiRenderer.endRenderPass(frameCommandBuffers.swapChain);
 
 				sumiRenderer.endFrame();
 			}

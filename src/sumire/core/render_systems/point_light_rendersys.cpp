@@ -14,11 +14,14 @@
 namespace sumire {
 
 	PointLightRenderSys::PointLightRenderSys(
-			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
-		) : sumiDevice{device} {
+		SumiDevice& device,
+		VkRenderPass renderPass,
+		uint32_t subpassIdx,
+		VkDescriptorSetLayout globalDescriptorSetLayout
+	) : sumiDevice{device} {
 			
 		createPipelineLayout(globalDescriptorSetLayout);
-		createPipeline(renderPass);
+		createPipeline(renderPass, subpassIdx);
 	}
 
 	PointLightRenderSys::~PointLightRenderSys() {
@@ -49,7 +52,7 @@ namespace sumire {
 		);
 	}
 
-	void PointLightRenderSys::createPipeline(VkRenderPass renderPass) {
+	void PointLightRenderSys::createPipeline(VkRenderPass renderPass, uint32_t subpassIdx) {
 		assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout.");
 
 		PipelineConfigInfo pipelineConfig{};
@@ -58,6 +61,7 @@ namespace sumire {
 		pipelineConfig.attributeDescriptions.clear(); // do not use vertex attributes or bindings
 		pipelineConfig.bindingDescriptions.clear();
 		pipelineConfig.renderPass = renderPass;
+		pipelineConfig.subpass = subpassIdx;
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		sumiPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,

@@ -87,10 +87,11 @@ namespace sumire {
         initInfo.MinImageCount = 2; // double buffer
         initInfo.ImageCount =  SumiSwapChain::MAX_FRAMES_IN_FLIGHT;
         initInfo.UseDynamicRendering = false;
-        initInfo.ColorAttachmentFormat = sumiRenderer.getSwapChainImageFormat();
+        initInfo.ColorAttachmentFormat = sumiRenderer.getSwapChainColorFormat();
         initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+        initInfo.Subpass = sumiRenderer.forwardRenderSubpassIdx();
 
-        ImGui_ImplVulkan_Init(&initInfo, sumiRenderer.getSwapChainRenderPass());
+        ImGui_ImplVulkan_Init(&initInfo, sumiRenderer.getRenderPass());
 
         // TODO: 1. Upload imgui font textures to GPU
         //       2. Then clear from CPU memory
