@@ -1,5 +1,7 @@
 #include <sumire/gui/sumi_imgui.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -61,9 +63,10 @@ namespace sumire {
         poolInfo.poolSizeCount = (uint32_t)std::size(poolSizes);
         poolInfo.pPoolSizes = poolSizes;
 
-        if (vkCreateDescriptorPool(sumiRenderer.getDevice().device(), &poolInfo, nullptr, &imguiDescriptorPool) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create descriptor pool for ImGui");
-        }
+        VK_CHECK_SUCCESS(
+            vkCreateDescriptorPool(sumiRenderer.getDevice().device(), &poolInfo, nullptr, &imguiDescriptorPool),
+            "[Sumire::SumiImgui] Failed to create ImGui's required descriptor pool."
+        );
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -84,10 +87,11 @@ namespace sumire {
         initInfo.MinImageCount = 2; // double buffer
         initInfo.ImageCount =  SumiSwapChain::MAX_FRAMES_IN_FLIGHT;
         initInfo.UseDynamicRendering = false;
-        initInfo.ColorAttachmentFormat = sumiRenderer.getSwapChainImageFormat();
+        initInfo.ColorAttachmentFormat = sumiRenderer.getSwapChainColorFormat();
         initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+        initInfo.Subpass = sumiRenderer.forwardRenderSubpassIdx();
 
-        ImGui_ImplVulkan_Init(&initInfo, sumiRenderer.getSwapChainRenderPass());
+        ImGui_ImplVulkan_Init(&initInfo, sumiRenderer.getRenderPass());
 
         // TODO: 1. Upload imgui font textures to GPU
         //       2. Then clear from CPU memory
@@ -253,8 +257,6 @@ namespace sumire {
                 ImGui::Combo("Type", &projTypeIdx, projTypes, IM_ARRAYSIZE(projTypes));
                 frameInfo.camera.setCameraType(static_cast<SmCameraType>(projTypeIdx));
 
-                ImGui::Text("Matrix needs update? : %s", frameInfo.camera.projMatrixNeedsUpdate ? "true" : "false");
-
                 ImGui::Spacing();
 
                 if (projTypeIdx == 0) {
@@ -287,6 +289,10 @@ namespace sumire {
                     ImGui::InputFloat("Bottom", &varOrthoB);
                     frameInfo.camera.setOrthoBot(varOrthoB);
 
+                    float varOrthoZoom = frameInfo.camera.getOrthoZoom();
+                    ImGui::DragFloat("Zoom", &varOrthoZoom, 0.01f, 0.01f, 4.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                    frameInfo.camera.setOrthoZoom(varOrthoZoom);
+
                 } else {
                     ImGui::Text("Oopsie - Something went wrong! Please reload.");
                 }
@@ -295,11 +301,11 @@ namespace sumire {
                 
                 // Near and Far planes
                 float tNear = frameInfo.camera.near();
-                ImGui::DragFloat("Near", &tNear, 0.01f, 0.01f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Near", &tNear, 0.01f, 0.00f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                 frameInfo.camera.setNear(tNear);
 
                 float tFar = frameInfo.camera.far();
-                ImGui::DragFloat("Far", &tFar, 1.0f, 1.0f, 10000.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Far", &tFar, 1.0f, 0.01f, 10000.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                 frameInfo.camera.setFar(tFar);
 
                 frameInfo.camera.calculateProjectionMatrix();
@@ -315,8 +321,9 @@ namespace sumire {
                 ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
                 for (auto& kv : frameInfo.objects) {
                     auto& obj = kv.second;
-                    const char *nodeStrId = std::to_string(kv.first).c_str();
-                    if (ImGui::TreeNode(nodeStrId, obj.model->displayName.c_str())) {
+                    const std::string nodeStrId = std::to_string(kv.first);
+                    const char* nodeCharId = nodeStrId.c_str();
+                    if (ImGui::TreeNode(nodeCharId, obj.model->displayName.c_str())) {
                         // Transform
                         drawTransformUI(obj.transform);
 

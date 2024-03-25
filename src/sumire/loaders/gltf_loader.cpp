@@ -47,7 +47,7 @@ namespace sumire::loaders {
 		else if (ext == ".glb")
 			loadGLTF(device, filepath, data, true, genTangents);
 		else
-			throw std::runtime_error("Attempted to load unsupported GLTF type: <" + ext.u8string() + ">");
+			throw std::runtime_error("[Sumire::GLTFloader] Attempted to load unsupported GLTF type: <" + ext.u8string() + ">");
 
 	}
 
@@ -75,7 +75,7 @@ namespace sumire::loaders {
 		}
 
 		if (!loadSuccess) {
-			throw std::runtime_error(warn + err);
+			throw std::runtime_error("[Sumire::GLTFloader] " + warn + err);
 		}
 
 		// Clear model data struct
@@ -616,7 +616,7 @@ namespace sumire::loaders {
 							break;
 						}
 						default:
-							throw std::runtime_error("Attempted to load skin with an unsupported data type. Supported: uint16, uint8");
+							throw std::runtime_error("[Sumire::GLTFloader] Attempted to load skin with an unsupported data type. Supported: uint16, uint8");
 					}
 				}
 
@@ -698,7 +698,7 @@ namespace sumire::loaders {
 						}
 						break;
 						default:
-							throw std::runtime_error("Attempted to load model indices with an unsupported data type. Supported: uint32, uint16, uint8");
+							throw std::runtime_error("[Sumire::GLTFloader] Attempted to load model indices with an unsupported data type. Supported: uint32, uint16, uint8");
 					}
 
 				}

@@ -1,6 +1,8 @@
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
+#include <sumire/util/vk_check_success.hpp>
+
 #include <sumire/core/flags/sumi_pipeline_state_flags.hpp>
 
 #define GLM_FORCE_RADIANS
@@ -13,12 +15,12 @@
 
 namespace sumire {
 
-	// Note: If any more Frag push constants are needed, create a struct here with 
-	//		 SumiMaterial::MaterialPushConstantData as an internal struct.
-
 	MeshRenderSys::MeshRenderSys(
-			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
-		) : sumiDevice{device} {
+		SumiDevice& device, 
+		VkRenderPass renderPass, 
+		uint32_t subpassIdx,
+		VkDescriptorSetLayout globalDescriptorSetLayout
+	) : sumiDevice{device} {
 		
 		// Check physical device can support the size of push constants for this pipeline.
 		//  VK min guarantee is 128 bytes, this pipeline targets 256 bytes.
@@ -28,7 +30,7 @@ namespace sumire {
 			sizeof(structs::VertPushConstantData) + sizeof(structs::FragPushConstantData
 		));
 		if (deviceProperties.limits.maxPushConstantsSize < requiredPushConstantSize) {
-			std::runtime_error(
+			throw std::runtime_error(
 				"Mesh rendering requires at least" + 
 				std::to_string(requiredPushConstantSize) +
 				" bytes of push constant storage. Physical device used supports only " +
@@ -38,7 +40,7 @@ namespace sumire {
 		}
 
 		createPipelineLayout(globalDescriptorSetLayout);
-		createPipelines(renderPass);
+		createPipelines(renderPass, subpassIdx);
 	}
 
 	MeshRenderSys::~MeshRenderSys() {
@@ -81,17 +83,15 @@ namespace sumire {
 		pipelineLayoutInfo.pushConstantRangeCount = pushConstantRanges.size();
 		pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
-		if (vkCreatePipelineLayout(
-				sumiDevice.device(), 
-				&pipelineLayoutInfo,
-				nullptr, 
-				&pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("<MeshRenderSys>: Failed to create pipeline layout.");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreatePipelineLayout(
+				sumiDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout),
+			"[Sumire::MeshRenderSys] Failed to create mesh rendering pipeline layout."
+		);
 	}
 
-	void MeshRenderSys::createPipelines(VkRenderPass renderPass) {
-		assert(pipelineLayout != nullptr && "<MeshRenderSys>: Cannot create pipeline before pipeline layout.");
+	void MeshRenderSys::createPipelines(VkRenderPass renderPass, uint32_t subpassIdx) {
+		assert(pipelineLayout != nullptr && "[Sumire::MeshRenderSys]: Cannot create pipeline before pipeline layout.");
 
 		// TODO: This pipeline creation step should be moved to a common location so that it can be
 		//		 re-used by different render systems. This would also allow for efficient caching
@@ -105,9 +105,10 @@ namespace sumire {
 		PipelineConfigInfo defaultConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(defaultConfig);
 		defaultConfig.renderPass = renderPass;
+		defaultConfig.subpass = subpassIdx;
 		defaultConfig.pipelineLayout = pipelineLayout;
-		std::string defaultVertShader = "shaders/mesh.vert.spv";
-		std::string defaultFragShader = "shaders/mesh.frag.spv";
+		std::string defaultVertShader = "shaders/forward/mesh.vert.spv";
+		std::string defaultFragShader = "shaders/forward/mesh.frag.spv";
 
 		// All permutations (including default)
 		const uint32_t pipelinePermutations = 2 * SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_HIGHEST;
@@ -119,7 +120,7 @@ namespace sumire {
 
 			// Deal with each bit flag
 			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT)
-				permutationFragShader = "shaders/mesh_unlit.frag.spv";
+				permutationFragShader = "shaders/forward/mesh_unlit.frag.spv";
 			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
 				permutationConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 

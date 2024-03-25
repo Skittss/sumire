@@ -1,7 +1,7 @@
 #pragma once
 
-#include <sumire/core/sumi_object.hpp>
-#include <sumire/core/sumi_window.hpp>
+#include <sumire/core/rendering/sumi_object.hpp>
+#include <sumire/core/windowing/sumi_window.hpp>
 
 // To make input values to a more sensible 0->1 sensitivity range;
 #define KBM_SENSITIVITY_FACTOR 0.05f

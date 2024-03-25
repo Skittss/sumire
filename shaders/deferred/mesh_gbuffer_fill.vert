@@ -38,7 +38,7 @@ layout(set = 2, binding = 0) uniform MeshNode {
 	int nJoints;
 } meshNode;
 
-#include "includes/inc_joint.glsl"
+#include "../includes/inc_joint.glsl"
 
 layout(set = 2, binding = 1) buffer jointSSBO {
 	Joint jointMatrices[];

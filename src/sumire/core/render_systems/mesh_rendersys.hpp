@@ -1,21 +1,25 @@
 #pragma once
 
-#include <sumire/core/sumi_pipeline.hpp>
-#include <sumire/core/sumi_device.hpp>
-#include <sumire/core//models/sumi_model.hpp>
-#include <sumire/core/sumi_object.hpp>
-#include <sumire/core/sumi_camera.hpp>
-#include <sumire/core/sumi_frame_info.hpp>
+#include <sumire/core/graphics_pipeline/sumi_pipeline.hpp>
+#include <sumire/core/graphics_pipeline/sumi_device.hpp>
+#include <sumire/core/models/sumi_model.hpp>
+#include <sumire/core/rendering/sumi_object.hpp>
+#include <sumire/core/rendering/sumi_camera.hpp>
+#include <sumire/core/rendering/sumi_frame_info.hpp>
 
 #include <memory>
 #include <vector>
 
 namespace sumire {
 
+	// A Forward-rendering system for rendering mesh data
 	class MeshRenderSys {
 		public:
 			MeshRenderSys(
-				SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
+				SumiDevice& device,
+				VkRenderPass renderPass,
+				uint32_t subpassIdx,
+				VkDescriptorSetLayout globalDescriptorSetLayout
 			);
 			~MeshRenderSys();
 
@@ -26,7 +30,7 @@ namespace sumire {
 
 		private:
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
-			void createPipelines(VkRenderPass renderPass);
+			void createPipelines(VkRenderPass renderPass, uint32_t subpassIdx);
 
 			SumiDevice& sumiDevice;
 

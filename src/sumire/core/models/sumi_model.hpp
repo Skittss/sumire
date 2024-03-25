@@ -1,10 +1,10 @@
 #pragma once
 
-#include <sumire/core/sumi_device.hpp>
-#include <sumire/core/sumi_buffer.hpp>
+#include <sumire/core/graphics_pipeline/sumi_device.hpp>
+#include <sumire/core/graphics_pipeline/sumi_buffer.hpp>
+#include <sumire/core/graphics_pipeline/sumi_texture.hpp>
+#include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
 #include <sumire/core/materials/sumi_material.hpp>
-#include <sumire/core/sumi_texture.hpp>
-#include <sumire/core/sumi_descriptors.hpp>
 
 // Model components
 #include <sumire/core/models/vertex.hpp>

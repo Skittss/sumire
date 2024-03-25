@@ -9,7 +9,10 @@ layout (location = 4) in vec3 inBitangent;
 layout (location = 5) in vec2 inUv0;
 layout (location = 6) in vec2 inUv1;
 
-layout (location = 0) out vec4 outCol;
+layout (location = 0) out vec4 outSwapChainCol;
+layout (location = 1) out vec4 outPosition;
+layout (location = 2) out vec4 outNormal;
+layout (location = 3) out vec4 outAlbedo;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
@@ -38,7 +41,7 @@ layout(set = 1, binding = 3) uniform sampler2D aoMap;
 layout(set = 1, binding = 4) uniform sampler2D emissiveMap;
 
 // Material properties
-#include "includes/inc_material.glsl"
+#include "../includes/inc_material.glsl"
 
 layout(set = 3, binding = 0) buffer SSBO {
 	Material materials[];
@@ -56,5 +59,39 @@ void main() {
 		: vec4(1.0);
 	albedo *= mat.baseColorFactors;
 
-	outCol = vec4(albedo.rgb, 1.0);
+	// Adjust geometrical properties of back-faces
+	vec3 geoTangent = inTangent;
+	vec3 geoBitangent = inBitangent;
+	vec3 geoNormal = inNorm;
+	if (gl_FrontFacing == false) {
+		geoTangent *= -1.0; 
+		geoBitangent *= -1.0; 
+		geoNormal *= -1.0;
+	}
+
+	// Normal Mapping
+	vec3 normal;
+	if (mat.normalTexCoord > -1) {
+		// Read tangent space normal from texture
+		vec3 Nt = texture(normalMap, inUvs[mat.normalTexCoord]).rgb * 2.0 - 1.0;
+		Nt *= vec3(mat.normalScale, mat.normalScale, 1.0); // Apply scale
+		Nt = normalize(Nt);
+
+		mat3 TBN = mat3(geoTangent, geoBitangent, geoNormal);
+		normal = normalize(TBN * Nt);		
+	} else {
+		normal = normalize(geoNormal);
+	}
+
+	// We do the fragment discard AFTER texture sampling as otherwise we get divergent control flow.
+	// More details in a similar issue from a khronos org repository:
+	// https://github.com/KhronosGroup/glTF-Sample-Viewer/issues/267
+	if (mat.useAlphaMask) {
+		if (albedo.a < mat.alphaMaskCutoff) 
+			discard;
+	}
+
+	outPosition = vec4(inPos, 1.0);
+	outNormal = vec4(normal, 1.0);
+	outAlbedo = albedo;
 }

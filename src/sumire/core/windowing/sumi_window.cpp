@@ -1,4 +1,6 @@
-#include <sumire/core/sumi_window.hpp>
+#include <sumire/core/windowing/sumi_window.hpp>
+
+#include <sumire/util/vk_check_success.hpp>
 
 #include <stdexcept>
 #include <iostream>
@@ -32,9 +34,10 @@ namespace sumire {
 	}
 
 	void SumiWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR* surface) {
-		if (glfwCreateWindowSurface(instance, window, nullptr, surface) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create window surface");
-		}
+		VK_CHECK_SUCCESS(
+			glfwCreateWindowSurface(instance, window, nullptr, surface),
+			"[Sumire::SumiWindow] Failed to create window surface."
+		);
 	}
 
 	void SumiWindow::showCursor() {

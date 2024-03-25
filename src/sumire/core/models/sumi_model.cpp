@@ -1,7 +1,7 @@
 #include <sumire/core/models/sumi_model.hpp>
 #include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
-#include <sumire/core/sumi_swap_chain.hpp>
+#include <sumire/core/rendering/sumi_swap_chain.hpp>
 
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
 #include <glm/gtc/type_ptr.hpp>

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <sumire/core/sumi_pipeline.hpp>
-#include <sumire/core/sumi_device.hpp>
-#include <sumire/core//models/sumi_model.hpp>
-#include <sumire/core/sumi_object.hpp>
-#include <sumire/core/sumi_camera.hpp>
-#include <sumire/core/sumi_frame_info.hpp>
-#include <sumire/core/sumi_descriptors.hpp>
+#include <sumire/core/graphics_pipeline/sumi_pipeline.hpp>
+#include <sumire/core/graphics_pipeline/sumi_device.hpp>
+#include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
+#include <sumire/core/models/sumi_model.hpp>
+#include <sumire/core/rendering/sumi_object.hpp>
+#include <sumire/core/rendering/sumi_camera.hpp>
+#include <sumire/core/rendering/sumi_frame_info.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -39,7 +39,10 @@ namespace sumire {
 			};
 
 			GridRendersys(
-				SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
+				SumiDevice& device, 
+				VkRenderPass renderPass,
+				uint32_t subpassIdx,
+				VkDescriptorSetLayout globalDescriptorSetLayout
 			);
 			~GridRendersys();
 
@@ -51,7 +54,7 @@ namespace sumire {
 		private:
 			void createGridQuadBuffers();
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);
-			void createPipeline(VkRenderPass renderPass);
+			void createPipeline(VkRenderPass renderPass, uint32_t subpassIdx);
 
 			void bindGridQuadBuffers(VkCommandBuffer &commandBuffer);
 

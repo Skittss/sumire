@@ -1,7 +1,9 @@
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/grid_rendersys_structs.hpp>
 
-#include <sumire/core/sumi_swap_chain.hpp>
+#include <sumire/util/vk_check_success.hpp>
+
+#include <sumire/core/rendering/sumi_swap_chain.hpp>
 
 #include <stdexcept>
 #include <array>
@@ -10,11 +12,14 @@
 namespace sumire {
 
 	GridRendersys::GridRendersys(
-			SumiDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalDescriptorSetLayout
-		) : sumiDevice{device} {
+		SumiDevice& device,
+		VkRenderPass renderPass,
+		uint32_t subpassIdx,
+		VkDescriptorSetLayout globalDescriptorSetLayout
+	) : sumiDevice{device} {
 		createGridQuadBuffers(); // Note: SumiBuffer cleans itself up.
 		createPipelineLayout(globalDescriptorSetLayout);
-		createPipeline(renderPass);
+		createPipeline(renderPass, subpassIdx);
 	}
 
 	GridRendersys::~GridRendersys() {
@@ -151,13 +156,11 @@ namespace sumire {
 		pipelineLayoutInfo.pushConstantRangeCount = pushConstantRanges.size();
 		pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
-		if (vkCreatePipelineLayout(
-				sumiDevice.device(), 
-				&pipelineLayoutInfo,
-				nullptr, 
-				&pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("<GridRenderSys>: Failed to create pipeline layout.");
-		}
+		VK_CHECK_SUCCESS(
+			vkCreatePipelineLayout(
+				sumiDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout),
+			"[Sumire::GridRenderSys] Failed to create grid rendering pipeline layout."
+		);
 	}
 
 	std::vector<VkVertexInputAttributeDescription> GridRendersys::GridMinimalVertex::getAttributeDescriptions() {
@@ -177,7 +180,7 @@ namespace sumire {
 		return bindingDescriptions;
 	}
 
-	void GridRendersys::createPipeline(VkRenderPass renderPass) {
+	void GridRendersys::createPipeline(VkRenderPass renderPass, uint32_t subpassIdx) {
 		assert(pipelineLayout != nullptr && "<GridRenderSys>: Cannot create pipeline before pipeline layout.");
 
 		PipelineConfigInfo pipelineConfig{};
@@ -187,6 +190,7 @@ namespace sumire {
 		pipelineConfig.attributeDescriptions = GridMinimalVertex::getAttributeDescriptions();
 		pipelineConfig.bindingDescriptions = GridMinimalVertex::getBindingDescriptions();
 		pipelineConfig.renderPass = renderPass;
+		pipelineConfig.subpass = subpassIdx;
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		sumiPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,
