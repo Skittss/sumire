@@ -1,11 +1,10 @@
 #pragma once
 
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
+#include <sumire/core/graphics_pipeline/sumi_attachment.hpp>
 
-// vulkan headers
 #include <vulkan/vulkan.h>
 
-// std lib headers
 #include <memory>
 #include <string>
 #include <vector>
@@ -23,79 +22,65 @@ namespace sumire {
 		SumiSwapChain(const SumiSwapChain&) = delete;
 		SumiSwapChain& operator=(const SumiSwapChain&) = delete;
 
-		VkFramebuffer getFrameBuffer(int index) { return swapChainFramebuffers[index]; }
-		VkRenderPass getRenderPass() { return renderPass; }
-		VkImageView getImageView(int index) { return swapChainImageViews[index]; }
-		size_t imageCount() { return swapChainImages.size(); }
-		VkFormat getSwapChainImageFormat() { return swapChainImageFormat; }
-		VkExtent2D getSwapChainExtent() { return swapChainExtent; }
-		uint32_t width() { return swapChainExtent.width; }
-		uint32_t height() { return swapChainExtent.height; }
+		size_t imageCount() { return colorAttachments.size(); }
+		SumiAttachment* getColorAttachment(uint32_t idx) const { return colorAttachments[idx].get(); }
+		SumiAttachment* getDepthAttachment() const { return depthAttachment.get(); }
 
-		float extentAspectRatio() {
-			return static_cast<float>(swapChainExtent.width) / static_cast<float>(swapChainExtent.height);
-		}
+		VkFormat getColorFormat() const { return colorFormat; }
+		VkFormat getDepthFormat() const { return depthFormat; }
 		VkFormat findDepthFormat();
 
-		VkResult acquireNextImage(uint32_t* imageIndex);
-		VkResult submitCommandBuffers(
-			const VkCommandBuffer* buffers, 
-			uint32_t* imageIndex,
-			const uint32_t waitSemaphoreCount,
-			const VkSemaphore* waitSemaphores,
-			const VkPipelineStageFlags* waitDstStageMask
-		);
+		VkExtent2D getExtent() const { return swapChainExtent; }
+		uint32_t width() const { return swapChainExtent.width; }
+		uint32_t height() const { return swapChainExtent.height; }
+		float getAspectRatio() const { 
+			return static_cast<float>(swapChainExtent.width) / static_cast<float>(swapChainExtent.height); }
+
+		VkResult acquireNextImage(uint32_t currentFrameIdx, uint32_t* imageIndex);
+		VkResult queuePresent(uint32_t* imageIndex, uint32_t waitSemaphoreCount, VkSemaphore* pWaitSemaphore);
 
 		bool compareSwapFormats(const SumiSwapChain& swapChain) const {
-			return swapChain.swapChainDepthFormat == swapChainDepthFormat && 
-				   swapChain.swapChainImageFormat == swapChainImageFormat;
+			return swapChain.depthFormat == depthFormat && 
+				   swapChain.colorFormat == colorFormat;
 		}
 
 		// Expose synchronisation objects
-		VkSemaphore getImageAvailableSemaphore(int index) const { return imageAvailableSemaphores[index]; }
-		VkSemaphore getCurrentImageAvailableSemaphore() const { return imageAvailableSemaphores[currentFrame]; }
-		VkSemaphore getRenderFinishedSemaphore(int index) const { return renderFinishedSemaphores[index]; }
+		VkFence getImageInFlightFence(uint32_t idx) const { return imagesInFlight[idx]; }
+		void setImageInFlightFence(uint32_t imageIdx, uint32_t frameIdx) { 
+			imagesInFlight[imageIdx] = inFlightFences[frameIdx];
+		}
+
+		VkSemaphore getImageAvailableSemaphore(uint32_t idx) const { return imageAvailableSemaphores[idx]; }
+		VkSemaphore getRenderFinishedSemaphore(uint32_t idx) const { return renderFinishedSemaphores[idx]; }
 
 	private:
 		void init();
 		void createSwapChain();
-		void createImageViews();
-		void createDepthResources();
-		void createRenderPass();
-		void createFramebuffers();
+		void createAttachments(); 
 		void createSyncObjects();
 
 		// Helper functions
-		VkSurfaceFormatKHR chooseSwapSurfaceFormat(
-			const std::vector<VkSurfaceFormatKHR>& availableFormats);
-		VkPresentModeKHR chooseSwapPresentMode(
-			const std::vector<VkPresentModeKHR>& availablePresentModes);
+		VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+		VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 		VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-		VkFormat swapChainImageFormat;
-		VkFormat swapChainDepthFormat;
 		VkExtent2D swapChainExtent;
 
-		std::vector<VkFramebuffer> swapChainFramebuffers;
-		VkRenderPass renderPass;
-
-		std::vector<VkImage> depthImages;
-		std::vector<VkDeviceMemory> depthImageMemorys;
-		std::vector<VkImageView> depthImageViews;
-		std::vector<VkImage> swapChainImages;
-		std::vector<VkImageView> swapChainImageViews;
+		VkFormat colorFormat;
+		VkFormat depthFormat;
+		std::vector<std::unique_ptr<SumiAttachment>> colorAttachments;
+		std::unique_ptr<SumiAttachment> depthAttachment;
 
 		SumiDevice& device;
 		VkExtent2D windowExtent;
 
-		VkSwapchainKHR swapChain;
+		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		std::shared_ptr<SumiSwapChain> oldSwapChain;
 
 		std::vector<VkSemaphore> imageAvailableSemaphores;
 		std::vector<VkSemaphore> renderFinishedSemaphores;
 		std::vector<VkFence> inFlightFences;
 		std::vector<VkFence> imagesInFlight;
-		size_t currentFrame = 0;
 	};
 
 }
