@@ -4,6 +4,7 @@
 #include <sumire/core/rendering/sumi_swap_chain.hpp>
 #include <sumire/core/rendering/sumi_gbuffer.hpp>
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
+#include <sumire/core/graphics_pipeline/sumi_attachment.hpp>
 
 #include <memory>
 #include <vector>
@@ -23,11 +24,10 @@ namespace sumire {
         SumiDevice& getDevice() const { return sumiDevice; }
 
         struct FrameCommandBuffers {
-            VkCommandBuffer deferred = VK_NULL_HANDLE;
             VkCommandBuffer swapChain = VK_NULL_HANDLE;
 
             bool validFrame() const {
-                return (deferred && swapChain);
+                return (swapChain);
             }
         };
 
@@ -44,20 +44,19 @@ namespace sumire {
         FrameCommandBuffers beginFrame();
         void endFrame();
 
-        // Deffered renderpass data
-        void beginGbufferRenderPass(VkCommandBuffer commandBuffer);
-        void endGbufferRenderPass(VkCommandBuffer commandBuffer);
+        // RenderPass
+        void beginRenderPass(VkCommandBuffer commandBuffer);
+        void nextSubpass(VkCommandBuffer commandBuffer);
+        void endRenderPass(VkCommandBuffer commandBuffer);
+        VkRenderPass getRenderPass() const { return renderPass; }
 
-        VkRenderPass getGbufferRenderPass() const { return gbuffer->getRenderPass(); }
         SumiGbuffer* getGbuffer() const { return gbuffer.get(); }
+        uint32_t gbufferFillSubpassIdx() const { return 0; }
+        uint32_t gbufferResolveSubpassIdx() const { return 1; }
+        uint32_t forwardRenderSubpassIdx() const { return 2; }
 
-        // Swapchain renderpass data
-        void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
-        void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
-
-        VkRenderPass getSwapChainRenderPass() const { return sumiSwapChain->getRenderPass(); }
-        float getAspect() const { return sumiSwapChain->extentAspectRatio(); }
-        VkFormat getSwapChainImageFormat () const { return sumiSwapChain->getSwapChainImageFormat(); }
+        float getAspect() const { return sumiSwapChain->getAspectRatio(); }
+        VkFormat getSwapChainColorFormat () const { return sumiSwapChain->getColorFormat(); }
         bool wasSwapChainRecreated() const { return scRecreatedFlag; }
         void resetScRecreatedFlag() { scRecreatedFlag = false; }
 
@@ -67,10 +66,18 @@ namespace sumire {
 		void recreateSwapChain();
         void recreateGbuffer();
 
+        void createRenderPass();
+        void createFramebuffers();
+
         bool scRecreatedFlag{false};
 
 		SumiWindow& sumiWindow;
 		SumiDevice& sumiDevice;
+
+        uint32_t currentSubpass = 0;
+        VkRenderPass renderPass = VK_NULL_HANDLE;
+
+        std::vector<VkFramebuffer> framebuffers;
 
         // Swap chain
 		std::unique_ptr<SumiSwapChain> sumiSwapChain;
@@ -82,8 +89,8 @@ namespace sumire {
         //   but only one gbuffer due to execution dependency of the deferred renderpass.
         std::vector<VkCommandBuffer> deferredCommandBuffers;
 
-        uint32_t currentImageIdx;
-        int currentFrameIdx{0};
-        bool isFrameStarted{false};
+        uint32_t currentImageIdx = 0; // for return value of vkAcquireNextImageKHR
+        uint32_t currentFrameIdx = 0;
+        bool isFrameStarted = false;
 	};
 }

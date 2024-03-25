@@ -18,8 +18,10 @@ namespace sumire {
 			DeferredMeshRenderSys(
 				SumiDevice& device, 
 				SumiGbuffer* gbuffer,
-				VkRenderPass gbufferRenderPass, 
-				VkRenderPass compositeRenderPass, 
+				VkRenderPass gbufferFillRenderPass, 
+				uint32_t gbufferFillSubpassIdx,
+				VkRenderPass gbufferResolveRenderPass, 
+				uint32_t gbufferResolveSubpassIdx,
 				VkDescriptorSetLayout globalDescriptorSetLayout
 			);
 			~DeferredMeshRenderSys();
@@ -27,18 +29,23 @@ namespace sumire {
 			DeferredMeshRenderSys(const DeferredMeshRenderSys&) = delete;
 			DeferredMeshRenderSys& operator=(const DeferredMeshRenderSys&) = delete;
 
-			void renderGbuffer(FrameInfo &frameInfo);
-			void renderObjects(FrameInfo &frameInfo);
+			void fillGbuffer(FrameInfo &frameInfo);
+			void resolveGbuffer(FrameInfo &frameInfo);
 
 		private:
-			void createGbufferSampler();
-			void initCompositeDescriptors(SumiGbuffer* gbuffer);
+			//void createGbufferSampler();
+			void initResolveDescriptors(SumiGbuffer* gbuffer);
 			void createPipelineLayouts(VkDescriptorSetLayout globalDescriptorSetLayout);
-			void createPipelines(VkRenderPass gbufferRenderPass, VkRenderPass compositeRenderPass);
+			void createPipelines(
+				VkRenderPass gbufferFillRenderPass, 
+				uint32_t gbufferFillSubpassIdx, 
+				VkRenderPass gbufferResolveRenderPass,
+				uint32_t gbufferResolveSubpassIdx
+			);
 
 			SumiDevice& sumiDevice;
 
-			// Gbuffer Descriptors
+			// Gbuffer Fill Descriptors
 			// Keep model descriptor layout handles alive for the lifespan of this rendersystem
 			std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout;
 			std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorLayout;
@@ -49,15 +56,15 @@ namespace sumire {
 			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 			std::unordered_map<SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>> pipelines;
 
-			// Composite Descriptors
-			std::unique_ptr<SumiDescriptorPool> compositeDescriptorPool;
-			std::unique_ptr<SumiDescriptorSetLayout> compositeDescriptorSetLayout;
-			VkDescriptorSet compositeDescriptorSet = VK_NULL_HANDLE;
-			VkSampler gbufferSampler = VK_NULL_HANDLE;
+			// Resolve Descriptors
+			std::unique_ptr<SumiDescriptorPool> resolveDescriptorPool;
+			std::unique_ptr<SumiDescriptorSetLayout> resolveDescriptorSetLayout;
+			VkDescriptorSet resolveDescriptorSet = VK_NULL_HANDLE;
+			//VkSampler gbufferSampler = VK_NULL_HANDLE;
 
-			// Composite Pipelines
-			VkPipelineLayout compositePipelineLayout = VK_NULL_HANDLE;
-			std::unique_ptr<SumiPipeline> compositePipeline;
+			// Resolve Pipelines
+			VkPipelineLayout resolvePipelineLayout = VK_NULL_HANDLE;
+			std::unique_ptr<SumiPipeline> resolvePipeline;
 	};
 
 }
