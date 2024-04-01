@@ -23,6 +23,7 @@ namespace sumire {
             SumiAttachment* positionAttachment() const { return position.get(); }
             SumiAttachment* normalAttachment() const { return normal.get(); }
             SumiAttachment* albedoAttachment() const { return albedo.get(); }
+            SumiAttachment* aoMetalRoughEmissiveAttachment() const { return aoMetalRoughEmissive.get(); }
 
         private:
             void createAttachments(VkImageUsageFlags extraFlags);
@@ -33,6 +34,7 @@ namespace sumire {
             std::unique_ptr<SumiAttachment> position;
             std::unique_ptr<SumiAttachment> normal;
             std::unique_ptr<SumiAttachment> albedo;
+            std::unique_ptr<SumiAttachment> aoMetalRoughEmissive;
     };
 
 }
