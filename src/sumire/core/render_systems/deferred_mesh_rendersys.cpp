@@ -208,11 +208,10 @@ namespace sumire {
 			std::string permutationFragShader = defaultFragShader;
 
 			// Deal with each bit flag
-			// TODO: We cannot handle unlit rendering in this way.
-			// 		 We should render these objects directly to the out color buffer to bypass the lighting
-			// 		 system entirely.
-			// if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT)
-			// 	permutationFragShader = "shaders/forward/mesh_unlit.frag.spv";
+			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT) {
+				permutationVertShader = "shaders/deferred/mesh_gbuffer_fill_unlit.vert.spv";
+				permutationFragShader = "shaders/deferred/mesh_gbuffer_fill_unlit.frag.spv";
+			}
 			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
 				permutationConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 
