@@ -13,6 +13,7 @@ layout (location = 0) out vec4 outSwapChainCol;
 layout (location = 1) out vec4 outPosition;
 layout (location = 2) out vec4 outNormal;
 layout (location = 3) out vec4 outAlbedo;
+layout (location = 4) out vec4 outAoMetalRoughEmissive;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
@@ -47,7 +48,11 @@ layout(set = 3, binding = 0) buffer SSBO {
 	Material materials[];
 };
 
+#include "../includes/srgb2linear.glsl"
+
 void main() {
+
+
 	// Index mesh's material from storage buffer
 	Material mat = materials[materialIdx];
 
@@ -59,6 +64,25 @@ void main() {
 		: vec4(1.0);
 	albedo *= mat.baseColorFactors;
 
+	// PBR properties
+	float ao = mat.occlusionTexCoord > -1 ? 
+		1.0 + mat.occlusionStrength * (texture(aoMap, inUvs[mat.occlusionTexCoord]).r - 1.0)
+		: 1.0;
+
+	//https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_material_pbrmetallicroughness_metallicroughnesstexture
+	vec2 metallicRoughness = mat.metallicRoughnessTexCoord > -1 ?
+		texture(metallicRoughnessMap, inUvs[mat.metallicRoughnessTexCoord]).bg
+		: vec2(1.0, 1.0);
+	metallicRoughness *= mat.metallicRoughnessFactors;
+
+	// TODO: Emissive strength extension
+	// Emissive textures are passed as RGB but have sRGB values (TODO: This has precision loss)
+	//  So need to be converted to linear RGB before using.
+	vec3 emissive = mat.emissiveTexCoord > -1 ? 
+		srgb2linear(texture(emissiveMap, inUvs[mat.emissiveTexCoord])).rgb
+		: vec3(0.0);
+	emissive *= mat.emissiveFactors;
+	
 	// Adjust geometrical properties of back-faces
 	vec3 geoTangent = inTangent;
 	vec3 geoBitangent = inBitangent;
@@ -91,7 +115,12 @@ void main() {
 			discard;
 	}
 
-	outPosition = vec4(inPos, 1.0);
-	outNormal = vec4(normal, 1.0);
+	// Tightly pack emissive values withing gbuffer to save on RTs:
+	//   r: outPosition.a
+	//   g: outNormal.a
+	//   b: outAoMetalRoughEmissive.a
+	outPosition = vec4(inPos, emissive.r);
+	outNormal = vec4(normal, emissive.g);
 	outAlbedo = albedo;
+	outAoMetalRoughEmissive = vec4(ao, metallicRoughness, emissive.b);
 }
