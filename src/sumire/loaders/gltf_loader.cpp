@@ -210,8 +210,6 @@ namespace sumire::loaders {
 			SumiMaterial::MaterialTextureData mat{};
 
 			// Textures
-			// TODO: Include texcoord which specify which UV coords from the primitives are used
-			//       for the respective texture.
 			if (material.pbrMetallicRoughness.baseColorTexture.index > -1) {
 				mat.baseColorTexture = data.textures[material.pbrMetallicRoughness.baseColorTexture.index];
 				mat.baseColorTexCoord = material.pbrMetallicRoughness.baseColorTexture.texCoord;
