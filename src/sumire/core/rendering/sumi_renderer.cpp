@@ -127,7 +127,7 @@ namespace sumire {
 		//    - Forward render to swapchain (for UI, etc.)
 
 		// Attachment descriptions
-		std::array<VkAttachmentDescription, 5> attachmentDescriptions{};
+		std::array<VkAttachmentDescription, 6> attachmentDescriptions{};
 
 		// 0: Swap Chain Color
 		attachmentDescriptions[0].format = sumiSwapChain->getColorFormat();
@@ -169,28 +169,39 @@ namespace sumire {
 		attachmentDescriptions[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		attachmentDescriptions[3].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		// 4: Shared Depth
-		attachmentDescriptions[4].format = sumiSwapChain->findDepthFormat();
+		// 4: Gbuffer AoMetalRoughEmissive (PBR)
+		attachmentDescriptions[4].format = gbuffer->aoMetalRoughEmissiveAttachment()->getFormat();
 		attachmentDescriptions[4].samples = VK_SAMPLE_COUNT_1_BIT;
 		attachmentDescriptions[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		attachmentDescriptions[4].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		attachmentDescriptions[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		attachmentDescriptions[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		attachmentDescriptions[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachmentDescriptions[4].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		attachmentDescriptions[4].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		// 5: Shared Depth
+		attachmentDescriptions[5].format = sumiSwapChain->findDepthFormat();
+		attachmentDescriptions[5].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachmentDescriptions[5].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentDescriptions[5].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[5].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentDescriptions[5].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[5].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentDescriptions[5].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		std::array<VkSubpassDescription, 3> subpassDescriptions{};
 		std::array<VkSubpassDependency, 5> subpassDependencies{};
 
 		// 0 - Gbuffer Fill ------------------------------------------------------------------
-		// Use 4 color attachments (gbuffer + swap chain image) 
+		// Use 5 color attachments (gbuffer + swap chain image) 
 		//   so that unlit meshes can be rendered straight to the swap chain, bypassing the lighting resolve.
-		std::array<VkAttachmentReference, 4> gbufferFillColorRefs{};
+		std::array<VkAttachmentReference, 5> gbufferFillColorRefs{};
 		gbufferFillColorRefs[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 		gbufferFillColorRefs[1] = { 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 		gbufferFillColorRefs[2] = { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 		gbufferFillColorRefs[3] = { 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-		VkAttachmentReference gbufferFillDepthRef = { 4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		gbufferFillColorRefs[4] = { 4, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+		VkAttachmentReference gbufferFillDepthRef = { 5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 		
 		subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpassDescriptions[0].colorAttachmentCount = static_cast<uint32_t>(gbufferFillColorRefs.size());
@@ -218,12 +229,13 @@ namespace sumire {
 		// 1 - Gbuffer Resolve  --------------------------------------------------------------
 		VkAttachmentReference gbufferResolveColorRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
-		std::array<VkAttachmentReference, 3> gbufferResolveInputReferences{};
+		std::array<VkAttachmentReference, 4> gbufferResolveInputReferences{};
 		gbufferResolveInputReferences[0] = { 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 		gbufferResolveInputReferences[1] = { 2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 		gbufferResolveInputReferences[2] = { 3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+		gbufferResolveInputReferences[3] = { 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 
-		VkAttachmentReference gbufferResolveDepthRef = { 4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		VkAttachmentReference gbufferResolveDepthRef = { 5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
 		subpassDescriptions[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpassDescriptions[1].colorAttachmentCount = 1;
@@ -245,10 +257,7 @@ namespace sumire {
 		// 2 - Forward Render To Swapchain ---------------------------------------------------
 		// Reuse the depth buffer from the Gbuffer Fill subpass
 		VkAttachmentReference forwardColorRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-		//std::array<VkAttachmentReference, 2> forwardInputRefs{};
-		//forwardInputRefs[0] = { 0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }; // Pre-rendered Swapchain Color
-		//forwardInputRefs[1] = { 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }; // Depth
-		VkAttachmentReference forwardDepthRef = { 4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		VkAttachmentReference forwardDepthRef = { 5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
 		subpassDescriptions[2].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpassDescriptions[2].colorAttachmentCount = 1;
@@ -290,7 +299,7 @@ namespace sumire {
 
 	void SumiRenderer::createFramebuffers() {
 
-		std::array<VkImageView, 5> attachments{};
+		std::array<VkImageView, 6> attachments{};
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -310,7 +319,8 @@ namespace sumire {
 			attachments[1] = gbuffer->positionAttachment()->getImageView();
 			attachments[2] = gbuffer->normalAttachment()->getImageView();
 			attachments[3] = gbuffer->albedoAttachment()->getImageView();
-			attachments[4] = sumiSwapChain->getDepthAttachment()->getImageView();
+			attachments[4] = gbuffer->aoMetalRoughEmissiveAttachment()->getImageView();
+			attachments[5] = sumiSwapChain->getDepthAttachment()->getImageView();
 
 			VK_CHECK_SUCCESS(
 				vkCreateFramebuffer(sumiDevice.device(), &framebufferInfo, nullptr, &framebuffers[i]),
@@ -424,12 +434,13 @@ namespace sumire {
 		currentSubpass = 0;
 
 		// Begin renderpass for gbuffer fill
-        std::array<VkClearValue, 5> attachmentClearValues{};
+        std::array<VkClearValue, 6> attachmentClearValues{};
         attachmentClearValues[0].color = { { 0.01f, 0.01f, 0.01f, 1.0f } };
         attachmentClearValues[1].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
         attachmentClearValues[2].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
         attachmentClearValues[3].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-        attachmentClearValues[4].depthStencil = { 1.0f, 0 };
+        attachmentClearValues[4].color = { { 1.0f, 0.0f, 0.0f, 0.0f } }; // AO, Metallic, Roughness, Emissive
+        attachmentClearValues[5].depthStencil = { 1.0f, 0 };
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

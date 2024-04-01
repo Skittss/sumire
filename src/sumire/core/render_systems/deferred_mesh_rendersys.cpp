@@ -59,15 +59,14 @@ namespace sumire {
 	void DeferredMeshRenderSys::initResolveDescriptors(SumiGbuffer* gbuffer) {
 		resolveDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
 			.setMaxSets(3)
-			.addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3)
-			// .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 4)
 			.build();
 
 		resolveDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 			.addBinding(1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 			.addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-			// .addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(3, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 			.build();
 
 		// Gbuffer attachment descriptors
@@ -86,10 +85,16 @@ namespace sumire {
 		albedoDescriptor.imageView = gbuffer->albedoAttachment()->getImageView();
 		albedoDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+		VkDescriptorImageInfo aoMetalRoughEmissive{};
+		aoMetalRoughEmissive.sampler = VK_NULL_HANDLE;
+		aoMetalRoughEmissive.imageView = gbuffer->aoMetalRoughEmissiveAttachment()->getImageView();
+		aoMetalRoughEmissive.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
 		SumiDescriptorWriter(*resolveDescriptorSetLayout, *resolveDescriptorPool)
 			.writeImage(0, &positionDescriptor)
 			.writeImage(1, &normalDescriptor)
 			.writeImage(2, &albedoDescriptor)
+			.writeImage(3, &aoMetalRoughEmissive)
 			.build(resolveDescriptorSet);
 	}
 
@@ -184,9 +189,9 @@ namespace sumire {
 		defaultConfig.subpass = fillSubpassIdx;
 		defaultConfig.pipelineLayout = pipelineLayout;
 
-		// Modify color blending for 3 channels as we have 3 colour outputs for deferred rendering.
+		// Modify color blending for 5 channels as we have 5 colour outputs for deferred rendering.
 		//  Validation errors will occur without this. (even though colour blending is not used for the attachments)
-		std::array<VkPipelineColorBlendAttachmentState, 4> colorBlendAttachments;
+		std::array<VkPipelineColorBlendAttachmentState, 5> colorBlendAttachments;
 		colorBlendAttachments.fill(defaultConfig.colorBlendAttachment);
 		defaultConfig.colorBlendInfo.pAttachments = colorBlendAttachments.data();
 		defaultConfig.colorBlendInfo.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
