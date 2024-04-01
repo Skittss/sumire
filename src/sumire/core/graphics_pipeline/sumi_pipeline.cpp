@@ -23,7 +23,7 @@ namespace sumire {
 		const std::string& vertFilepath,
 		const std::string& fragFilepath,
 		const PipelineConfigInfo& configInfo
-	) : sumiDevice{ device } {
+	) : sumiDevice{ device }, vertFilePath{ vertFilePath }, fragFilePath{fragFilepath} {
 		createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
 	}
 

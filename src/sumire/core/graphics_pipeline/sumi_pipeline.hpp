@@ -52,6 +52,9 @@ namespace sumire {
 
 		void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 
+		std::string vertFilePath = "Undefined";
+		std::string fragFilePath = "Undefined";
+
 		// Aggregatitive relationship so this reference member is memory-safe.
 		SumiDevice& sumiDevice;
 		VkPipeline graphicsPipeline;
