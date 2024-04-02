@@ -82,7 +82,9 @@ namespace sumire {
 			0, nullptr
 		);
 
-		vkCmdDraw(frameInfo.commandBuffer, 6, 1, 0, 0);
+		uint32_t nLights = static_cast<uint32_t>(frameInfo.lights.size());
+
+		vkCmdDraw(frameInfo.commandBuffer, 6, nLights, 0, 0);
 
 	}
 }

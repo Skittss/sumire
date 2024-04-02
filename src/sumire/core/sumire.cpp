@@ -21,6 +21,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtx/color_space.hpp>
 
 #include <stdexcept>
 #include <array>
@@ -31,38 +32,41 @@ namespace sumire {
 
 	struct GlobalUBO {
 		alignas(16) glm::vec3 ambientCol{0.02f};
-		alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
-		alignas(16) glm::vec3 lightPos{ 1.0f};
-		alignas(16) glm::vec3 lightCol{ 1.0f};
-		float lightIntesnity = 1.0f;
+		uint32_t nLights = 0.0f;
+		// alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
+		// alignas(16) glm::vec3 lightPos{ 1.0f};
+		// alignas(16) glm::vec3 lightCol{ 1.0f};
+		// float lightIntesnity = 1.0f;
 	};
-	
+
 	struct CameraUBO {
 		glm::mat4 projectionMatrix{1.0f};
 		glm::mat4 viewMatrix{1.0f};
 		glm::mat4 projectionViewMatrix{1.0f};
 	};
 
-	struct DirectionalLightUBO {
-		alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
-		alignas(16) glm::vec3 lightCol{ 1.0f};
-		float lightIntesnity = 1.0f;
-	};
+	// struct DirectionalLightUBO {
+	// 	alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
+	// 	alignas(16) glm::vec3 lightCol{ 1.0f};
+	// 	float lightIntesnity = 1.0f;
+	// };
 
-	struct PointLightUBO {
-		alignas(16) glm::vec3 lightPos{ 1.0f};
-		alignas(16) glm::vec3 lightCol{ 1.0f};
-		float lightIntesnity = 1.0f;
-	};
+	// struct PointLightUBO {
+	// 	alignas(16) glm::vec3 lightPos{ 1.0f};
+	// 	alignas(16) glm::vec3 lightCol{ 1.0f};
+	// 	float lightIntesnity = 1.0f;
+	// };
 
 	Sumire::Sumire() {
 		globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
-			.setMaxSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.setMaxSets(1 + (2 * SumiSwapChain::MAX_FRAMES_IN_FLIGHT))
 			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // global
 			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // camera
+			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1) // Light SSBO
 			.build();
 
 		loadObjects();
+		loadLights();
 	}
 
 	Sumire::~Sumire() {
@@ -98,20 +102,33 @@ namespace sumire {
 			cameraUniformBuffers[i]->map(); //enable writing to buffer memory
 		}
 
+		// Light SSBO
+		std::unique_ptr<SumiBuffer> lightSSBO = std::make_unique<SumiBuffer>(
+			sumiDevice,
+			MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
+			1,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+		);
+		lightSSBO->map();
+
 		// Layout
 		auto globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
 			.addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+			.addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
 			.build();
 
-		// 
+		// Write Descriptor Sets
 		std::vector<VkDescriptorSet> globalDescriptorSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 		for (int i = 0; i < globalDescriptorSets.size(); i++) {
 			auto globalBufferInfo = globalUniformBuffers[i]->descriptorInfo();
 			auto cameraBufferInfo = cameraUniformBuffers[i]->descriptorInfo();
+			auto lightSSBOinfo = lightSSBO->descriptorInfo(); // shared across swapchain images
 			SumiDescriptorWriter(*globalDescriptorSetLayout, *globalDescriptorPool)
 				.writeBuffer(0, &globalBufferInfo)
 				.writeBuffer(1, &cameraBufferInfo)
+				.writeBuffer(2, &lightSSBOinfo)
 				.build(globalDescriptorSets[i]);
 		}
 
@@ -146,7 +163,6 @@ namespace sumire {
 			sumiRenderer.forwardRenderSubpassIdx(),
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
-
 
 		sumiWindow.setMousePollMode(SumiWindow::MousePollMode::MANUAL);
 
@@ -226,7 +242,8 @@ namespace sumire {
 				nullptr,   // commandBuffer
 				camera,
 				nullptr,   // globalDescriptorSet
-				objects
+				objects,
+				lights
 			};
 
 			// Render GUI
@@ -254,9 +271,22 @@ namespace sumire {
 				cameraUniformBuffers[frameIdx]->writeToBuffer(&cameraUbo);
 				cameraUniformBuffers[frameIdx]->flush();
 
+				const uint32_t nLights = static_cast<uint32_t>(lights.size());
 				GlobalUBO globalUbo{};
+				globalUbo.nLights = nLights;
 				globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
 				globalUniformBuffers[frameIdx]->flush();
+
+				// Write lights SSBO
+				// TODO: This will be very slow when the number of lights increases.
+				//        We should only write to the buffer when absolutely necessary, i.e. on light change.
+				auto lightData = std::vector<SumiLight::LightShaderData>{};
+				for (auto& kv : lights) {
+					auto& light = kv.second;
+					lightData.push_back(light.getShaderData());
+				}
+				lightSSBO->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
+				lightSSBO->flush();
 
 				// To swap chain render pass
 				frameInfo.commandBuffer = frameCommandBuffers.swapChain;
@@ -324,5 +354,17 @@ namespace sumire {
 		glb3.transform.setTranslation(glm::vec3{2.0f, 0.0f, 0.0f});
 		glb3.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(glb3.getId(), std::move(glb3));
+	}
+
+	void Sumire::loadLights() {
+		constexpr float radial_n_lights = 20.0;
+		for (float i = 0; i < radial_n_lights; i++) {
+			float rads = i * glm::two_pi<float>() / radial_n_lights;
+			auto light = SumiLight::createPointLight(glm::vec3{glm::sin(rads), 3.0f, glm::cos(rads)});
+			float hue = i * 360.0f / radial_n_lights;
+			light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
+			lights.emplace(light.getId(), std::move(light));
+		}
+
 	}
 }
