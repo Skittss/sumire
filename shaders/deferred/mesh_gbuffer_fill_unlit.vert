@@ -10,13 +10,9 @@ layout(location = 5) in vec3 normal;
 layout(location = 6) in vec2 uv0;
 layout(location = 7) in vec2 uv1;
 
-layout(location = 0) out vec3 outPos;
-layout(location = 1) out vec3 outColor;
-layout(location = 2) out vec3 outNorm;
-layout(location = 3) out vec3 outTangent;
-layout(location = 4) out vec3 outBitangent;
-layout(location = 5) out vec2 outUv0;
-layout(location = 6) out vec2 outUv1;
+layout(location = 0) out vec3 outColor;
+layout(location = 1) out vec2 outUv0;
+layout(location = 2) out vec2 outUv1;
 
 layout(set = 0, binding = 1) uniform Camera {
 	mat4 projectionMatrix;
@@ -65,7 +61,6 @@ void main() {
 	gl_Position = projectionViewMatrix * localPos;
 
 	// Pass remaining vertex attributes to frag shader
-	outPos = localPos.xyz;
 	outColor = col;
 	outUv0 = uv0;
 	outUv1 = uv1;

@@ -13,10 +13,7 @@ layout (location = 0) out vec4 outCol;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
-	vec3 lightDir;
-	vec3 lightPos;
-	vec3 lightCol;
-	float lightIntensity;
+	int nLights;
 } ubo;
 
 layout(set = 0, binding = 1) uniform Camera {

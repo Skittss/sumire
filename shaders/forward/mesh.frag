@@ -13,10 +13,7 @@ layout (location = 0) out vec4 outCol;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	vec3 ambientCol;
-	vec3 lightDir;
-	vec3 lightPos;
-	vec3 lightCol;
-	float lightIntensity;
+	int nLights;
 } ubo;
 
 layout(set = 0, binding = 1) uniform Camera {
@@ -87,13 +84,13 @@ void main() {
 		normal = normalize(geoNormal);
 	}
 
-	vec3 pointLightDir = ubo.lightPos - inPos.xyz;
-	float dLight = length(pointLightDir);
-	float attenuation = ubo.lightIntensity / dLight * dLight;
+	//vec3 pointLightDir = ubo.lightPos - inPos.xyz;
+	//float dLight = length(pointLightDir);
+	//float attenuation = ubo.lightIntensity / dLight * dLight;
 
-	vec3 diffuse = attenuation * ubo.lightCol * max(dot(normal, normalize(pointLightDir)), 0.0);
+	//vec3 diffuse = attenuation * ubo.lightCol * max(dot(normal, normalize(pointLightDir)), 0.0);
 
-	// outCol = vec4(albedo.rgb, 1.0);
+	outCol = vec4(albedo.rgb, 1.0);
 
 	// Debug Ouputss
 	// outCol = vec4(0.5 + 0.5 * inUvs[0], 0.0, 1.0);
@@ -107,5 +104,5 @@ void main() {
 
 	// outCol = vec4((ubo.ambientCol + diffuse))
 
-	outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
+	//outCol = vec4((ubo.ambientCol + diffuse) * albedo.rgb, 1.0);
 }

@@ -1,4 +1,5 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
 
 layout (input_attachment_index = 0, binding = 0) uniform subpassInput gbufferPosition;
 layout (input_attachment_index = 1, binding = 1) uniform subpassInput gbufferNormal;
@@ -8,6 +9,8 @@ layout (input_attachment_index = 3, binding = 3) uniform subpassInput gbufferAoM
 layout (location = 0) in vec2 gbufferUV;
 
 layout (location = 0) out vec4 outCol;
+
+#include "../includes/inc_pbr_brdf.glsl"
 
 void main() {
 	// Raw buffer values
@@ -23,7 +26,10 @@ void main() {
 	vec2 metalRoughness = aoMetalRoughEmissiveVales.gb;
 	vec3 emissive = vec3(positionValues.a, normalValues.a, aoMetalRoughEmissiveVales.a);
 	
-	// Resolve PBR lighting
+	// PBR lighting
+	//  Using Cook-Torrence BRDF: Lr = (f_d + f_s) * Li * n dot wi
+	vec3 f_d = BRDF_lambertian(albedo.rgb);
+	// vec3 f_s = ;
 	
     outCol = albedo;
 }

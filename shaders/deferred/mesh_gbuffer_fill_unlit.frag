@@ -2,19 +2,11 @@
 #extension GL_GOOGLE_include_directive : require
 
 
-layout (location = 0) in vec3 inPos;
-layout (location = 1) in vec3 inColor;
-layout (location = 2) in vec3 inNorm;
-layout (location = 3) in vec3 inTangent;
-layout (location = 4) in vec3 inBitangent;
-layout (location = 5) in vec2 inUv0;
-layout (location = 6) in vec2 inUv1;
+layout (location = 0) in vec3 inColor;
+layout (location = 1) in vec2 inUv0;
+layout (location = 2) in vec2 inUv1;
 
 layout (location = 0) out vec4 outSwapChainCol;
-layout (location = 1) out vec4 outPosition;
-layout (location = 2) out vec4 outNormal;
-layout (location = 3) out vec4 outAlbedo;
-layout (location = 4) out vec4 outAoMetalRoughEmissive;
 
 layout(push_constant) uniform Push {
 	layout(offset = 128) int materialIdx;
