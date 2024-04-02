@@ -330,13 +330,78 @@ namespace sumire {
                         ImGui::TreePop();
                     }
                 }
-
                 ImGui::PopItemWidth();
 
                 ImGui::TreePop();
             }
 
             if (ImGui::TreeNode("Lights")) {
+                ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
+                for (auto& kv : frameInfo.lights) {
+                    auto& light = kv.second;
+                    const std::string nodeStrId = std::to_string(kv.first);
+                    const char* nodeCharId = nodeStrId.c_str();
+                    if (ImGui::TreeNode(nodeCharId, light.name.c_str())) {
+                        const char* lightTypes[] = {"Point", "Spot", "Directional"};
+                        static int lightTypeIdx = frameInfo.camera.getCameraType();
+                        ImGui::Combo("Type", &lightTypeIdx, lightTypes, IM_ARRAYSIZE(lightTypes));
+                        SumiLight::Type lightType = static_cast<SumiLight::Type>(lightTypeIdx);
+                        light.type = lightType;
+
+                        drawTransformUI(light.transform, false);
+
+                        ImGui::SeparatorText("Illumination");
+                        const ImGuiColorEditFlags colorPickerFlags = ImGuiColorEditFlags_AlphaPreview;
+                        float lightCol[3] = { light.color.r, light.color.g, light.color.b };
+                        ImGui::ColorEdit3("Color", lightCol, colorPickerFlags);
+                        light.color.r = lightCol[0];
+                        light.color.g = lightCol[1];
+                        light.color.b = lightCol[2];
+
+                        float intensity = light.color.a;
+                        ImGui::DragFloat("Intensity", &intensity, 0.01f, 0.00f, 1.0f, "%.2f");
+                        light.color.a = intensity;
+
+                        ImGui::Spacing();
+                        switch (light.type) {
+                            case SumiLight::PUNCTUAL_POINT: {
+                                ImGui::SeparatorText("Attenuation");
+                                float range = light.range;
+                                ImGui::DragFloat("Range", &range, 0.01f, 0.00f, 100.0f, "%.2f");
+                                light.range = range;
+                            }
+                            break;
+                            case SumiLight::PUNCTUAL_SPOT: {
+                                ImGui::SeparatorText("Attenuation");
+                                float range = light.range;
+                                ImGui::DragFloat("Range", &range, 0.01f, 0.00f, 100.0f, "%.2f");
+                                light.range =  range;
+
+                                ImGui::Spacing();
+                                float innerConeAngle = light.innerConeAngle;
+                                ImGui::DragFloat("Inner Cone Angle", &innerConeAngle, 0.001f, 0.00f, glm::half_pi<float>(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
+                                light.innerConeAngle = innerConeAngle;
+
+                                float outerConeAngle = light.outerConeAngle;
+                                ImGui::DragFloat("Outer Cone Angle", &outerConeAngle, 0.001f, light.innerConeAngle, glm::half_pi<float>(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
+                                light.outerConeAngle = outerConeAngle;
+                            }
+                            break;
+                            case SumiLight::PUNCTUAL_DIRECTIONAL: {
+
+                            }
+                            break;
+                            default: {
+                                ImGui::Text("Could not load light parameters!");
+                            }
+                        }
+
+                        ImGui::TreePop();
+                    }
+
+                }
+                ImGui::PopItemWidth();
+
                 ImGui::TreePop();
             }
         }
