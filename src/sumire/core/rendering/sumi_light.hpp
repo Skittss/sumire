@@ -36,13 +36,14 @@ namespace sumire {
             // Shader Compatible Data 
             struct LightShaderData {
                 // Shared - all light types
-                glm::mat4 transform;
-                glm::vec4 color;
-                uint32_t type;
+                alignas(16) glm::vec4 color;
+                alignas(16) glm::vec3 translation;
+                alignas(16) glm::vec3 rotation;
+                alignas(4)  uint32_t type;
                 // Type-specific 
-                float range; // PUNCTUAL_POINT, PUNCTUAL_SPOT
-                float lightAngleScale; // PUNCTUAL_SPOT
-                float lightAngleOffset; // PUNCTUAL_SPOT
+                alignas(4)  float range; // PUNCTUAL_POINT, PUNCTUAL_SPOT
+                alignas(4)  float lightAngleScale; // PUNCTUAL_SPOT
+                alignas(4)  float lightAngleOffset; // PUNCTUAL_SPOT
             };
             LightShaderData getShaderData();
 

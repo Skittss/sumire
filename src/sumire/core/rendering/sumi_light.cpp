@@ -39,9 +39,9 @@ namespace sumire {
         coneToLightAngle(innerConeAngle, outerConeAngle, lightAngleScale, lightAngleOffset);
 
         return LightShaderData{
-            transform.modelMatrix(),
             color,
-            //SumiLight::typeToUint32t(type),
+            transform.getTranslation(),
+            transform.getRotation(),
             static_cast<uint32_t>(type),
             range,
             lightAngleOffset,
