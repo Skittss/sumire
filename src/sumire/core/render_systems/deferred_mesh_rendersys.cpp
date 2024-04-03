@@ -58,7 +58,7 @@ namespace sumire {
 
 	void DeferredMeshRenderSys::initResolveDescriptors(SumiGbuffer* gbuffer) {
 		resolveDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
-			.setMaxSets(3)
+			.setMaxSets(4)
 			.addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 4)
 			.build();
 
@@ -139,26 +139,27 @@ namespace sumire {
 			"[Sumire::DeferredMeshRenderSys] Failed to create gbuffer rendering pipeline layout."
 		);
 
-		VkPushConstantRange compositePushConstantRange{};
-		compositePushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		compositePushConstantRange.offset = 0;
-		compositePushConstantRange.size = sizeof(structs::CompositePushConstantData);
+		VkPushConstantRange resolvePushConstantRange{};
+		resolvePushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		resolvePushConstantRange.offset = 0;
+		resolvePushConstantRange.size = sizeof(structs::CompositePushConstantData);
 
 		// Composite Pipeline (Lighting)
-		std::vector<VkDescriptorSetLayout> compositeDescriptorSetLayouts{
+		std::vector<VkDescriptorSetLayout> resolveDescriptorSetLayouts{
+			globalDescriptorSetLayout,
 			resolveDescriptorSetLayout->getDescriptorSetLayout()
 		};
 
-		VkPipelineLayoutCreateInfo compositePipelineLayoutInfo{};
-		compositePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		compositePipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(compositeDescriptorSetLayouts.size());
-		compositePipelineLayoutInfo.pSetLayouts = compositeDescriptorSetLayouts.data();
-		compositePipelineLayoutInfo.pushConstantRangeCount = 1;
-		compositePipelineLayoutInfo.pPushConstantRanges = &compositePushConstantRange;
+		VkPipelineLayoutCreateInfo resolvePipelineLayoutInfo{};
+		resolvePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		resolvePipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(resolveDescriptorSetLayouts.size());
+		resolvePipelineLayoutInfo.pSetLayouts = resolveDescriptorSetLayouts.data();
+		resolvePipelineLayoutInfo.pushConstantRangeCount = 1;
+		resolvePipelineLayoutInfo.pPushConstantRanges = &resolvePushConstantRange;
 
 		VK_CHECK_SUCCESS(
 			vkCreatePipelineLayout(
-				sumiDevice.device(), &compositePipelineLayoutInfo, nullptr, &resolvePipelineLayout),
+				sumiDevice.device(), &resolvePipelineLayoutInfo, nullptr, &resolvePipelineLayout),
 			"[Sumire::DeferredMeshRenderSys] Failed to create lighting composition pipeline layout."
 		);
 	}
@@ -262,13 +263,18 @@ namespace sumire {
 			&push
 		);
 
-		// Bind descriptor sets (Gbuffer & lights)
+		std::array<VkDescriptorSet, 2> resolveDescriptors{
+			frameInfo.globalDescriptorSet,
+			resolveDescriptorSet
+		};
+
+		// Bind descriptor sets (Gbuffer)
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			resolvePipelineLayout,
-			0, 1,
-			&resolveDescriptorSet,
+			0, static_cast<uint32_t>(resolveDescriptors.size()),
+			resolveDescriptors.data(),
 			0, nullptr
 		);
 
