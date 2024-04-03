@@ -12,7 +12,6 @@ layout (location = 6) in vec2 inUv1;
 layout (location = 0) out vec4 outCol;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	vec3 ambientCol;
 	int nLights;
 } ubo;
 

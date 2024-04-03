@@ -5,7 +5,6 @@ layout (location = 0) out vec2 fragOffset;
 layout (location = 1) out int lightIdx;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	vec3 ambientCol;
 	float nLights;
 } ubo;
 
@@ -37,7 +36,7 @@ void main() {
 	lightIdx = gl_InstanceIndex;
 	Light light = lights[lightIdx];
 	
-    vec4 lightPosCamera = viewMatrix * light.transform * vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 lightPosCamera = viewMatrix * vec4(light.translation, 1.0);
 	float billboardSize = max(0.01, min(0.07, 0.005 * light.range));
     vec3 vertexPosCamera = lightPosCamera.xyz + billboardSize * vec3(fragOffset, 0.0); // billboard orthogonal to view
 

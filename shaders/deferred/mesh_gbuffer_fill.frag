@@ -16,7 +16,6 @@ layout (location = 3) out vec4 outAlbedo;
 layout (location = 4) out vec4 outAoMetalRoughEmissive;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	vec3 ambientCol;
 	int nLights;
 } ubo;
 
@@ -72,9 +71,9 @@ void main() {
 		: vec2(1.0, 1.0);
 	metallicRoughness *= mat.metallicRoughnessFactors;
 
-	// TODO: Emissive strength extension
 	// Emissive textures are passed as RGB but have sRGB values (TODO: This has precision loss)
 	//  So need to be converted to linear RGB before using.
+	// TODO: Emissive strength extension
 	vec3 emissive = mat.emissiveTexCoord > -1 ? 
 		srgb2linear(texture(emissiveMap, inUvs[mat.emissiveTexCoord])).rgb
 		: vec3(0.0);

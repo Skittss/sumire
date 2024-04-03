@@ -18,11 +18,6 @@ layout(location = 4) out vec3 outBitangent;
 layout(location = 5) out vec2 outUv0;
 layout(location = 6) out vec2 outUv1;
 
-layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	vec3 ambientCol;
-	int nLights;
-} ubo;
-
 layout(set = 0, binding = 1) uniform Camera {
 	mat4 projectionMatrix;
 	mat4 viewMatrix;

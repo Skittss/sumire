@@ -7,8 +7,7 @@ layout (location = 1) flat in int lightIdx;
 layout (location = 0) out vec4 col;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	vec3 ambientCol;
-	float nLights;
+	int nLights;
 } ubo;
 
 layout(set = 0, binding = 1) uniform Camera {
