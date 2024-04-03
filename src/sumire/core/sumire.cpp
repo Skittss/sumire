@@ -31,12 +31,7 @@
 namespace sumire {
 
 	struct GlobalUBO {
-		alignas(16) glm::vec3 ambientCol{0.02f};
-		uint32_t nLights = 0.0f;
-		// alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
-		// alignas(16) glm::vec3 lightPos{ 1.0f};
-		// alignas(16) glm::vec3 lightCol{ 1.0f};
-		// float lightIntesnity = 1.0f;
+		int nLights = 0;
 	};
 
 	struct CameraUBO {
@@ -44,18 +39,6 @@ namespace sumire {
 		glm::mat4 viewMatrix{1.0f};
 		glm::mat4 projectionViewMatrix{1.0f};
 	};
-
-	// struct DirectionalLightUBO {
-	// 	alignas(16) glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
-	// 	alignas(16) glm::vec3 lightCol{ 1.0f};
-	// 	float lightIntesnity = 1.0f;
-	// };
-
-	// struct PointLightUBO {
-	// 	alignas(16) glm::vec3 lightPos{ 1.0f};
-	// 	alignas(16) glm::vec3 lightCol{ 1.0f};
-	// 	float lightIntesnity = 1.0f;
-	// };
 
 	Sumire::Sumire() {
 		globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
@@ -271,7 +254,7 @@ namespace sumire {
 				cameraUniformBuffers[frameIdx]->writeToBuffer(&cameraUbo);
 				cameraUniformBuffers[frameIdx]->flush();
 
-				const uint32_t nLights = static_cast<uint32_t>(lights.size());
+				const int nLights = static_cast<int>(lights.size());
 				GlobalUBO globalUbo{};
 				globalUbo.nLights = nLights;
 				globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
@@ -330,14 +313,14 @@ namespace sumire {
 		std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/test/NormalTangentMirrorTest.glb");
 		auto obj1 = SumiObject::createObject();
 		obj1.model = modelObj1;
-		obj1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
+		obj1.transform.setTranslation(glm::vec3{-8.0f, 0.0f, 0.0f});
 		obj1.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(obj1.getId(), std::move(obj1));
 
 		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/clorinde.glb");
 		auto glb1 = SumiObject::createObject();
 		glb1.model = modelGlb1;
-		glb1.transform.setTranslation(glm::vec3{-2.0f, 0.0f, 0.0f});
+		glb1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
 		glb1.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(glb1.getId(), std::move(glb1));
 
@@ -351,7 +334,7 @@ namespace sumire {
 		std::shared_ptr<SumiModel> modelGlb3 = loaders::GLTFloader::createModelFromFile(sumiDevice, "../assets/models/gltf/2b.glb");
 		auto glb3 = SumiObject::createObject();
 		glb3.model = modelGlb3;
-		glb3.transform.setTranslation(glm::vec3{2.0f, 0.0f, 0.0f});
+		glb3.transform.setTranslation(glm::vec3{0.0f, 0.0f, 0.0f});
 		glb3.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(glb3.getId(), std::move(glb3));
 	}
@@ -360,9 +343,9 @@ namespace sumire {
 		constexpr float radial_n_lights = 20.0;
 		for (float i = 0; i < radial_n_lights; i++) {
 			float rads = i * glm::two_pi<float>() / radial_n_lights;
-			auto light = SumiLight::createPointLight(glm::vec3{glm::sin(rads), 3.0f, glm::cos(rads)});
+			auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});
 			float hue = i * 360.0f / radial_n_lights;
-			light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
+			light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 0.5);
 			lights.emplace(light.getId(), std::move(light));
 		}
 
