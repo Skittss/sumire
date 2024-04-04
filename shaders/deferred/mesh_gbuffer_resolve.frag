@@ -14,6 +14,13 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
 	int nLights;
 } ubo;
 
+layout(set = 0, binding = 1) uniform Camera {
+	mat4 projectionMatrix;
+	mat4 viewMatrix;
+	mat4 projectionViewMatrix;
+	vec3 cameraPosition;
+};
+
 #include "../includes/inc_light.glsl"
 
 layout(set = 0, binding = 2) buffer LightSSBO {
@@ -42,31 +49,34 @@ void main() {
 	vec3 f0 = vec3(0.04);
 
 	// View vector
-	vec3 V = normalize( - position);
-	float NdotVplus = clamp(dot(normal, V), 0.0, 1.0);
+	vec3 V = normalize(cameraPosition - position);
+	float NdotVplus = max(dot(normal, V), 0.0);
 
 	vec3 col = vec3(0.0);
 	for (int i = 0; i < ubo.nLights; i++) {
 		Light light = lights[i];
 		vec3 perLightCol = vec3(0.0);
 		
-		vec3 L = normalize(light.translation - position); // TODO: light pos
+		vec3 pToL = light.translation - position;
+		float lightDist = length(pToL);
+
+		vec3 L = normalize(pToL);
 		vec3 H = normalize(L + V);
 
-		float NdotLplus = clamp(dot(normal, L), 0.0, 1.0);
-		float NdotHplus = clamp(dot(normal, H), 0.0, 1.0);
+		float NdotLplus = max(dot(normal, L), 0.0);
+		float NdotHplus = max(dot(normal, H), 0.0);
+		float VdotHplus = max(dot(V, H), 0.0);
 		if (NdotLplus > 0.0 || NdotHplus > 0.0) {
 			// roughness is authored as r^2 = a by convention to compensate for non-linear perception.
 			float alpha_roughness = metalRoughness.y * metalRoughness.y;
 			
 			vec3 f_d = BRDF_lambertian(albedo.rgb);
-			vec3 f_s = BRDF_specular_GGX(alpha_roughness, f0, NdotLplus, NdotVplus, NdotHplus);
+			vec3 f_s = BRDF_specular_GGX(alpha_roughness, f0, NdotLplus, NdotVplus, NdotHplus, VdotHplus);
 
-			vec3 Li = light.color.rgb * light.color.a;
+			vec3 Li = light.color.rgb * light.color.a / (lightDist * lightDist);
 			col += (f_d + f_s) * Li * NdotLplus;
 		}
 	}
 	
-	outCol = vec4(col, albedo.a);
-    //outCol += vec4(emissive + col, 1.0);
+	outCol = vec4(emissive + col, albedo.a);
 }
