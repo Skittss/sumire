@@ -1,6 +1,7 @@
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/point_light_rendersys_structs.hpp>
 
+#include <sumire/util/sumire_engine_path.hpp>
 #include <sumire/util/vk_check_success.hpp>
 
 #define GLM_FORCE_RADIANS
@@ -65,8 +66,8 @@ namespace sumire {
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		sumiPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,
-			"shaders/point_light.vert.spv",
-			"shaders/point_light.frag.spv",
+			SUMIRE_ENGINE_PATH("shaders/point_light.vert.spv"),
+			SUMIRE_ENGINE_PATH("shaders/point_light.frag.spv"),
 			pipelineConfig);
 	}
 

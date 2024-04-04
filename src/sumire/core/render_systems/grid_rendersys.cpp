@@ -1,6 +1,7 @@
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/grid_rendersys_structs.hpp>
 
+#include <sumire/util/sumire_engine_path.hpp>
 #include <sumire/util/vk_check_success.hpp>
 
 #include <sumire/core/rendering/sumi_swap_chain.hpp>
@@ -181,7 +182,7 @@ namespace sumire {
 	}
 
 	void GridRendersys::createPipeline(VkRenderPass renderPass, uint32_t subpassIdx) {
-		assert(pipelineLayout != nullptr && "<GridRenderSys>: Cannot create pipeline before pipeline layout.");
+		assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout.");
 
 		PipelineConfigInfo pipelineConfig{};
 		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
@@ -194,8 +195,8 @@ namespace sumire {
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		sumiPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,
-			"shaders/grid.vert.spv",
-			"shaders/grid.frag.spv",
+			SUMIRE_ENGINE_PATH("shaders/grid.vert.spv"),
+			SUMIRE_ENGINE_PATH("shaders/grid.frag.spv"),
 			pipelineConfig);
 
 	}

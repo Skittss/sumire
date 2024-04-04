@@ -1,4 +1,5 @@
 #include <sumire/core/models/sumi_model.hpp>
+#include <sumire/util/sumire_engine_path.hpp>
 #include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
 #include <sumire/core/rendering/sumi_swap_chain.hpp>
@@ -119,7 +120,7 @@ namespace sumire {
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			imageInfo,
 			samplerInfo,
-			"../assets/textures/empty.png"
+			SUMIRE_ENGINE_PATH("assets/textures/empty.png")
 		);
 	}
 

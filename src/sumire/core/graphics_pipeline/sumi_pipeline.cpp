@@ -8,11 +8,6 @@
 #include <stdexcept>
 #include <cassert>
 
-// Deal with cmake building to ./build instead of ./
-#ifndef ENGINE_DIR
-#define ENGINE_DIR "../"
-#endif
-
 namespace sumire {
 
 	// Initialize reference to currently bound pipeline as nullptr
@@ -37,11 +32,10 @@ namespace sumire {
 	}
 
 	std::vector<char> SumiPipeline::readFile(const std::string& filepath) {
-		std::string enginePath = ENGINE_DIR + filepath;
-		std::ifstream file{ enginePath, std::ios::ate | std::ios::binary };
+		std::ifstream file{ filepath, std::ios::ate | std::ios::binary };
 
 		if (!file.is_open()) {
-			throw std::runtime_error("[Sumire::SumiPipeline] Could not open file: " + enginePath);
+			throw std::runtime_error("[Sumire::SumiPipeline] Could not open file: " + filepath);
 		}
 
 		size_t fileSize = static_cast<size_t>(file.tellg());

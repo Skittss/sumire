@@ -1,6 +1,7 @@
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
+#include <sumire/util/sumire_engine_path.hpp>
 #include <sumire/util/vk_check_success.hpp>
 
 #include <sumire/core/flags/sumi_pipeline_state_flags.hpp>
@@ -107,8 +108,8 @@ namespace sumire {
 		defaultConfig.renderPass = renderPass;
 		defaultConfig.subpass = subpassIdx;
 		defaultConfig.pipelineLayout = pipelineLayout;
-		std::string defaultVertShader = "shaders/forward/mesh.vert.spv";
-		std::string defaultFragShader = "shaders/forward/mesh.frag.spv";
+		std::string defaultVertShader = SUMIRE_ENGINE_PATH("shaders/forward/mesh.vert.spv");
+		std::string defaultFragShader = SUMIRE_ENGINE_PATH("shaders/forward/mesh.frag.spv");
 
 		// All permutations (including default)
 		const uint32_t pipelinePermutations = 2 * SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_HIGHEST;
@@ -120,7 +121,7 @@ namespace sumire {
 
 			// Deal with each bit flag
 			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT)
-				permutationFragShader = "shaders/forward/mesh_unlit.frag.spv";
+				permutationFragShader = SUMIRE_ENGINE_PATH("shaders/forward/mesh_unlit.frag.spv");
 			if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
 				permutationConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 
