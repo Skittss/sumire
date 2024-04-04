@@ -9,6 +9,7 @@ layout(set = 0, binding = 1) uniform Camera {
 	mat4 projectionMatrix;
 	mat4 viewMatrix;
 	mat4 projectionViewMatrix;
+    vec3 cameraPosition;
 };
 
 layout(set = 1, binding = 0) uniform GridUniforms {
