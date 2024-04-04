@@ -152,6 +152,7 @@ endif()
  
 ############## Build SHADERS #######################
  
+message(STATUS "COMPILING SHADERS")
 # Find all vertex and fragment sources within shaders directory
 # taken from VBlancos vulkan tutorial
 # https://github.com/vblanco20-1/vulkan-guide/blob/all-chapters/CMakeLists.txt
@@ -186,3 +187,8 @@ add_custom_target(
 	Shaders
 	DEPENDS ${SPIRV_BINARY_FILES}
 )
+
+# Deal with MSVC not building cmake custom targets automatically.
+if (MSVC)
+	add_dependencies(${PROJECT_NAME} Shaders)
+endif()
