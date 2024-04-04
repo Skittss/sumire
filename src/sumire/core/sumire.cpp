@@ -39,6 +39,7 @@ namespace sumire {
 		glm::mat4 projectionMatrix{1.0f};
 		glm::mat4 viewMatrix{1.0f};
 		glm::mat4 projectionViewMatrix{1.0f};
+		glm::vec3 cameraPosition{0.0f};
 	};
 
 	Sumire::Sumire() {
@@ -252,6 +253,7 @@ namespace sumire {
 				cameraUbo.projectionMatrix     = camera.getProjectionMatrix();
 				cameraUbo.viewMatrix           = camera.getViewMatrix();
 				cameraUbo.projectionViewMatrix = cameraUbo.projectionMatrix * cameraUbo.viewMatrix;
+				cameraUbo.cameraPosition = camera.transform.getTranslation();
 				cameraUniformBuffers[frameIdx]->writeToBuffer(&cameraUbo);
 				cameraUniformBuffers[frameIdx]->flush();
 
@@ -318,11 +320,12 @@ namespace sumire {
 		obj1.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(obj1.getId(), std::move(obj1));
 
-		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
+		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/primitives/sphere.glb"));
+		// std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
 		auto glb1 = SumiObject::createObject();
 		glb1.model = modelGlb1;
 		glb1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
-		glb1.transform.setScale(glm::vec3{1.0f});
+		glb1.transform.setScale(glm::vec3{0.2f});
 		objects.emplace(glb1.getId(), std::move(glb1));
 
 		// std::shared_ptr<SumiModel> modelGlb2 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/doomslayer.glb"));
@@ -346,7 +349,7 @@ namespace sumire {
 			float rads = i * glm::two_pi<float>() / radial_n_lights;
 			auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});
 			float hue = i * 360.0f / radial_n_lights;
-			light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 0.5);
+			light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
 			lights.emplace(light.getId(), std::move(light));
 		}
 
