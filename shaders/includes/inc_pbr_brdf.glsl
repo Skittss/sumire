@@ -35,8 +35,12 @@ float BRDF_V_GGX(float alpha_roughness, float NdotLplus, float NdotVplus) {
 
 	float GGXV = NdotLplus * sqrt(alpha_sq + NdotVplus * NdotVplus * (1.0 - alpha_sq));
 	float GGXL = NdotVplus * sqrt(alpha_sq + NdotLplus * NdotLplus * (1.0 - alpha_sq));
-	
-	return 0.5 / (GGXV + GGXL);
+	float GGX = GGXV + GGXL;
+
+	// Prevent div by 0
+	float V = GGX > 0 ? 0.5 / GGX : 0.0;
+
+	return V;
 }
 
 // Cook-Torrence Microfacet BRDF specular component (f_s) using GGX distribution.

@@ -52,6 +52,7 @@ void main() {
 	vec3 V = normalize(cameraPosition - position);
 	float NdotVplus = max(dot(normal, V), 0.0);
 
+	// Per-light resolve
 	vec3 col = vec3(0.0);
 	for (int i = 0; i < ubo.nLights; i++) {
 		Light light = lights[i];
@@ -72,7 +73,8 @@ void main() {
 			
 			vec3 f_d = BRDF_lambertian(albedo.rgb);
 			vec3 f_s = BRDF_specular_GGX(alpha_roughness, f0, NdotLplus, NdotVplus, NdotHplus, VdotHplus);
-
+			
+			// Attenuate light source
 			vec3 Li = light.color.rgb * light.color.a / (lightDist * lightDist);
 			col += (f_d + f_s) * Li * NdotLplus;
 		}
