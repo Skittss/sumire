@@ -1,6 +1,8 @@
 build/*
+bin/*
 .env.cmake
 .vscode
+.vs
 
 shaders/**/*.spv
 

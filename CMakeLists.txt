@@ -39,7 +39,7 @@ if (DEFINED GLFW_PATH)
 	message(STATUS "Using GLFW path specified in .env")
 	set(GLFW_INCLUDE_DIRS "${GLFW_PATH}/include")
 	if (MSVC)
-		set(GLFW_LIB "${GLFW_PATH}/lib-vc2019") # Make sure this matches MSVC version
+		set(GLFW_LIB "${GLFW_PATH}/lib-vc2022") # Make sure this matches MSVC version
 	elseif (CMAKE_GENERATOR STREQUAL "MinGW Makefiles")
 		message(STATUS "USING MINGW")
 		set(GLFW_LIB "${GLFW_PATH}/lib-mingw-w64")
@@ -54,9 +54,7 @@ if (NOT GLFW_LIB)
 else()
 	message(STATUS "Using glfw lib at: ${GLFW_LIB}")
 endif()
- 
-#include_directories(external)
- 
+  
 # TINY OBJ LOADER
 if (NOT TINYOBJ_PATH)
 	message(STATUS "TINYOBJ_PATH not specified in .env.cmake, using external/tinyobjloader")
@@ -80,6 +78,18 @@ if (NOT MIKKTSPACE_PATH)
 	set(MIKKTSPACE_PATH external/mikktspace)
 endif()
 
+# Bin path
+set(OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release") # VS uses no configuration suffix for releases
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}/Release")         #  But I've included it anyhow just in case.
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release")
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}/Release")
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release")
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}/Release")
+
 file(GLOB_RECURSE MIKKTSPACE_SOURCES ${MIKKTSPACE_PATH}/*.c)
 file(GLOB_RECURSE IMGUI_SOURCES ${IMGUI_PATH}/*.cpp)
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp) # find cpp files (nested) -> store in ${SOURCES}
@@ -88,7 +98,7 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES}
  
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # c++ 17 standard
  
-set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
+# set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
  
 if (WIN32)
 	message(STATUS "CREATING BUILD FOR WINDOWS")

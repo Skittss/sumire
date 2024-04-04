@@ -1,4 +1,4 @@
-if not exist build mkdir build
-cd build
-cmake -S ../ -B .
-cd ../
+@if not exist build\msvc mkdir build\msvc
+@cd build\msvc
+cmake -S ../../ -B .
+@cd ../../
