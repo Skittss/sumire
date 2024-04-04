@@ -100,6 +100,8 @@ namespace sumire {
 
 			populateDebugMessengerCreateInfo(debugCreateInfo);
 			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+
+			std::cout << "[Sumire::SumiDevice] Validation layers are ENABLED" << std::endl;
 		}
 		else {
 			createInfo.enabledLayerCount = 0;
