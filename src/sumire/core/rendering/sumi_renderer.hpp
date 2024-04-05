@@ -59,17 +59,22 @@ namespace sumire {
         VkFormat getSwapChainColorFormat () const { return sumiSwapChain->getColorFormat(); }
         bool wasSwapChainRecreated() const { return scRecreatedFlag; }
         void resetScRecreatedFlag() { scRecreatedFlag = false; }
+        bool wasGbufferRecreated() const { return gbufferRecreatedFlag; }
+        void resetGbufferRecreatedFlag() { gbufferRecreatedFlag = false; }
 
 	private:
 		void createCommandBuffers();
 		void freeCommandBuffers();
+        void recreateRenderObjects();
 		void recreateSwapChain();
         void recreateGbuffer();
 
         void createRenderPass();
         void createFramebuffers();
+        void freeFramebuffers();
 
-        bool scRecreatedFlag{false};
+        bool scRecreatedFlag = false;
+        bool gbufferRecreatedFlag = false;
 
 		SumiWindow& sumiWindow;
 		SumiDevice& sumiDevice;

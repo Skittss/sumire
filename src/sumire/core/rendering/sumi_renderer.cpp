@@ -17,12 +17,17 @@ namespace sumire {
 
 	SumiRenderer::~SumiRenderer() {
 		freeCommandBuffers();
-
-		for (auto fb : framebuffers) {
-			vkDestroyFramebuffer(sumiDevice.device(), fb, nullptr);
-		}
+		freeFramebuffers();
 
 		vkDestroyRenderPass(sumiDevice.device(), renderPass, nullptr);
+	}
+
+	void SumiRenderer::recreateRenderObjects() {
+		recreateSwapChain();
+		recreateGbuffer();
+
+		freeFramebuffers();
+		createFramebuffers();
 	}
 
 	void SumiRenderer::recreateSwapChain() {
@@ -43,7 +48,7 @@ namespace sumire {
 			sumiSwapChain = std::make_unique<SumiSwapChain>(sumiDevice, extent, oldSwapChain);
 
             if (!oldSwapChain->compareSwapFormats(*sumiSwapChain.get())) {
-                throw std::runtime_error("[Sumire::SumiRenderer] Swap chain image / depth format has changed!");
+                throw std::runtime_error("[Sumire::SumiRenderer] Could not use old swapchain as base for recreation - swap chain format has changed.");
             }
 		}
 
@@ -68,6 +73,8 @@ namespace sumire {
 			extent,
 			gbufferAttachmentExtraFlags
 		);
+
+		gbufferRecreatedFlag = true;
 	}
 
 	void SumiRenderer::createCommandBuffers() {
@@ -329,6 +336,12 @@ namespace sumire {
 		}
 	}
 
+	void SumiRenderer::freeFramebuffers() {
+		for (auto fb : framebuffers) {
+			vkDestroyFramebuffer(sumiDevice.device(), fb, nullptr);
+		}
+	}
+
 	SumiRenderer::FrameCommandBuffers SumiRenderer::getCurrentCommandBuffers() const {
 		assert(isFrameStarted && "Failed to get command buffers - no frame in flight.");
 
@@ -345,7 +358,8 @@ namespace sumire {
 		auto result = sumiSwapChain->acquireNextImage(currentFrameIdx, &currentImageIdx);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			recreateSwapChain();
+			recreateRenderObjects();
+			//recreateSwapChain();
 			return FrameCommandBuffers{};
 		}
 
@@ -418,10 +432,14 @@ namespace sumire {
 		auto result = sumiSwapChain->queuePresent(&currentImageIdx, 1, &renderFinished);
 
 		// TODO: Need to consider gbuffer resize too.
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || 
-				sumiWindow.wasWindowResized()) {
+		if (
+			result == VK_ERROR_OUT_OF_DATE_KHR ||
+			result == VK_SUBOPTIMAL_KHR || 
+			sumiWindow.wasWindowResized()
+		) {
 			sumiWindow.resetWindowResizedFlag();
-			recreateSwapChain();
+			recreateRenderObjects();
+			//recreateSwapChain();
 		} else if (result != VK_SUCCESS) {
             throw std::runtime_error("[Sumire::SumiRenderer] Failed to present swap chain image.");
         }

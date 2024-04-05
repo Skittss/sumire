@@ -99,6 +99,36 @@ namespace sumire {
 			.build(resolveDescriptorSet);
 	}
 
+	void DeferredMeshRenderSys::updateResolveDescriptors(SumiGbuffer* gbuffer) {
+		// Gbuffer attachment descriptors
+		VkDescriptorImageInfo positionDescriptor{};
+		positionDescriptor.sampler = VK_NULL_HANDLE;
+		positionDescriptor.imageView = gbuffer->positionAttachment()->getImageView();
+		positionDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkDescriptorImageInfo normalDescriptor{};
+		normalDescriptor.sampler = VK_NULL_HANDLE;
+		normalDescriptor.imageView = gbuffer->normalAttachment()->getImageView();
+		normalDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkDescriptorImageInfo albedoDescriptor{};
+		albedoDescriptor.sampler = VK_NULL_HANDLE;
+		albedoDescriptor.imageView = gbuffer->albedoAttachment()->getImageView();
+		albedoDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkDescriptorImageInfo aoMetalRoughEmissive{};
+		aoMetalRoughEmissive.sampler = VK_NULL_HANDLE;
+		aoMetalRoughEmissive.imageView = gbuffer->aoMetalRoughEmissiveAttachment()->getImageView();
+		aoMetalRoughEmissive.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		SumiDescriptorWriter(*resolveDescriptorSetLayout, *resolveDescriptorPool)
+			.writeImage(0, &positionDescriptor)
+			.writeImage(1, &normalDescriptor)
+			.writeImage(2, &albedoDescriptor)
+			.writeImage(3, &aoMetalRoughEmissive)
+			.overwrite(resolveDescriptorSet);
+	}
+
 	void DeferredMeshRenderSys::createPipelineLayouts(VkDescriptorSetLayout globalDescriptorSetLayout) {
 		// Gbuffer Pipelines (Mesh rendering)
 		VkPushConstantRange vertPushConstantRange{};

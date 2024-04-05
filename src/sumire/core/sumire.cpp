@@ -219,6 +219,11 @@ namespace sumire {
 				sumiRenderer.resetScRecreatedFlag();
 			}
 
+			if (sumiRenderer.wasGbufferRecreated()) {
+				deferredMeshRenderSystem.updateResolveDescriptors(sumiRenderer.getGbuffer());
+				sumiRenderer.resetGbufferRecreatedFlag();
+			}
+
 			// Set up FrameInfo for GUI, and add remaining props later;
 			FrameInfo frameInfo{
 				-1,        // frameIdx

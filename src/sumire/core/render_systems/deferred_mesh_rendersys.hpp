@@ -32,6 +32,8 @@ namespace sumire {
 			void fillGbuffer(FrameInfo &frameInfo);
 			void resolveGbuffer(FrameInfo &frameInfo);
 
+			void updateResolveDescriptors(SumiGbuffer* gbuffer);
+
 		private:
 			//void createGbufferSampler();
 			void initResolveDescriptors(SumiGbuffer* gbuffer);
