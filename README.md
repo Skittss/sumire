@@ -18,13 +18,15 @@ If you are using a standalone C++ compiler (e.g. MinGW) you must also specify it
 ## Building
 A number of build scripts are provided which build the project via CMake. 
 
-Only windows scripts are tested, of which building to a MSVC solution is recommended via running `build_win_msvc`. Sumire is tested primarily using the MSVC compiler with the provided CMake scripts.
+Only windows scripts are tested, of which building to a MSVC solution is recommended via running `build_win_msvc`. Sumire is tested primarily using the MSVC compiler then building the provided CMake targets (Sumire executable, and Shaders custom target).
 
 You may also build with a standalone compiler 
 via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 
 # Running
 Run the generated binary in the directory `sumire/bin/Debug` or `sumire/bin/Release`.
+
+---
 
 # Todo
 
