@@ -212,7 +212,7 @@ namespace sumire {
 		//		 required pipelines at runtime, with (runtime) caching, and generate a common (serialized) 
 		//		 pipeline cache that can load up frequently used pipelines from disk.
 
-		// Gbuffer Pipeline - 3 Color attachments
+		// Gbuffer Pipeline - 5 Color attachments
 
 		// Default pipeline config used as base of permutations
 		PipelineConfigInfo defaultConfig{};
@@ -222,9 +222,28 @@ namespace sumire {
 		defaultConfig.pipelineLayout = pipelineLayout;
 
 		// Modify color blending for 5 channels as we have 5 colour outputs for deferred rendering.
-		//  Validation errors will occur without this. (even though colour blending is not used for the attachments)
-		std::array<VkPipelineColorBlendAttachmentState, 5> colorBlendAttachments;
-		colorBlendAttachments.fill(defaultConfig.colorBlendAttachment);
+		// All non-color channels should not alpha blend, but we should enable it for color channels.
+		VkPipelineColorBlendAttachmentState noAlphaBlend = defaultConfig.colorBlendAttachment;
+		VkPipelineColorBlendAttachmentState alphaBlend{};
+		alphaBlend.colorWriteMask = 
+			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
+			VK_COLOR_COMPONENT_A_BIT;
+		alphaBlend.blendEnable = VK_TRUE;
+		alphaBlend.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		alphaBlend.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		alphaBlend.colorBlendOp = VK_BLEND_OP_ADD;
+		alphaBlend.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		alphaBlend.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		alphaBlend.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		std::array<VkPipelineColorBlendAttachmentState, 5> colorBlendAttachments{
+			alphaBlend,   // Swapchain Col
+			noAlphaBlend, // Position
+			noAlphaBlend, // Normal
+			alphaBlend,   // Albedo
+			noAlphaBlend  // Depth
+		};
+
 		defaultConfig.colorBlendInfo.pAttachments = colorBlendAttachments.data();
 		defaultConfig.colorBlendInfo.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
 
