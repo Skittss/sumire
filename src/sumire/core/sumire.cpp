@@ -325,7 +325,7 @@ namespace sumire {
 		obj1.transform.setScale(glm::vec3{1.0f});
 		objects.emplace(obj1.getId(), std::move(obj1));
 
-		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/primitives/sphere.glb"));
+		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/MetalRoughSpheres.glb"));
 		// std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
 		auto glb1 = SumiObject::createObject();
 		glb1.model = modelGlb1;

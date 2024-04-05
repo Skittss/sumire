@@ -40,13 +40,18 @@ void main() {
     vec3 position = positionValues.rgb;
     vec3 normal = normalValues.rgb;
 	float ao = aoMetalRoughEmissiveVales.r;
-	vec2 metalRoughness = aoMetalRoughEmissiveVales.gb;
+	float metallic = aoMetalRoughEmissiveVales.g;
+	float roughness = aoMetalRoughEmissiveVales.b;
 	vec3 emissive = vec3(positionValues.a, normalValues.a, aoMetalRoughEmissiveVales.a);
 	
 	// === PBR lighting ======================================================================
 	//  Using Cook-Torrence BRDF: Lr = Le + (f_d + f_s) * Li * n dot wi
 
 	vec3 f0 = vec3(0.04);
+	f0 = mix(f0, albedo.rgb, metallic);
+
+	// roughness is authored as r^2 = a by convention to compensate for non-linear perception.
+	float alpha_roughness = roughness * roughness;
 
 	// View vector
 	vec3 V = normalize(cameraPosition - position);
@@ -68,15 +73,14 @@ void main() {
 		float NdotHplus = max(dot(normal, H), 0.0);
 		float VdotHplus = max(dot(V, H), 0.0);
 		if (NdotLplus > 0.0 || NdotHplus > 0.0) {
-			// roughness is authored as r^2 = a by convention to compensate for non-linear perception.
-			float alpha_roughness = metalRoughness.y * metalRoughness.y;
-			
+			vec3 k_s = BRDF_F_schlick(VdotHplus, f0);
+			vec3 k_d = mix(1.0 - k_s, vec3(0.0), metallic); // Metals diminish defuse reflectance
 			vec3 f_d = BRDF_lambertian(albedo.rgb);
 			vec3 f_s = BRDF_specular_GGX(alpha_roughness, f0, NdotLplus, NdotVplus, NdotHplus, VdotHplus);
 			
 			// Attenuate light source
 			vec3 Li = light.color.rgb * light.color.a / (lightDist * lightDist);
-			col += (f_d + f_s) * Li * NdotLplus;
+			col += (k_d * f_d + f_s) * Li * NdotLplus;
 		}
 	}
 	
