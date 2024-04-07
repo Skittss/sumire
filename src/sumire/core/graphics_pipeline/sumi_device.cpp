@@ -2,7 +2,6 @@
 
 #include <sumire/util/vk_check_success.hpp>
 
-// std headers
 #include <cstring>
 #include <iostream>
 #include <set>
@@ -16,7 +15,7 @@ namespace sumire {
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
 		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 		void* pUserData) {
-		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+		std::cerr << "[VK VALIDATION LAYER]" << pCallbackData->pMessage << std::endl;
 
 		return VK_FALSE;
 	}
@@ -309,19 +308,18 @@ namespace sumire {
 		std::vector<VkExtensionProperties> extensions(extensionCount);
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
-		std::cout << "available extensions:" << std::endl;
 		std::unordered_set<std::string> available;
 		for (const auto& extension : extensions) {
-			std::cout << "\t" << extension.extensionName << std::endl;
 			available.insert(extension.extensionName);
 		}
 
-		std::cout << "required extensions:" << std::endl;
+		std::cout << "[Sumire::SumiDevice] (INFO) Required Vulkan Extensions:" << std::endl;
 		auto requiredExtensions = getRequiredExtensions();
 		for (const auto& required : requiredExtensions) {
 			std::cout << "\t" << required << std::endl;
 			if (available.find(required) == available.end()) {
-				throw std::runtime_error("[Sumire::SumiDevice] Missing required glfw extension.");
+				std::string failedExtensionName{ required };
+				throw std::runtime_error("[Sumire::SumiDevice] Required Vulkan extension " + failedExtensionName + " is not available.");
 			}
 		}
 	}

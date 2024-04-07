@@ -48,9 +48,9 @@ namespace sumire::loaders {
         auto modelPtr = std::make_unique<SumiModel>(device, data);
         modelPtr->displayName = fp.filename().u8string();
 
-        std::cout << "Loaded Model <" << filepath << "> (verts: " << data.vertices.size() 
+        std::cout << "[Sumire::OBJloader] Loaded Model <" << filepath << "> (verts: " << data.vertices.size() 
 					<< ", triangles: " << (modelPtr->hasIndices() ? data.indices.size() / 3.0f : data.vertices.size())
-                    << ", nodes: " << data.flatNodes.size() << " [top level: " << data.nodes.size() << "]"
+                    << ", nodes: " << data.flatNodes.size()
                     << ", mat: " << data.materials.size()
                     << ", tex: " << data.textures.size()
                     << ")" << std::endl;
