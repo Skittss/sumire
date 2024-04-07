@@ -28,28 +28,40 @@ via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 
 ---
 
-# Todo
+# Partial Feature List and Todos
 
-- [X] faster glTF animation updating
-- [X] model normal matrices (and normal matrices for skinning)
-- [X] Pass joint matrices in to shader via SSBO as uniforms overflow.
-    - [ ] Bone space on the GPU can be reduced to half by encoding the matrices as a quaternion rotation and vec4 offset
-    - [ ] Skinning can be calculated in a compute shader
+## GLTF support
+- [X] faster glTF skinned animation updating
+    - Cached local node transforms and swapped to top-down update rather than bottom up
+    - [ ] This could be even faster if we dispatched compute for it.
+- [X] Model normal matrices (and normal matrices for skinning)
+- [ ] Morph-target support (and their animation)
+- [ ] Bone space on the GPU can be reduced to half by encoding the matrices as a quaternion rotation and vec4 offset rather than mat4
 - [X] Model Normal Mapping from tangent space textures.
-- [X] Right handed and +y default camera.
-- [X] Proper handling of double-sided triangles (Currently all back-face tris are culled)
-    - Solved via dynamic pipeline binding in model draw calls.
-- [X] Bitangent reading from glTF needs a fix (fails NormalMirrorTest.glb)
-- [X] Mesh Rendering multi-pipeline support
-- [X] glTF texture mip-mapping support (runtime)
+- [X] Texture mip-mapping support (runtime)
     - [ ] Loading in mip maps from files
     - [ ] Mip map generation could be moved to compute shader if anything more complicated than linear downsampling is needed
-- [ ] glTF Morph-target support (and their animation)
-- [X] Deferred Rendering
+- [X] Bitangent reading
+- [X] Mikktspace tangent generation
+
+## Conventions
+- [X] Right handed and +y default camera from Vulkan -y canonical viewing volume.
+
+## Frame Pipeline
+- [X] Proper handling of double-sided triangles (Currently all back-face tris are culled)
+    - Solved via dynamic pipeline binding in model draw calls.
+- [X] Mesh Rendering multi-pipeline support
+- [X] Tile-based Deferred Rendering
     - [X] Enable alpha blending when doing the composite deferred render pass
-    - [X] Copy depth buffer from gbuffer to subsequent forward rendering passes 
-        - Solved using reusing gbuffer depth during subpass
-    - [X] Convert gbuffer-swap chain passes into subpasses
+    - [X] Enable direct writing to swapchain for non-deferred geometry (e.g. unlit).
+    - [X] VK_BY_REGION_BIT usage for tile based rendering support.
+- [X] PBR material workfllow
+- [ ] IBL support
+    - Do not want the design to be purely IBL based, but having IBL for features such as environment probes would be a plus.
+- [ ] Async compute utilisation as well as more robust queue family management.
+    - Pipeline bind caching may have to be updated to accommodate more complex queue family ecosystem
+- [ ] Compute-based post-processing dispatch.
+- [ ] High quality deferred shadows (modification on cascaded shadow maps) via compute.
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
-- [ ] Pipeline caching (if pipeline initialisation becomes slow)
+- [ ] Pipeline caching (if pipeline initialisation becomes slow - currently non-issue)
