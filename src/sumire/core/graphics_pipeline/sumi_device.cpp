@@ -163,8 +163,10 @@ namespace sumire {
 		descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 		descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
 
+		// TODO: Should check for feature support and log a warning if not supported.
 		VkPhysicalDeviceFeatures deviceFeatures = {};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
+		deviceFeatures.independentBlend = VK_TRUE;
 
 		VkDeviceCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -558,6 +560,46 @@ namespace sumire {
 			vkBindImageMemory(device_, image, imageMemory, 0),
 			"[Sumire::SumiDevice] Failed to bind memory for requested image."
 		);
+	}
+
+	void SumiDevice::imageMemoryBarrier(
+		VkImage image,
+		VkImageLayout oldLayout,
+		VkImageLayout newLayout,
+		VkAccessFlags srcAcessMask,
+		VkAccessFlags dstAccessMask,
+		VkPipelineStageFlags srcStageMask,
+		VkPipelineStageFlags dstStageMask,
+		VkImageSubresourceRange subresourceRange,
+		uint32_t srcQueueFamilyIndex,
+		uint32_t dstQueueFamilyIndex,
+		VkCommandBuffer commandBuffer
+	) {
+		bool needsCommandBuffer = (commandBuffer == VK_NULL_HANDLE);
+		if (needsCommandBuffer) commandBuffer = beginSingleTimeCommands();
+
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.image = image;
+		barrier.oldLayout = oldLayout;
+		barrier.newLayout = newLayout;
+		barrier.srcAccessMask = srcAcessMask;
+		barrier.dstAccessMask = dstAccessMask;
+		barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
+		barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+		barrier.subresourceRange = subresourceRange;
+
+		vkCmdPipelineBarrier(
+			commandBuffer,
+			srcStageMask,
+			dstStageMask,
+			0x0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier
+		);
+
+		if (needsCommandBuffer) endSingleTimeCommands(commandBuffer);
 	}
 
 	void SumiDevice::transitionImageLayout(

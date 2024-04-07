@@ -19,10 +19,12 @@ namespace sumire {
 
 	struct QueueFamilyIndices {
 		uint32_t graphicsFamily;
+		uint32_t computeFamily;
 		uint32_t presentFamily;
 		bool graphicsFamilyHasValue = false;
+		bool computeFamilyHasValue = false;
 		bool presentFamilyHasValue = false;
-		bool isComplete() { return graphicsFamilyHasValue && presentFamilyHasValue; }
+		bool isComplete() { return graphicsFamilyHasValue && computeFamilyHasValue && presentFamilyHasValue; }
 	};
 
 	class SumiDevice {
@@ -44,13 +46,13 @@ namespace sumire {
 		SumiDevice& operator=(SumiDevice&&) = delete;
 
 		// TODO: These get functions are all over the place name-wise and should be const.
-		VkCommandPool getCommandPool() { return commandPool; }
-		VkDevice device() { return device_; }
-		VkPhysicalDevice getPhysicalDevice() { return physicalDevice; }
-		VkInstance getInstance() { return instance; }
-		VkSurfaceKHR surface() { return surface_; }
-		VkQueue graphicsQueue() { return graphicsQueue_; }
-		VkQueue presentQueue() { return presentQueue_; }
+		VkCommandPool getCommandPool() const { return commandPool; }
+		VkDevice device() const { return device_; }
+		VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
+		VkInstance getInstance() const { return instance; }
+		VkSurfaceKHR surface() const { return surface_; }
+		VkQueue graphicsQueue() const { return graphicsQueue_; }
+		VkQueue presentQueue() const { return presentQueue_; }
 
 		SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
 		uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -64,12 +66,16 @@ namespace sumire {
 			VkBufferUsageFlags usage,
 			VkMemoryPropertyFlags properties,
 			VkBuffer& buffer,
-			VkDeviceMemory& bufferMemory);
+			VkDeviceMemory& bufferMemory
+		);
 		VkCommandBuffer beginSingleTimeCommands();
 		void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 		void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 		void copyBufferToImage(
-			VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t layerCount);
+			VkBuffer buffer, VkImage image, 
+			uint32_t width, uint32_t height, 
+			uint32_t layerCount
+		);
 
 		// Image helpers
 		void createImageWithInfo(
@@ -77,6 +83,19 @@ namespace sumire {
 			VkMemoryPropertyFlags properties,
 			VkImage& image,
 			VkDeviceMemory& imageMemory);
+		void imageMemoryBarrier(
+			VkImage image,
+			VkImageLayout oldLayout,
+			VkImageLayout newLayout,
+			VkAccessFlags srcAcessMask,
+			VkAccessFlags dstAccessMask,
+			VkPipelineStageFlags srcStageMask,
+			VkPipelineStageFlags dstStageMask,
+			VkImageSubresourceRange subresourceRange,
+			uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			VkCommandBuffer commandBuffer = VK_NULL_HANDLE
+		);
 		void transitionImageLayout(
 			VkImage image, 
 			VkImageSubresourceRange subresourceRange,
