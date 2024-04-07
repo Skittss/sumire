@@ -74,7 +74,7 @@ namespace sumire {
 
 	void SumiDevice::createInstance() {
 		if (enableValidationLayers && !checkValidationLayerSupport()) {
-			throw std::runtime_error("[Sumire::SumiDevice] Validation layers requested, but not available.");
+			throw std::runtime_error("[Sumire::SumiDevice] Validation layers were requested, but are not available.");
 		}
 
 		VkApplicationInfo appInfo = {};
@@ -123,7 +123,7 @@ namespace sumire {
 		if (deviceCount == 0) {
 			throw std::runtime_error("[Sumire::SumiDevice] Failed to find GPUs with Vulkan support.");
 		}
-		std::cout << "Device count: " << deviceCount << std::endl;
+		std::cout << "[Sumire::SumiDevice] Checking for GPU support among " << deviceCount << " physical device(s)..." << std::endl;
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
@@ -135,15 +135,22 @@ namespace sumire {
 		}
 
 		if (physicalDevice == VK_NULL_HANDLE) {
-			throw std::runtime_error("[Sumire::SumiDevice] Failed to find a suitable GPU.");
+			throw std::runtime_error("[Sumire::SumiDevice] Failed to find a suitable GPU from candidates.");
 		}
 
 		vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-		std::cout << "physical device: " << properties.deviceName << std::endl;
+		std::cout << "[Sumire::SumiDevice] Using physical device: " << properties.deviceName << std::endl;
 	}
 
 	void SumiDevice::createLogicalDevice() {
 		QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+
+		if (!indices.hasDedicatedComputeFamily) {
+			std::cout << "[Sumire::SumiDevice] WARNING: Physical device has no dedicated compute queue - using a combined compute queue instead." << std::endl;
+		}
+		if (!indices.hasDedicatedTransferFamily) {
+			std::cout << "[Sumire::SumiDevice] WARNING: Physical device has no dedicated transfer queue - using a combined transfer queue instead." << std::endl;
+		}
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
@@ -229,7 +236,7 @@ namespace sumire {
 		VkPhysicalDeviceFeatures supportedFeatures;
 		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-		return indices.isComplete() && extensionsSupported && swapChainAdequate &&
+		return indices.hasValidQueueSupport() && extensionsSupported && swapChainAdequate &&
 			supportedFeatures.samplerAnisotropy;
 	}
 
@@ -342,32 +349,112 @@ namespace sumire {
 	QueueFamilyIndices SumiDevice::findQueueFamilies(VkPhysicalDevice device) {
 		QueueFamilyIndices indices;
 
+		// Query physical device queue families
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+		
+		// Generally speaking, we can make use of 3 queue types for most graphics tasks on modern hardware:
+		//  - Combined Graphics & Compute queues
+		//  - Dedicated Compute Queues
+		//  - Dedicated Transfer Queues
+
+		// Sumire is set up to run best with async compute dispatches.
+		//  Some (particularly old / embedded) hardware does not have a dedicated compute queue.
+		//  In such cases, we have to force all the the work linearly through a combined graphics/compute queue.
+
+		// Additionally having prioritised graphics queues is beneficial for frame throughput
+		//  (e.g. when we want to quickly finish off a frame for presenting when also starting to rasterize another).
+		//  Thus having *at least two* graphics queues available is useful for this separation.
+
+		// First pass: Try and find all desired queue types exactly.
+		for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilies.size()); i++) {
+			if (indices.hasValidQueueSupport()) break; // short circuit if required queues are found
+
+			VkQueueFamilyProperties& currentProperties = queueFamilies[i];
+			if (currentProperties.queueCount <= 0) continue;
+
+			// Present Family
+			if (!indices.hasValidPresentFamily) {
+				VkBool32 presentSupport = false;
+				vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &presentSupport);
+				if (presentSupport) {
+					indices.presentFamily = i;
+					indices.hasValidPresentFamily = true;
+				}
+			}
+
+			// Graphics Family
+			if (!indices.hasValidGraphicsFamily &&
+				currentProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT
+			) {
+				indices.graphicsFamily = i;
+				indices.hasValidGraphicsFamily = true;
+			}
+
+			// Dedicated Compute Family
+			if (!indices.hasValidComputeFamily &&
+				currentProperties.queueFlags & VK_QUEUE_COMPUTE_BIT && 
+				!(currentProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			) {
+				indices.dedicatedComputeFamily = i;
+				indices.hasValidComputeFamily = true;
+				indices.hasDedicatedComputeFamily = true;
+			}
+
+			// Dedicated Transfer Family
+			if (!indices.hasValidTransferFamily &&
+				currentProperties.queueFlags & VK_QUEUE_TRANSFER_BIT &&
+				!(currentProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+				!(currentProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
+			) {
+				indices.dedicatedTransferFamily = i;
+				indices.hasValidTransferFamily = true;
+				indices.hasDedicatedTransferFamily = true;
+			}
+		}
+
+		// Deal with cases where dedicated queues are not present.
+		if (!indices.hasValidComputeFamily) {
+			// Find any applicable compute queue to use instead.
+			indices.hasValidComputeFamily = findFirstValidQueueFamily(
+				device, 
+				VK_QUEUE_COMPUTE_BIT, 
+				indices.dedicatedComputeFamily
+			);
+		}
+		if (!indices.hasValidTransferFamily) {
+			indices.hasValidTransferFamily = findFirstValidQueueFamily(
+				device,
+				VK_QUEUE_TRANSFER_BIT, 
+				indices.dedicatedTransferFamily
+			);
+		}
+
+		return indices;
+	}
+
+	bool SumiDevice::findFirstValidQueueFamily(VkPhysicalDevice device, VkQueueFlags flags, uint32_t& idx) {
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-		int i = 0;
-		for (const auto& queueFamily : queueFamilies) {
-			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-				indices.graphicsFamily = i;
-				indices.graphicsFamilyHasValue = true;
-			}
-			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &presentSupport);
-			if (queueFamily.queueCount > 0 && presentSupport) {
-				indices.presentFamily = i;
-				indices.presentFamilyHasValue = true;
-			}
-			if (indices.isComplete()) {
-				break;
-			}
+		bool foundValidQueueFamily = false;
+		for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilies.size()); i++) {
+			VkQueueFamilyProperties& currentProperties = queueFamilies[i];
+			if (currentProperties.queueCount <= 0) continue;
 
-			i++;
+			if (currentProperties.queueFlags & flags) {
+				idx = i;
+				foundValidQueueFamily = true;
+			}
 		}
 
-		return indices;
+		return foundValidQueueFamily;
 	}
 
 	SwapChainSupportDetails SumiDevice::querySwapChainSupport(VkPhysicalDevice device) {

@@ -18,13 +18,24 @@ namespace sumire {
 	};
 
 	struct QueueFamilyIndices {
-		uint32_t graphicsFamily;
-		uint32_t computeFamily;
 		uint32_t presentFamily;
-		bool graphicsFamilyHasValue = false;
-		bool computeFamilyHasValue = false;
-		bool presentFamilyHasValue = false;
-		bool isComplete() { return graphicsFamilyHasValue && computeFamilyHasValue && presentFamilyHasValue; }
+		uint32_t graphicsFamily;
+		uint32_t dedicatedComputeFamily;
+		uint32_t dedicatedTransferFamily;
+
+		bool hasValidPresentFamily = false;
+		bool hasValidGraphicsFamily = false;
+		bool hasValidComputeFamily = false;
+		bool hasDedicatedComputeFamily = false;
+		bool hasValidTransferFamily = false;
+		bool hasDedicatedTransferFamily = false;
+
+		bool hasValidQueueSupport() { 
+			return (
+				hasValidPresentFamily && hasValidGraphicsFamily &&
+				hasValidComputeFamily && hasValidTransferFamily
+			);
+		}
 	};
 
 	class SumiDevice {
@@ -39,7 +50,6 @@ namespace sumire {
 		SumiDevice(SumiWindow& window);
 		~SumiDevice();
 
-		// Not copyable or movable
 		SumiDevice(const SumiDevice&) = delete;
 		SumiDevice& operator=(const SumiDevice&) = delete;
 		SumiDevice(SumiDevice&&) = delete;
@@ -82,7 +92,8 @@ namespace sumire {
 			const VkImageCreateInfo& imageInfo,
 			VkMemoryPropertyFlags properties,
 			VkImage& image,
-			VkDeviceMemory& imageMemory);
+			VkDeviceMemory& imageMemory
+		);
 		void imageMemoryBarrier(
 			VkImage image,
 			VkImageLayout oldLayout,
@@ -114,11 +125,14 @@ namespace sumire {
 		void createLogicalDevice();
 		void createCommandPool();
 
-		// helper functions
 		bool isDeviceSuitable(VkPhysicalDevice device);
 		std::vector<const char*> getRequiredExtensions();
 		bool checkValidationLayerSupport();
+
+		// Queue Family querying
 		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+		bool findFirstValidQueueFamily(VkPhysicalDevice device, VkQueueFlags flags, uint32_t& idx);
+
 		void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		void hasGflwRequiredInstanceExtensions();
 		bool checkDeviceExtensionSupport(VkPhysicalDevice device);
