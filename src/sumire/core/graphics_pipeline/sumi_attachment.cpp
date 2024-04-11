@@ -9,7 +9,7 @@ namespace sumire {
         VkExtent2D extent,
         VkFormat format,
         VkImageUsageFlags usage
-    ) : sumiDevice{ device }, format{ format } {
+    ) : sumiDevice{ device }, format{ format }, extent{ extent } {
         createImage(extent, usage);
         
         VkImageAspectFlags aspectMask = 0x0;
@@ -24,10 +24,11 @@ namespace sumire {
     
     SumiAttachment::SumiAttachment(
         SumiDevice &device,
+        VkExtent2D extent,
         VkImage image,
         VkFormat format,
         VkImageAspectFlags aspectMask
-    ) : sumiDevice{ device }, image{ image }, format{ format } {
+    ) : sumiDevice{ device }, image{ image }, format{ format }, extent{ extent } {
         createImageView(aspectMask);
     }
 
@@ -68,7 +69,7 @@ namespace sumire {
     }
 
     void SumiAttachment::createImageView(VkImageAspectFlags aspectMask) {
-        VkImageViewCreateInfo viewInfo{};
+        viewInfo = VkImageViewCreateInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = image;
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
