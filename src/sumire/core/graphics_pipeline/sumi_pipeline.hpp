@@ -19,8 +19,8 @@ namespace sumire {
 		VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
 		std::vector<VkDynamicState> dynamicStateEnables;
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo;
-		VkPipelineLayout pipelineLayout = nullptr;
-		VkRenderPass renderPass = nullptr;
+		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+		VkRenderPass renderPass = VK_NULL_HANDLE;
 		uint32_t subpass = 0;
 	};
 
@@ -43,13 +43,13 @@ namespace sumire {
 		static void enableAlphaBlending(PipelineConfigInfo& configInfo);
 
 	private:
-		static std::vector<char> readFile(const std::string& filepath);
 		void createGraphicsPipeline(
 			const std::string& vertFilepath, 
 			const std::string& fragFilepath,
 			const PipelineConfigInfo& configInfo
 		);
 
+		static std::vector<char> readFile(const std::string& filepath);
 		void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 
 		std::string vertFilePath = "Undefined";

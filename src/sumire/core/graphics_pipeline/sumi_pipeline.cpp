@@ -31,23 +31,6 @@ namespace sumire {
 		if (boundPipeline == this) boundPipeline = nullptr;
 	}
 
-	std::vector<char> SumiPipeline::readFile(const std::string& filepath) {
-		std::ifstream file{ filepath, std::ios::ate | std::ios::binary };
-
-		if (!file.is_open()) {
-			throw std::runtime_error("[Sumire::SumiPipeline] Could not open file: " + filepath);
-		}
-
-		size_t fileSize = static_cast<size_t>(file.tellg());
-		std::vector<char> buffer(fileSize);
-
-		file.seekg(0);
-		file.read(buffer.data(), fileSize);
-
-		file.close();
-		return buffer;
-	}
-
 	void SumiPipeline::createGraphicsPipeline(
 		const std::string& vertFilepath, 
 		const std::string& fragFilepath,
@@ -122,6 +105,23 @@ namespace sumire {
 		);
 	}
 
+	std::vector<char> SumiPipeline::readFile(const std::string& filepath) {
+		std::ifstream file{ filepath, std::ios::ate | std::ios::binary };
+
+		if (!file.is_open()) {
+			throw std::runtime_error("[Sumire::SumiPipeline] Could not open file: " + filepath);
+		}
+
+		size_t fileSize = static_cast<size_t>(file.tellg());
+		std::vector<char> buffer(fileSize);
+
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+
+		file.close();
+		return buffer;
+	}
+
 	void SumiPipeline::createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) {
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -137,7 +137,7 @@ namespace sumire {
 	void SumiPipeline::bind(VkCommandBuffer commandBuffer) {
 		// TODO: This pipeline switching optimization is not perfect -
 		//       We currently don't check if pipelines are semantically the same but under different objects.
-		//       This mean pipelines will always swithc betwee render systems, etc.
+		//       This mean pipelines will always switch between render systems, etc.
 		//		 This could be fixed by comparing a hash of the pipeline state instead of a reference.
 		// TODO: It would also be beneficial to organise drawing code such that minimal pipeline
 		//		 switching is required in the first place.
