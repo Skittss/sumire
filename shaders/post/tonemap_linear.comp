@@ -1,0 +1,17 @@
+#version 450
+
+layout(set = 0, binding = 0, rgba16) uniform image2D hdrImage;
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(push_constant) uniform imageInfo {
+	vec2 resolution;
+};
+
+void main() {
+	vec4 inCol = imageLoad(hdrImage, ivec2(gl_GlobalInvocationID.xy));
+	vec3 hdr = inCol.rgb;
+	vec3 ldr = clamp(hdr, 0.0, 1.0);
+
+	imageStore(hdrImage, ivec2(gl_GlobalInvocationID.xy), vec4(ldr, inCol.a));
+}
