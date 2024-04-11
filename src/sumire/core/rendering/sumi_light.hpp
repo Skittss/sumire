@@ -49,7 +49,7 @@ namespace sumire {
 
             // Internal Data
             std::string name = "Unnamed Light";
-            SumiLight::Type type;
+            SumiLight::Type type = SumiLight::Type::PUNCTUAL_POINT;
             Transform3DComponent transform{};
             glm::vec4 color{ 1.0f };
             float innerConeAngle = 0.0f;
