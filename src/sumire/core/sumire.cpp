@@ -5,6 +5,7 @@
 // Render systems
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
+#include <sumire/core/render_systems/post_processor.hpp>
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 
@@ -135,6 +136,12 @@ namespace sumire {
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
 
+		PostProcessor postProcessor{
+			sumiDevice,
+			sumiRenderer.getIntermediateColorAttachments(),
+			sumiRenderer.getCompositionRenderPass()
+		};
+
 		PointLightRenderSys pointLightSystem{
 			sumiDevice, 
 			sumiRenderer.getRenderPass(), 
@@ -160,7 +167,12 @@ namespace sumire {
 		};
 
 		// GUI
-		SumiImgui gui{sumiRenderer};
+		SumiImgui gui{
+			sumiRenderer,
+			sumiRenderer.getCompositionRenderPass(),
+			sumiRenderer.compositionSubpassIdx(),
+			sumiDevice.presentQueue()
+		};
 
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		float cumulativeFrameTime = 0.0f;
@@ -216,6 +228,7 @@ namespace sumire {
 			if (sumiRenderer.wasSwapChainRecreated()) {
 				float aspect = sumiRenderer.getAspect();
 				camera.setAspect(aspect, true);
+				postProcessor.updateDescriptors(sumiRenderer.getIntermediateColorAttachments());
 				sumiRenderer.resetScRecreatedFlag();
 			}
 
@@ -250,7 +263,7 @@ namespace sumire {
 
 				// Fill in rest of frame-specific frameinfo props
 				frameInfo.frameIdx = frameIdx;
-				frameInfo.commandBuffer = frameCommandBuffers.swapChain;
+				frameInfo.commandBuffer = frameCommandBuffers.graphics;
 				frameInfo.globalDescriptorSet = globalDescriptorSets[frameIdx];
 
 				// Populate uniform buffers with data
@@ -280,18 +293,18 @@ namespace sumire {
 				lightSSBO->flush();
 
 				// To swap chain render pass
-				frameInfo.commandBuffer = frameCommandBuffers.swapChain;
-				sumiRenderer.beginRenderPass(frameCommandBuffers.swapChain);
+				frameInfo.commandBuffer = frameCommandBuffers.graphics;
+				sumiRenderer.beginRenderPass(frameCommandBuffers.graphics);
 
 				// Deferred fill subpass
 				deferredMeshRenderSystem.fillGbuffer(frameInfo);
 
-				sumiRenderer.nextSubpass(frameCommandBuffers.swapChain);
+				sumiRenderer.nextSubpass(frameCommandBuffers.graphics);
 
 				// Deferred resolve subpass
 				deferredMeshRenderSystem.resolveGbuffer(frameInfo);
 
-				sumiRenderer.nextSubpass(frameCommandBuffers.swapChain);
+				sumiRenderer.nextSubpass(frameCommandBuffers.graphics);
 
 				// Swapchain forward rendering subpass
 				pointLightSystem.render(frameInfo);
@@ -300,11 +313,27 @@ namespace sumire {
 					auto gridUbo = gui.getGridUboData();
 					gridRenderSystem.render(frameInfo, gridUbo);
 				}
-
-				// GUI should *ALWAYS* render last.
-				gui.renderToCmdBuffer(frameCommandBuffers.swapChain);
 				
-				sumiRenderer.endRenderPass(frameCommandBuffers.swapChain);
+				sumiRenderer.endRenderPass(frameCommandBuffers.graphics);
+
+				// Async Compute for post effects
+				sumiRenderer.beginPostCompute(frameCommandBuffers.compute);
+
+				postProcessor.tonemap(frameCommandBuffers.compute, frameInfo.frameIdx);
+
+				sumiRenderer.endPostCompute(frameCommandBuffers.compute);
+
+				// Final Composite
+				// TODO: This needs to use a high priority graphics queue to not block
+				//       subsequent frame work from starting.
+				sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
+
+				postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
+
+				// GUI should *ALWAYS* render last after post-processing.
+				gui.renderToCmdBuffer(frameCommandBuffers.present);
+
+				sumiRenderer.endCompositeRenderPass(frameCommandBuffers.present);
 
 				sumiRenderer.endFrame();
 			}
