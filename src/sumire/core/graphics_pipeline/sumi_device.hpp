@@ -5,10 +5,6 @@
 #include <string>
 #include <vector>
 
-//#ifndef NDEBUG
-//#define NDEBUG
-//#endif
-
 namespace sumire {
 
 	struct SwapChainSupportDetails {
@@ -20,17 +16,21 @@ namespace sumire {
 	struct QueueFamilyIndices {
 		uint32_t presentFamily;
 		uint32_t graphicsFamily;
-		uint32_t dedicatedComputeFamily;
-		uint32_t dedicatedTransferFamily;
+		uint32_t computeFamily;
+		uint32_t transferFamily;
 
 		bool hasValidPresentFamily = false;
+
 		bool hasValidGraphicsFamily = false;
+		bool hasMultipleGraphicsQueues = false;
+
 		bool hasValidComputeFamily = false;
 		bool hasDedicatedComputeFamily = false;
+
 		bool hasValidTransferFamily = false;
 		bool hasDedicatedTransferFamily = false;
 
-		bool hasValidQueueSupport() { 
+		bool hasValidQueueSupport() const { 
 			return (
 				hasValidPresentFamily && hasValidGraphicsFamily &&
 				hasValidComputeFamily && hasValidTransferFamily
@@ -55,18 +55,28 @@ namespace sumire {
 		SumiDevice(SumiDevice&&) = delete;
 		SumiDevice& operator=(SumiDevice&&) = delete;
 
-		// TODO: These get functions are all over the place name-wise and should be const.
-		VkCommandPool getCommandPool() const { return commandPool; }
 		VkDevice device() const { return device_; }
 		VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
 		VkInstance getInstance() const { return instance; }
 		VkSurfaceKHR surface() const { return surface_; }
+
 		VkQueue graphicsQueue() const { return graphicsQueue_; }
+		uint32_t graphicsQueueFamilyIndex() const { return queueFamilyIndices.graphicsFamily; }
+		VkQueue computeQueue() const { return computeQueue_; }
+		uint32_t computeQueueFamilyIndex() const { return queueFamilyIndices.computeFamily; }
 		VkQueue presentQueue() const { return presentQueue_; }
+		uint32_t presentQueueFamilyIndex() const { return queueFamilyIndices.presentFamily; }
+		QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(physicalDevice); }
+
+		VkCommandPool getGraphicsCommandPool() const { return graphicsCommandPool; }
+		VkCommandPool getPresentCommandPool() const { return presentCommandPool; }
+		VkCommandPool getComputeCommandPool() const {
+			return computeCommandPool == VK_NULL_HANDLE ? graphicsCommandPool : computeCommandPool; }
+		VkCommandBuffer beginSingleTimeCommands();
+		void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 		SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
 		uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-		QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(physicalDevice); }
 		VkFormat findSupportedFormat(
 			const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
@@ -78,8 +88,6 @@ namespace sumire {
 			VkBuffer& buffer,
 			VkDeviceMemory& bufferMemory
 		);
-		VkCommandBuffer beginSingleTimeCommands();
-		void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 		void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 		void copyBufferToImage(
 			VkBuffer buffer, VkImage image, 
@@ -123,30 +131,37 @@ namespace sumire {
 		void createSurface();
 		void pickPhysicalDevice();
 		void createLogicalDevice();
-		void createCommandPool();
+		void createCommandPools();
 
 		bool isDeviceSuitable(VkPhysicalDevice device);
 		std::vector<const char*> getRequiredExtensions();
+		bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 		bool checkValidationLayerSupport();
+		void hasGflwRequiredInstanceExtensions();
+		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+		
+		void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
 		// Queue Family querying
 		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 		bool findFirstValidQueueFamily(VkPhysicalDevice device, VkQueueFlags flags, uint32_t& idx);
 
-		void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-		void hasGflwRequiredInstanceExtensions();
-		bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+		SumiWindow& window;
 
 		VkInstance instance;
 		VkDebugUtilsMessengerEXT debugMessenger;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-		SumiWindow& window;
-		VkCommandPool commandPool;
 
 		VkDevice device_;
+
+		VkCommandPool graphicsCommandPool;
+		VkCommandPool presentCommandPool;
+		VkCommandPool computeCommandPool = VK_NULL_HANDLE;
+
 		VkSurfaceKHR surface_;
+		QueueFamilyIndices queueFamilyIndices;
 		VkQueue graphicsQueue_;
+		VkQueue computeQueue_;
 		VkQueue presentQueue_;
 
 		const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };

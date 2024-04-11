@@ -15,7 +15,7 @@ namespace sumire {
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
 		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 		void* pUserData) {
-		std::cerr << "[VK VALIDATION LAYER]" << pCallbackData->pMessage << std::endl;
+		std::cerr << "[VK VALIDATION LAYER] " << pCallbackData->pMessage << std::endl;
 
 		return VK_FALSE;
 	}
@@ -55,12 +55,16 @@ namespace sumire {
 		createSurface();
 		pickPhysicalDevice();
 		createLogicalDevice();
-		createCommandPool();
+		createCommandPools();
 	}
 
 	SumiDevice::~SumiDevice() {
-		// Note this encapsulates destroying components of the device: command pool, etc.
-		vkDestroyCommandPool(device_, commandPool, nullptr);
+		// compute command pool mirrors the graphics command pool if it is VK_NULL_HANDLE.
+		if (computeCommandPool != VK_NULL_HANDLE) 
+			vkDestroyCommandPool(device_, computeCommandPool, nullptr);
+		vkDestroyCommandPool(device_, presentCommandPool, nullptr);
+		vkDestroyCommandPool(device_, graphicsCommandPool, nullptr);
+
 		vkDestroyDevice(device_, nullptr);
 
 		if (enableValidationLayers) {
@@ -142,25 +146,57 @@ namespace sumire {
 	}
 
 	void SumiDevice::createLogicalDevice() {
-		QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+		queueFamilyIndices = findQueueFamilies(physicalDevice);
 
-		if (!indices.hasDedicatedComputeFamily) {
+		if (!queueFamilyIndices.hasDedicatedComputeFamily) {
 			std::cout << "[Sumire::SumiDevice] WARNING: Physical device has no dedicated compute queue - using a combined compute queue instead." << std::endl;
 		}
-		if (!indices.hasDedicatedTransferFamily) {
+		if (!queueFamilyIndices.hasDedicatedTransferFamily) {
 			std::cout << "[Sumire::SumiDevice] WARNING: Physical device has no dedicated transfer queue - using a combined transfer queue instead." << std::endl;
 		}
 
-		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+		std::set<uint32_t> uniqueQueueFamilies = { 
+			queueFamilyIndices.graphicsFamily,
+			queueFamilyIndices.computeFamily,
+			queueFamilyIndices.presentFamily
+		};
 
-		float queuePriority = 1.0f;
-		for (uint32_t queueFamily : uniqueQueueFamilies) {
-			VkDeviceQueueCreateInfo queueCreateInfo = {};
+		// This map contains a mapping from queue family -> queue priorities
+		//   which also encodes the queue count needed for logical device setup.
+		std::unordered_map<uint32_t, std::set<float>> queuePriorities{};
+		if (queueFamilyIndices.hasDedicatedComputeFamily) {
+			// Present and Compute are always high priority if async compute is possible.
+			queuePriorities[queueFamilyIndices.presentFamily].insert(0.0);
+			queuePriorities[queueFamilyIndices.computeFamily].insert(0.0);
+			// We add the option to have low priority graphics queue if there are queues available.
+			//   This potentially enables interleaving of compute and graphics work
+			if (queueFamilyIndices.hasMultipleGraphicsQueues || 
+				queueFamilyIndices.graphicsFamily != queueFamilyIndices.presentFamily
+			) {
+				queuePriorities[queueFamilyIndices.graphicsFamily].insert(1.0);
+			}
+		}
+		else {
+			// Force all work through same priority queues.
+			queuePriorities[queueFamilyIndices.presentFamily].insert(1.0);
+			queuePriorities[queueFamilyIndices.computeFamily].insert(1.0);
+			queuePriorities[queueFamilyIndices.graphicsFamily].insert(1.0);
+		}
+
+		// Vectorize queue family mapping so data is in a continuous (persistent) block of memory
+		//  until vkCreateDevice() call.
+		std::unordered_map<uint32_t, std::vector<float>> vectorizedPriorities{};
+		for (auto& kv : queuePriorities) {
+			vectorizedPriorities[kv.first] = std::vector<float>(kv.second.begin(), kv.second.end());
+		}
+
+		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+		for (auto& kv : vectorizedPriorities) {
+			VkDeviceQueueCreateInfo queueCreateInfo{};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueCreateInfo.queueFamilyIndex = queueFamily;
-			queueCreateInfo.queueCount = 1;
-			queueCreateInfo.pQueuePriorities = &queuePriority;
+			queueCreateInfo.queueFamilyIndex = kv.first;
+			queueCreateInfo.queueCount = static_cast<uint32_t>(kv.second.size());
+			queueCreateInfo.pQueuePriorities = kv.second.data();
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
 
@@ -185,8 +221,7 @@ namespace sumire {
 		createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-		// might not really be necessary anymore because device specific validation layers
-		// have been deprecated
+		// TODO: Specific validation layers have been deprecated - this can probably be removed.
 		if (enableValidationLayers) {
 			createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -200,13 +235,22 @@ namespace sumire {
 			"[Sumire::SumiDevice] Failed to create logical device."
 		);
 
-		vkGetDeviceQueue(device_, indices.graphicsFamily, 0, &graphicsQueue_);
-		vkGetDeviceQueue(device_, indices.presentFamily, 0, &presentQueue_);
+		// Use the lowest-priorty graphics queue possible to potentially interleave graphics & compute.
+		uint32_t graphicsQueueIdx = 
+			static_cast<uint32_t>(queuePriorities[queueFamilyIndices.graphicsFamily].size()) - 1u;
+
+		vkGetDeviceQueue(device_, queueFamilyIndices.graphicsFamily, graphicsQueueIdx, &graphicsQueue_);
+		// Use highest priority compute and present queues
+		vkGetDeviceQueue(device_, queueFamilyIndices.computeFamily, 0, &computeQueue_);
+		vkGetDeviceQueue(device_, queueFamilyIndices.presentFamily, 0, &presentQueue_);
 	}
 
-	void SumiDevice::createCommandPool() {
+	void SumiDevice::createCommandPools() {
 		QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
 
+		// Individual command pools for each queue family we may way to submit to.
+
+		// Graphics
 		VkCommandPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
@@ -214,9 +258,37 @@ namespace sumire {
 			VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		VK_CHECK_SUCCESS(
-			vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool),
-			"[Sumire::SumiDevice] Failed to create command pool."
+			vkCreateCommandPool(device_, &poolInfo, nullptr, &graphicsCommandPool),
+			"[Sumire::SumiDevice] Failed to create graphics queue family command pool."
 		);
+
+		// Present
+		VkCommandPoolCreateInfo presentPoolInfo = {};
+		presentPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		presentPoolInfo.queueFamilyIndex = queueFamilyIndices.presentFamily;
+		presentPoolInfo.flags =
+			VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		VK_CHECK_SUCCESS(
+			vkCreateCommandPool(device_, &presentPoolInfo, nullptr, &presentCommandPool),
+			"[Sumire::SumiDevice] Failed to create present queue family command pool."
+		);
+
+		// Compute
+		if (queueFamilyIndices.computeFamily != queueFamilyIndices.graphicsFamily) {
+			VkCommandPoolCreateInfo computePoolInfo = {};
+			computePoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			computePoolInfo.queueFamilyIndex = queueFamilyIndices.computeFamily;
+			computePoolInfo.flags =
+				VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+			VK_CHECK_SUCCESS(
+				vkCreateCommandPool(device_, &computePoolInfo, nullptr, &computeCommandPool),
+				"[Sumire::SumiDevice] Failed to create compute queue family command pool."
+			);
+		}
+
+		// TODO: Transfer?
 	}
 
 	void SumiDevice::createSurface() { window.createWindowSurface(instance, &surface_); }
@@ -390,6 +462,7 @@ namespace sumire {
 			) {
 				indices.graphicsFamily = i;
 				indices.hasValidGraphicsFamily = true;
+				indices.hasMultipleGraphicsQueues = (currentProperties.queueCount > 1);
 			}
 
 			// Dedicated Compute Family
@@ -397,7 +470,7 @@ namespace sumire {
 				currentProperties.queueFlags & VK_QUEUE_COMPUTE_BIT && 
 				!(currentProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			) {
-				indices.dedicatedComputeFamily = i;
+				indices.computeFamily = i;
 				indices.hasValidComputeFamily = true;
 				indices.hasDedicatedComputeFamily = true;
 			}
@@ -408,7 +481,7 @@ namespace sumire {
 				!(currentProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
 				!(currentProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
 			) {
-				indices.dedicatedTransferFamily = i;
+				indices.transferFamily = i;
 				indices.hasValidTransferFamily = true;
 				indices.hasDedicatedTransferFamily = true;
 			}
@@ -420,14 +493,14 @@ namespace sumire {
 			indices.hasValidComputeFamily = findFirstValidQueueFamily(
 				device, 
 				VK_QUEUE_COMPUTE_BIT, 
-				indices.dedicatedComputeFamily
+				indices.computeFamily
 			);
 		}
 		if (!indices.hasValidTransferFamily) {
 			indices.hasValidTransferFamily = findFirstValidQueueFamily(
 				device,
 				VK_QUEUE_TRANSFER_BIT, 
-				indices.dedicatedTransferFamily
+				indices.transferFamily
 			);
 		}
 
@@ -549,7 +622,7 @@ namespace sumire {
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = commandPool;
+		allocInfo.commandPool = graphicsCommandPool;
 		allocInfo.commandBufferCount = 1;
 
 		VkCommandBuffer commandBuffer;
@@ -574,7 +647,7 @@ namespace sumire {
 		vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE);
 		vkQueueWaitIdle(graphicsQueue_);
 
-		vkFreeCommandBuffers(device_, commandPool, 1, &commandBuffer);
+		vkFreeCommandBuffers(device_, graphicsCommandPool, 1, &commandBuffer);
 	}
 
 	void SumiDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
