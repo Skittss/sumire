@@ -12,9 +12,12 @@
 namespace sumire {
 
     SumiImgui::SumiImgui(
-        SumiRenderer &renderer
+        SumiRenderer &renderer,
+        VkRenderPass renderPass,
+        uint32_t subpassIdx,
+        VkQueue workQueue
     ) : sumiRenderer{ renderer } {
-        initImgui();
+        initImgui(renderPass, subpassIdx, workQueue);
     }
 
     SumiImgui::~SumiImgui() {
@@ -39,7 +42,7 @@ namespace sumire {
         return ubo;
     }
 
-    void SumiImgui::initImgui() {
+    void SumiImgui::initImgui(VkRenderPass renderPass, uint32_t subpassIdx, VkQueue workQueue) {
 
         // Create descriptor pool for ImGui
         VkDescriptorPoolSize poolSizes[] = { 
@@ -82,16 +85,16 @@ namespace sumire {
         initInfo.Instance = sumiRenderer.getDevice().getInstance();
         initInfo.PhysicalDevice = sumiRenderer.getDevice().getPhysicalDevice();
         initInfo.Device = sumiRenderer.getDevice().device();
-        initInfo.Queue = sumiRenderer.getDevice().graphicsQueue();
+        initInfo.Queue = workQueue;
         initInfo.DescriptorPool = imguiDescriptorPool;
         initInfo.MinImageCount = 2; // double buffer
         initInfo.ImageCount =  SumiSwapChain::MAX_FRAMES_IN_FLIGHT;
         initInfo.UseDynamicRendering = false;
         initInfo.ColorAttachmentFormat = sumiRenderer.getSwapChainColorFormat();
         initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-        initInfo.Subpass = sumiRenderer.forwardRenderSubpassIdx();
+        initInfo.Subpass = subpassIdx;
 
-        ImGui_ImplVulkan_Init(&initInfo, sumiRenderer.getRenderPass());
+        ImGui_ImplVulkan_Init(&initInfo, renderPass);
 
         // TODO: 1. Upload imgui font textures to GPU
         //       2. Then clear from CPU memory

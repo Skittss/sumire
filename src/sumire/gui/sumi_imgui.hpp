@@ -22,7 +22,12 @@ namespace sumire {
 
     class SumiImgui {
         public:
-            SumiImgui(SumiRenderer &renderer);
+            SumiImgui(
+                SumiRenderer &renderer,
+                VkRenderPass renderPass,
+                uint32_t subpassIdx,
+                VkQueue workQueue
+            );
             ~SumiImgui();
 
             SumiImgui(const SumiImgui&) = delete;
@@ -50,7 +55,7 @@ namespace sumire {
             bool showGrid{true};
 
         private:
-            void initImgui();
+            void initImgui(VkRenderPass renderPass, uint32_t subpassIdx, VkQueue workQueue);
             void drawConfigUI(SumiKBMcontroller &cameraController);
             void drawSceneUI(FrameInfo &frameInfo);
             void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
