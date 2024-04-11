@@ -23,6 +23,7 @@ namespace sumire {
 		SumiSwapChain& operator=(const SumiSwapChain&) = delete;
 
 		size_t imageCount() { return colorAttachments.size(); }
+		
 		SumiAttachment* getColorAttachment(uint32_t idx) const { return colorAttachments[idx].get(); }
 		SumiAttachment* getDepthAttachment() const { return depthAttachment.get(); }
 
