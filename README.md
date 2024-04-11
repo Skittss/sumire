@@ -48,6 +48,9 @@ via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 - [X] Right handed and +y default camera from Vulkan -y canonical viewing volume.
 
 ## Frame Pipeline
+The current frame pipeline works as follows:
+Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Graphics subpasses) -> Async post process (Compute) -> Composite (Graphics)
+
 - [X] Proper handling of double-sided triangles (Currently all back-face tris are culled)
     - Solved via dynamic pipeline binding in model draw calls.
 - [X] Mesh Rendering multi-pipeline support
@@ -58,9 +61,10 @@ via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 - [X] PBR material workfllow
 - [ ] IBL support
     - Do not want the design to be purely IBL based, but having IBL for features such as environment probes would be a plus.
-- [ ] Async compute utilisation as well as more robust queue family management.
-    - Pipeline bind caching may have to be updated to accommodate more complex queue family ecosystem
-- [ ] Compute-based post-processing dispatch.
+- [X] Async compute utilisation as well as more robust queue family management.
+    - [ ] Pipeline bind caching may have to be updated to accommodate more complex queue family ecosystem
+    - [ ] Compute -> Fragment interleaving needs profiling to ensure it's working correctly.
+- [X] Compute-based post-processing dispatch.
 - [ ] High quality deferred shadows (modification on cascaded shadow maps) via compute.
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
