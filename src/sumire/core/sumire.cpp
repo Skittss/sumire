@@ -5,6 +5,7 @@
 // Render systems
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapper.hpp>
 #include <sumire/core/render_systems/post_processor.hpp>
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>
@@ -135,6 +136,8 @@ namespace sumire {
 			sumiRenderer.gbufferResolveSubpassIdx(),
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
+
+		HighQualityShadowMapper shadowMapper{};
 
 		PostProcessor postProcessor{
 			sumiDevice,
@@ -292,7 +295,14 @@ namespace sumire {
 				lightSSBO->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
 				lightSSBO->flush();
 
-				// To swap chain render pass
+				// Shadow mapping
+				shadowMapper.prepare(
+					lightData,
+					camera.getNear(), camera.getFar(), camera.getFovy(),
+					cameraUbo.viewMatrix
+				);
+
+				// Main scene render pass
 				frameInfo.commandBuffer = frameCommandBuffers.graphics;
 				sumiRenderer.beginRenderPass(frameCommandBuffers.graphics);
 
@@ -306,7 +316,7 @@ namespace sumire {
 
 				sumiRenderer.nextSubpass(frameCommandBuffers.graphics);
 
-				// Swapchain forward rendering subpass
+				// Forward rendering subpass
 				pointLightSystem.render(frameInfo);
 				
 				if (gui.showGrid && gui.gridOpacity > 0.0f) {
@@ -324,8 +334,6 @@ namespace sumire {
 				sumiRenderer.endPostCompute(frameCommandBuffers.compute);
 
 				// Final Composite
-				// TODO: This needs to use a high priority graphics queue to not block
-				//       subsequent frame work from starting.
 				sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
 
 				postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
@@ -347,7 +355,8 @@ namespace sumire {
 	void Sumire::loadObjects() {
 		// TODO: Load objects in asynchronously
 		// std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/obj/clorinde.obj"));
-		std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/NormalTangentMirrorTest.glb"));
+		//std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/NormalTangentMirrorTest.glb"));
+		std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
 		auto obj1 = SumiObject::createObject();
 		obj1.model = modelObj1;
 		obj1.transform.setTranslation(glm::vec3{-8.0f, 0.0f, 0.0f});
@@ -355,7 +364,6 @@ namespace sumire {
 		objects.emplace(obj1.getId(), std::move(obj1));
 
 		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/MetalRoughSpheres.glb"));
-		// std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
 		auto glb1 = SumiObject::createObject();
 		glb1.model = modelGlb1;
 		glb1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
