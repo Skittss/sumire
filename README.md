@@ -38,6 +38,7 @@ via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 - [ ] Morph-target support (and their animation)
 - [ ] Bone space on the GPU can be reduced to half by encoding the matrices as a quaternion rotation and vec4 offset rather than mat4
 - [X] Model Normal Mapping from tangent space textures.
+- [ ] KTX (compressed texture) reading and load support.
 - [X] Texture mip-mapping support (runtime)
     - [ ] Loading in mip maps from files
     - [ ] Mip map generation could be moved to compute shader if anything more complicated than linear downsampling is needed
@@ -63,9 +64,12 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
     - Do not want the design to be purely IBL based, but having IBL for features such as environment probes would be a plus.
 - [X] Async compute utilisation as well as more robust queue family management.
     - [ ] Pipeline bind caching may have to be updated to accommodate more complex queue family ecosystem
-    - [ ] Compute -> Fragment interleaving needs profiling to ensure it's working correctly.
+    - [ ] Compute -> Fragment interleaving needs profiling to ensure it's working correctly. (Cannot test on my Pascal GPU)
 - [X] Compute-based post-processing dispatch.
 - [ ] High quality deferred shadows (modification on cascaded shadow maps) via compute.
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
 - [ ] Pipeline caching (if pipeline initialisation becomes slow - currently non-issue)
+
+## High Quality Shadow Mapping
+- [ ] Zbin testing
