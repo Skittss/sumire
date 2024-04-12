@@ -303,11 +303,11 @@ namespace sumire {
                 ImGui::Spacing();
                 
                 // Near and Far planes
-                float tNear = frameInfo.camera.near();
+                float tNear = frameInfo.camera.getNear();
                 ImGui::DragFloat("Near", &tNear, 0.01f, 0.00f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                 frameInfo.camera.setNear(tNear);
 
-                float tFar = frameInfo.camera.far();
+                float tFar = frameInfo.camera.getFar();
                 ImGui::DragFloat("Far", &tFar, 1.0f, 0.01f, 10000.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                 frameInfo.camera.setFar(tFar);
 

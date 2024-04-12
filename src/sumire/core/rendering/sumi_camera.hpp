@@ -63,8 +63,8 @@ namespace sumire {
         };
 
         // Near and Far get & set
-        float near() const { return nearPlane; }
-        float far() const { return farPlane; }
+        float getNear() const { return nearPlane; }
+        float getFar() const { return farPlane; }
         void setNear(float dist, bool recomputeProjMatrix = false);
         void setFar(float dist, bool recomputeProjMatrix = false);
 
