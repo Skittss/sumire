@@ -252,11 +252,6 @@ namespace sumire {
 				lights
 			};
 
-			// Render GUI
-			gui.beginFrame();
-			gui.drawStatWindow(frameInfo, cameraController);
-			gui.endFrame();
-
 			SumiRenderer::FrameCommandBuffers frameCommandBuffers = sumiRenderer.beginFrame();
 
 			// If all cmd buffers are null, then the frame was not started.
@@ -339,6 +334,15 @@ namespace sumire {
 				postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
 
 				// GUI should *ALWAYS* render last after post-processing.
+
+				gui.beginFrame();
+				gui.drawStatWindow(
+					frameInfo, 
+					cameraController, 
+					shadowMapper.getZbinData()
+				);
+				gui.endFrame();
+
 				gui.renderToCmdBuffer(frameCommandBuffers.present);
 
 				sumiRenderer.endCompositeRenderPass(frameCommandBuffers.present);

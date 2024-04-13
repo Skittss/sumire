@@ -114,8 +114,12 @@ namespace sumire {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer);
     }
     
-    void SumiImgui::drawStatWindow(FrameInfo &frameInfo, SumiKBMcontroller &cameraController) {
-        // ImGui::ShowDemoWindow();
+    void SumiImgui::drawStatWindow(
+        FrameInfo &frameInfo, 
+        SumiKBMcontroller &cameraController,
+        const std::vector<structs::zBinData>& zBinData
+    ) {
+        //ImGui::ShowDemoWindow();
         
         ImGui::Begin("Sumire Scene Viewer");
         ImGui::Text("Sumire Build v0.0.1");
@@ -123,12 +127,14 @@ namespace sumire {
         ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
 
         ImGui::Spacing();
+        drawDebugUI(zBinData);
+
+        ImGui::Spacing();
         drawConfigUI(cameraController);
 
         ImGui::Spacing();
         drawSceneUI(frameInfo);
 
-        //ImGui::Text("FPS: %.1f", 1.0);
         ImGui::End();
     }
 
@@ -407,6 +413,93 @@ namespace sumire {
 
                 ImGui::TreePop();
             }
+        }
+    }
+
+    void SumiImgui::drawDebugUI(const std::vector<structs::zBinData>& zBinData) {
+        if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
+            drawFrameTimingsSection();
+            drawHighQualityShadowMappingSection(zBinData);
+
+            ImGui::Spacing();
+            ImGui::TreePop();
+        }
+
+    }
+
+    void SumiImgui::drawFrameTimingsSection() {
+        if (ImGui::TreeNode("Frame Timings")) {
+            ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
+
+            ImGui::TreePop();
+        }
+    }
+
+    void SumiImgui::drawHighQualityShadowMappingSection(const std::vector<structs::zBinData>& zBinData) {
+        if (ImGui::TreeNode("High Quality Shadow Mapping")) {
+            if (ImGui::TreeNode("zBin")) {
+
+                uint32_t nBins = static_cast<uint32_t>(zBinData.size());
+                ImGui::Text("zBin size: %u", nBins);
+                ImGui::Spacing();
+
+                constexpr ImGuiTableFlags flags =
+                    ImGuiTableFlags_ScrollX |
+                    ImGuiTableFlags_ScrollY |
+                    ImGuiTableFlags_RowBg |
+                    ImGuiTableFlags_BordersOuter |
+                    ImGuiTableFlags_BordersV;
+
+                constexpr int cols = 5;
+
+                const ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
+                if (ImGui::BeginTable("zBin Data", cols, flags, outer_size)) {
+                    ImGui::TableSetupScrollFreeze(1, 1);
+                    ImGui::TableSetupColumn("bin", 
+                        ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_WidthFixed, 30.0f);
+                    ImGui::TableSetupColumn("min", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                    ImGui::TableSetupColumn("max", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                    ImGui::TableSetupColumn("rMin", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                    ImGui::TableSetupColumn("rMax", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                    ImGui::TableHeadersRow();
+
+                    for (size_t i = 0; i < zBinData.size(); i++) {
+                        uint32_t idx = static_cast<uint32_t>(i);
+                        ImGui::TableNextRow();
+                        for (int j = 0; j < cols; j++) {
+                            if (!ImGui::TableSetColumnIndex(j) && j > 0)
+                                continue;
+
+                            if (j == 0)
+                                ImGui::Text("%u", static_cast<uint32_t>(i));
+                            else
+                                switch (j) {
+                                case 0:
+                                    ImGui::Text("%u", i);
+                                    break;
+                                case 1:
+                                    ImGui::Text("%u", zBinData[i].minLightIdx);
+                                    break;
+                                case 2:
+                                    ImGui::Text("%u", zBinData[i].maxLightIdx);
+                                    break; 
+                                case 3:
+                                    ImGui::Text("%u", zBinData[i].rangedMinLightIdx);
+                                    break;
+                                case 4:
+                                    ImGui::Text("%u", zBinData[i].rangedMaxLightIdx);
+                                    break;
+                                default:
+                                    ImGui::Text("OOB!");
+                                }
+                        }
+                    }
+                    ImGui::EndTable();
+                }
+
+            }
+
+            ImGui::TreePop();
         }
     }
 

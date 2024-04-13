@@ -2,8 +2,6 @@
 
 #include <glm/gtx/string_cast.hpp>
 
-#include <iostream>
-
 namespace sumire {
 
 	HighQualityShadowMapper::HighQualityShadowMapper() {
@@ -30,10 +28,9 @@ namespace sumire {
 		// Sort and bin lights into discrete z intervals between the near and far camera plane.
 
 		const float logFarNear = glm::log(far / near);
-		const float sliceFrac1 = NUM_SLICES / logFarNear;
-		const float sliceFrac2 = NUM_SLICES * glm::log(near) / logFarNear;
+		const float sliceFrac1 = static_cast<float>(NUM_SLICES) / logFarNear;
+		const float sliceFrac2 = static_cast<float>(NUM_SLICES) * glm::log(near) / logFarNear;
 
-		std::vector<float> zBinVec(lightData.size());
 		for (size_t i = 0; i < lightData.size(); i++) {
 			// Depth calculation in view space
 			//  This is the length of the view (A) -> point (B) vector truncated by the near plane intersection:
@@ -61,9 +58,8 @@ namespace sumire {
 			// From Tiago Sous' DOOM 2016 Siggraph presentation.
 			float slice = glm::floor(glm::log(z) * sliceFrac1 - sliceFrac2);
 
-			zBinVec[i] = slice;
-			//std::cout << i << "\t | view: " << glm::to_string(B) << "\t | t: " << t << "\t | z: " << z << "\t | bin: " << zBinVec[i] << "\n";
+			zBinData[i] = structs::zBinData{};
+			zBinData[i].minLightIdx = slice;
 		}
-		//std::cout << std::endl;
 	}
 }

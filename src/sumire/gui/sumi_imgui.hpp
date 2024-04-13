@@ -12,12 +12,20 @@
 #include <sumire/core/rendering/sumi_object.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 
+#include <sumire/core/render_systems/data_structs/high_quality_shadow_mapper_structs.hpp>
+
 #include <sumire/input/sumi_kbm_controller.hpp>
 
 namespace sumire {
 
-    struct gridAdjustableParams {
-
+    struct SceneViewUIdata {
+        // TODO: pointerized objects are probably better for supporting optional data
+        // General
+        FrameInfo& frameInfo;
+        // Inputs
+        SumiKBMcontroller& cameraController;
+        // Debug
+        const std::vector<structs::zBinData>& zBinData;
     };
 
     class SumiImgui {
@@ -37,7 +45,11 @@ namespace sumire {
             void endFrame();
             void renderToCmdBuffer(VkCommandBuffer &buffer);
 
-            void drawStatWindow(FrameInfo &frameInfo, SumiKBMcontroller &cameraController);
+            void drawStatWindow(
+                FrameInfo &frameInfo, 
+                SumiKBMcontroller &cameraController,
+                const std::vector<structs::zBinData>& zBinData
+            );
 
             ImGuiIO& getIO();
             void ignoreMouse() { getIO().ConfigFlags |= ImGuiConfigFlags_NoMouse; }
@@ -56,8 +68,14 @@ namespace sumire {
 
         private:
             void initImgui(VkRenderPass renderPass, uint32_t subpassIdx, VkQueue workQueue);
+
             void drawConfigUI(SumiKBMcontroller &cameraController);
             void drawSceneUI(FrameInfo &frameInfo);
+
+            void drawDebugUI(const std::vector<structs::zBinData>& zBinData);
+            void drawFrameTimingsSection();
+            void drawHighQualityShadowMappingSection(const std::vector<structs::zBinData>& zBinData);
+
             void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 
             SumiRenderer &sumiRenderer;

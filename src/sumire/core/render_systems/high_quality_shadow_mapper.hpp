@@ -30,13 +30,15 @@ namespace sumire {
 		HighQualityShadowMapper();
 		~HighQualityShadowMapper();
 
-		static constexpr float NUM_SLICES = 1024.0f;
+		static constexpr uint32_t NUM_SLICES = 1024u;
 
 		void prepare(
 			const std::vector<SumiLight::LightShaderData>& lights,
 			float near, float far, float fov,
 			glm::mat4 view
 		);
+
+		const std::vector<structs::zBinData>& getZbinData() { return zBinData; }
 
 	private:
 		void generateZbin(
@@ -51,6 +53,7 @@ namespace sumire {
 		void generateDeferredShadowMaps();
 		void compositeHighQualityShadows();
 
+		std::vector<structs::zBinData> zBinData = std::vector<structs::zBinData>(NUM_SLICES);
 		std::unique_ptr<SumiBuffer> zBin;
 		std::unique_ptr<SumiBuffer> lightMaskBuffer;
 		
