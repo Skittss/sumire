@@ -422,7 +422,6 @@ namespace sumire {
             drawHighQualityShadowMappingSection(zBinData);
 
             ImGui::Spacing();
-            ImGui::TreePop();
         }
 
     }
@@ -478,16 +477,16 @@ namespace sumire {
                                     ImGui::Text("%u", i);
                                     break;
                                 case 1:
-                                    ImGui::Text("%u", zBinData[i].minLightIdx);
+                                    ImGui::Text("%d", zBinData[i].minLightIdx);
                                     break;
                                 case 2:
-                                    ImGui::Text("%u", zBinData[i].maxLightIdx);
+                                    ImGui::Text("%d", zBinData[i].maxLightIdx);
                                     break; 
                                 case 3:
-                                    ImGui::Text("%u", zBinData[i].rangedMinLightIdx);
+                                    ImGui::Text("%d", zBinData[i].rangedMinLightIdx);
                                     break;
                                 case 4:
-                                    ImGui::Text("%u", zBinData[i].rangedMaxLightIdx);
+                                    ImGui::Text("%d", zBinData[i].rangedMaxLightIdx);
                                     break;
                                 default:
                                     ImGui::Text("OOB!");
@@ -496,6 +495,7 @@ namespace sumire {
                     }
                     ImGui::EndTable();
                 }
+                ImGui::TreePop();
 
             }
 
