@@ -53,8 +53,8 @@ namespace sumire {
             Transform3DComponent transform{};
             glm::vec4 color{ 1.0f };
             float innerConeAngle = 0.0f;
-            float outerConeAngle = glm::pi<float>() / 4.0;
-            float range = 0;
+            float outerConeAngle = glm::pi<float>() / 4.0f;
+            float range = 1.0f;
 
             const id_t getId() const { return id; }
 
