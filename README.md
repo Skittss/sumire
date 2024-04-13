@@ -23,7 +23,7 @@ Only windows scripts are tested, of which building to a MSVC solution is recomme
 You may also build with a standalone compiler 
 via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 
-# Running
+## Running
 - Run the generated binary in the directory `sumire/bin/Debug` or `sumire/bin/Release`.
 
 ---
@@ -73,3 +73,4 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
 
 ## High Quality Shadow Mapping
 - [ ] Zbin testing
+- [ ] Fix view space depth calculation for out of bounds / extreme view frustum fovs
