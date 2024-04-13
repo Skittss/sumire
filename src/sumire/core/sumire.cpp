@@ -279,21 +279,29 @@ namespace sumire {
 				globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
 				globalUniformBuffers[frameIdx]->flush();
 
-				// Write lights SSBO
-				// TODO: This will be very slow when the number of lights increases.
-				//        We should only write to the buffer when absolutely necessary, i.e. on light change.
+				// Prepare Lights
+				//   Sort lights by view space depth for shadow mapping pass
+				auto sortedLights = HighQualityShadowMapper::sortLightsByViewSpaceDepth(
+					lights, 
+					cameraUbo.viewMatrix, 
+					camera.getNear()
+				);
+
+				//   Write lights SSBO
+				//   TODO: This will be very slow when the number of lights increases.
+				//          We should only write to the buffer when absolutely necessary, i.e. on light change.
 				auto lightData = std::vector<SumiLight::LightShaderData>{};
-				for (auto& kv : lights) {
-					auto& light = kv.second;
-					lightData.push_back(light.getShaderData());
+				for (auto& viewSpaceLight : sortedLights) {
+					lightData.push_back(viewSpaceLight.lightPtr->getShaderData());
 				}
 				lightSSBO->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
 				lightSSBO->flush();
 
-				// Shadow mapping
+				// Shadow mapping preparation
+				//  TODO: Only re-prepare if lights / camera view have changed.
 				shadowMapper.prepare(
-					lightData,
-					camera.getNear(), camera.getFar(), camera.getFovy(),
+					sortedLights,
+					camera.getNear(), camera.getFar(),
 					cameraUbo.viewMatrix
 				);
 

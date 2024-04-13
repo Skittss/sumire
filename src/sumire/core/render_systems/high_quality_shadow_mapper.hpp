@@ -32,9 +32,15 @@ namespace sumire {
 
 		static constexpr uint32_t NUM_SLICES = 1024u;
 
+		static std::vector<structs::viewSpaceLight> sortLightsByViewSpaceDepth(
+			SumiLight::Map& lights,
+			glm::mat4 view,
+			float near
+		);
+
 		void prepare(
-			const std::vector<SumiLight::LightShaderData>& lights,
-			float near, float far, float fov,
+			const std::vector<structs::viewSpaceLight>& lights,
+			float near, float far,
 			glm::mat4 view
 		);
 
@@ -42,8 +48,8 @@ namespace sumire {
 
 	private:
 		void generateZbin(
-			const std::vector<SumiLight::LightShaderData>& lights,
-			float near, float far, float fov,
+			const std::vector<structs::viewSpaceLight>& lights,
+			float near, float far,
 			glm::mat4 view
 		);
 		void generateLightMaskBuffer();
