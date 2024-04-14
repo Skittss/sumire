@@ -6,8 +6,6 @@
 
 #include <algorithm>
 
-#include <iostream>
-
 namespace sumire {
 
 	HighQualityShadowMapper::HighQualityShadowMapper() {
@@ -29,10 +27,9 @@ namespace sumire {
 			auto& light = kv.second;
 			structs::viewSpaceLight viewSpaceLight{};
 			viewSpaceLight.lightPtr = &light;
-			viewSpaceLight.viewSpaceDepth = calculateViewSpaceDepth(
+			viewSpaceLight.viewSpaceDepth = calculateOrthogonalViewSpaceDepth(
 				light.transform.getTranslation(),
 				view,
-				near,
 				&viewSpaceLight.viewSpacePosition
 			);
 
@@ -54,6 +51,8 @@ namespace sumire {
 		float near, float far,
 		glm::mat4 view
 	) {
+		// We end up doing this preparation step on the CPU as the light list needs
+		//  to be view-depth sorted prior to zBin and light mask generation for memory reduction.
 		generateZbin(lights, near, far, view);
 	}
 
@@ -81,20 +80,25 @@ namespace sumire {
 			const glm::vec3 viewDir = glm::normalize(lights[i].viewSpacePosition);
 
 			//  Project radial length onto view plane normal for max light extent
-			float viewLightRange = 
-				lightRange * glm::dot(viewSpacePlaneNormal, viewDir);
+			float viewLightRange =
+				lightRange * glm::abs(glm::dot(viewSpacePlaneNormal, viewDir));
 
 			float minZ = z - viewLightRange;
 			float maxZ = z + viewLightRange;
 
 			// Slice calculation from Tiago Sous' DOOM 2016 Siggraph presentation.
-			uint32_t minSlice = glm::floor<uint32_t>(glm::log(minZ) * sliceFrac1 - sliceFrac2);
-			uint32_t maxSlice = glm::floor<uint32_t>(glm::log(maxZ) * sliceFrac1 - sliceFrac2);
+			int minSlice = glm::floor<int>(glm::log(minZ) * sliceFrac1 - sliceFrac2);
+			int maxSlice = glm::floor<int>(glm::log(maxZ) * sliceFrac1 - sliceFrac2);
 
-			//std::cout << i << " | " << minSlice << ", " << maxSlice << " | " << z << ", " << minZ << ", " << maxZ << " (" << viewLightRange << ")\n";
+			// Clamp to valid index range, leaving -1 and NUM_SLICES for out-of-range flags.
+			minSlice = glm::clamp<int>(minSlice, -1, NUM_SLICES);
+			maxSlice = glm::clamp<int>(maxSlice, -1, NUM_SLICES);
 
 			// Fill zBin values
-			for (uint32_t j = minSlice; j <= maxSlice; j++) {
+			for (int j = minSlice; j <= maxSlice; j++) {
+				// Disregard lights out of zBin range (either behind near plane or beyond far plane)
+ 				if (j < 0 || j >= NUM_SLICES) continue;
+
 				// minLightIdx
 				if (zBinData[j].minLightIdx == -1) zBinData[j].minLightIdx = i;
 				else zBinData[j].minLightIdx = glm::min<int>(zBinData[j].minLightIdx, i);
