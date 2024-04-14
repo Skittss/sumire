@@ -87,6 +87,7 @@ namespace sumire {
 			float maxZ = z + viewLightRange;
 
 			// Slice calculation from Tiago Sous' DOOM 2016 Siggraph presentation.
+			//   Interactive graph: https://www.desmos.com/calculator/bf0g6n0hqp
 			int minSlice = glm::floor<int>(glm::log(minZ) * sliceFrac1 - sliceFrac2);
 			int maxSlice = glm::floor<int>(glm::log(maxZ) * sliceFrac1 - sliceFrac2);
 
