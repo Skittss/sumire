@@ -73,4 +73,4 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
 
 ## High Quality Shadow Mapping
 - [ ] Zbin testing
-- [ ] Fix view space depth calculation for out of bounds / extreme view frustum fovs
+- [X] Fix view space depth calculation for out of bounds / extreme view frustum fovs
