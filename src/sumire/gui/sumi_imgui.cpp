@@ -117,7 +117,7 @@ namespace sumire {
     void SumiImgui::drawStatWindow(
         FrameInfo &frameInfo, 
         SumiKBMcontroller &cameraController,
-        const std::vector<structs::zBinData>& zBinData
+        const structs::zBin& zBin
     ) {
         //ImGui::ShowDemoWindow();
         
@@ -127,7 +127,7 @@ namespace sumire {
         ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
 
         ImGui::Spacing();
-        drawDebugUI(zBinData);
+        drawDebugUI(zBin);
 
         ImGui::Spacing();
         drawConfigUI(cameraController);
@@ -416,10 +416,10 @@ namespace sumire {
         }
     }
 
-    void SumiImgui::drawDebugUI(const std::vector<structs::zBinData>& zBinData) {
+    void SumiImgui::drawDebugUI(const structs::zBin& zBin) {
         if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
             drawFrameTimingsSection();
-            drawHighQualityShadowMappingSection(zBinData);
+            drawHighQualityShadowMappingSection(zBin);
 
             ImGui::Spacing();
         }
@@ -434,12 +434,15 @@ namespace sumire {
         }
     }
 
-    void SumiImgui::drawHighQualityShadowMappingSection(const std::vector<structs::zBinData>& zBinData) {
+    void SumiImgui::drawHighQualityShadowMappingSection(const structs::zBin& zBin) {
         if (ImGui::TreeNode("High Quality Shadow Mapping")) {
             if (ImGui::TreeNode("zBin")) {
 
-                uint32_t nBins = static_cast<uint32_t>(zBinData.size());
+                uint32_t nBins = static_cast<uint32_t>(zBin.data.size());
                 ImGui::Text("zBin size: %u", nBins);
+                ImGui::Spacing();
+                ImGui::Text("Light index range: [%d, %d]", zBin.minLight, zBin.maxLight);
+                ImGui::Text("Full bin index range: [%d, %d]", zBin.firstFullIdx, zBin.lastFullIdx);
                 ImGui::Spacing();
 
                 constexpr ImGuiTableFlags flags =
@@ -462,7 +465,7 @@ namespace sumire {
                     ImGui::TableSetupColumn("rMax", ImGuiTableColumnFlags_WidthFixed, 50.0f);
                     ImGui::TableHeadersRow();
 
-                    for (size_t i = 0; i < zBinData.size(); i++) {
+                    for (size_t i = 0; i < zBin.data.size(); i++) {
                         uint32_t idx = static_cast<uint32_t>(i);
                         ImGui::TableNextRow();
                         for (int j = 0; j < cols; j++) {
@@ -477,16 +480,16 @@ namespace sumire {
                                     ImGui::Text("%u", i);
                                     break;
                                 case 1:
-                                    ImGui::Text("%d", zBinData[i].minLightIdx);
+                                    ImGui::Text("%d", zBin.data[i].minLightIdx);
                                     break;
                                 case 2:
-                                    ImGui::Text("%d", zBinData[i].maxLightIdx);
+                                    ImGui::Text("%d", zBin.data[i].maxLightIdx);
                                     break; 
                                 case 3:
-                                    ImGui::Text("%d", zBinData[i].rangedMinLightIdx);
+                                    ImGui::Text("%d", zBin.data[i].rangedMinLightIdx);
                                     break;
                                 case 4:
-                                    ImGui::Text("%d", zBinData[i].rangedMaxLightIdx);
+                                    ImGui::Text("%d", zBin.data[i].rangedMaxLightIdx);
                                     break;
                                 default:
                                     ImGui::Text("OOB!");

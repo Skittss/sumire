@@ -25,7 +25,7 @@ namespace sumire {
         // Inputs
         SumiKBMcontroller& cameraController;
         // Debug
-        const std::vector<structs::zBinData>& zBinData;
+        const structs::zBin& zBinData;
     };
 
     class SumiImgui {
@@ -48,7 +48,7 @@ namespace sumire {
             void drawStatWindow(
                 FrameInfo &frameInfo, 
                 SumiKBMcontroller &cameraController,
-                const std::vector<structs::zBinData>& zBinData
+                const structs::zBin& zBin
             );
 
             ImGuiIO& getIO();
@@ -72,9 +72,9 @@ namespace sumire {
             void drawConfigUI(SumiKBMcontroller &cameraController);
             void drawSceneUI(FrameInfo &frameInfo);
 
-            void drawDebugUI(const std::vector<structs::zBinData>& zBinData);
+            void drawDebugUI(const structs::zBin& zBin);
             void drawFrameTimingsSection();
-            void drawHighQualityShadowMappingSection(const std::vector<structs::zBinData>& zBinData);
+            void drawHighQualityShadowMappingSection(const structs::zBin& zBin);
 
             void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 
