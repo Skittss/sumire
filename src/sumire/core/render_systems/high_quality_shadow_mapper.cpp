@@ -25,21 +25,25 @@ namespace sumire {
 		auto viewSpaceLights = std::vector<structs::viewSpaceLight>();
 		for (auto& kv : lights) {
 			auto& light = kv.second;
+
 			structs::viewSpaceLight viewSpaceLight{};
 			viewSpaceLight.lightPtr = &light;
+
 			viewSpaceLight.viewSpaceDepth = calculateOrthogonalViewSpaceDepth(
 				light.transform.getTranslation(),
 				view,
 				&viewSpaceLight.viewSpacePosition
 			);
+			viewSpaceLight.minDepth = viewSpaceLight.viewSpaceDepth - light.range;
+			viewSpaceLight.maxDepth = viewSpaceLight.viewSpaceDepth + light.range;
 
 			viewSpaceLights.push_back(std::move(viewSpaceLight));
 		}
 
-		// Sort by view space depth
+		// Sort by (min) view space depth
 		std::sort(viewSpaceLights.begin(), viewSpaceLights.end(), 
 			[](const structs::viewSpaceLight& a, const structs::viewSpaceLight& b) {
-				return a.viewSpaceDepth < b.viewSpaceDepth;
+				return a.minDepth < b.minDepth;
 			}
 		);
 
@@ -63,28 +67,17 @@ namespace sumire {
 	) {
 		// Bin lights into discrete z intervals between the near and far camera plane.
 		// Note: lights MUST BE PRE-SORTED BY VIEWSPACE DISTANCE. ( see sortLightsByViewSpaceDepth() ).
-		std::fill(zBinData.begin(), zBinData.end(), structs::zBinData{});
+		
+		zBin.reset();
 
 		const float logFarNear = glm::log(far / near);
 		const float sliceFrac1 = static_cast<float>(NUM_SLICES) / logFarNear;
 		const float sliceFrac2 = static_cast<float>(NUM_SLICES) * glm::log(near) / logFarNear;
 
-		for (size_t i = 0; i < lights.size(); i++) {
-			float z = lights[i].viewSpaceDepth;
-
-			// Find maximum and minimum bins of the light.
-			//  This will be range in the direction on the view plane normal (+/- z) 
-			//  assuming lights behave like point lights.
-			float lightRange = lights[i].lightPtr->range;
-			constexpr glm::vec3 viewSpacePlaneNormal = { 0.0f, 0.0f, -1.0f };
-			const glm::vec3 viewDir = glm::normalize(lights[i].viewSpacePosition);
-
-			//  Project radial length onto view plane normal for max light extent
-			float viewLightRange =
-				lightRange * glm::abs(glm::dot(viewSpacePlaneNormal, viewDir));
-
-			float minZ = z - viewLightRange;
-			float maxZ = z + viewLightRange;
+		uint32_t lastLightIdx = static_cast<uint32_t>(lights.size()) - 1u;
+		for (size_t i = 0; i <= lastLightIdx; i++) {
+			float minZ = lights[i].minDepth;
+			float maxZ = lights[i].maxDepth;
 
 			// Slice calculation from Tiago Sous' DOOM 2016 Siggraph presentation.
 			//   Interactive graph: https://www.desmos.com/calculator/bf0g6n0hqp
@@ -95,17 +88,101 @@ namespace sumire {
 			minSlice = glm::clamp<int>(minSlice, -1, NUM_SLICES);
 			maxSlice = glm::clamp<int>(maxSlice, -1, NUM_SLICES);
 
-			// Fill zBin values
+			// Set min and max light indices (zBin metadata) when lights are visible
+			if (minSlice < static_cast<int>(NUM_SLICES) && maxSlice >= 0) {
+				if (zBin.minLight == -1) zBin.minLight = static_cast<int>(i);
+				zBin.maxLight = static_cast<int>(i);
+			}
+
+			// Fill standard zBin values
 			for (int j = minSlice; j <= maxSlice; j++) {
 				// Disregard lights out of zBin range (either behind near plane or beyond far plane)
  				if (j < 0 || j >= NUM_SLICES) continue;
 
-				// minLightIdx
-				if (zBinData[j].minLightIdx == -1) zBinData[j].minLightIdx = i;
-				else zBinData[j].minLightIdx = glm::min<int>(zBinData[j].minLightIdx, i);
-				// maxLightIdx
-				zBinData[j].maxLightIdx = glm::max<int>(zBinData[j].maxLightIdx, i);
-				// TODO: ranged zBin
+				//   min
+				if (zBin.data[j].minLightIdx == -1) zBin.data[j].minLightIdx = i;
+				else zBin.data[j].minLightIdx = glm::min<int>(zBin.data[j].minLightIdx, i);
+				//   max
+				zBin.data[j].maxLightIdx = glm::max<int>(zBin.data[j].maxLightIdx, i);
+
+				// Fill first / last zBin idx (zBin metadata)
+				//  first
+				if (zBin.firstFullIdx == -1 && j != -1) 
+					zBin.firstFullIdx = j;
+				else 
+					zBin.firstFullIdx = glm::min(zBin.firstFullIdx, j);
+				//  last
+				zBin.lastFullIdx = glm::max(zBin.lastFullIdx, j);
+			}
+		}
+
+		// Fill ranged zBin
+		const uint32_t lastZbinIdx = static_cast<uint32_t>(zBin.data.size()) - 1u;
+		int nextIdx;
+		int currIdx;
+		int prevIdx;
+
+		int nextRangedMin = zBin.minLight;
+
+		// TODO: Here be some voodoo. There is likely a more straight forward way to fill this
+		//         ranged buffer, but the paper isn't very explicit about how they do it so I made my own
+		//		   solution. 
+		//       We fill explicit ranges first, then fill in the gaps with a reversed two-pointer type approach.
+
+		// First pass - fill in explicit ranges
+		for (uint32_t j = 0; j <= lastZbinIdx; j++) {
+			// rMin
+			if (j != lastZbinIdx) {
+				currIdx = zBin.data[j].minLightIdx;
+				nextIdx = zBin.data[j + 1].minLightIdx;
+
+				if (nextIdx == -1) 
+					nextIdx = zBin.data[j].minLightIdx;
+				if (currIdx != -1)
+					zBin.data[j].rangedMinLightIdx = glm::min(currIdx, nextIdx);
+			}
+
+			// rMax
+			if (j != 0) {
+				currIdx = zBin.data[j].maxLightIdx;
+				prevIdx = zBin.data[j - 1].maxLightIdx;
+
+				if (prevIdx == -1) 
+					prevIdx = zBin.data[j].maxLightIdx;
+				if (currIdx != -1)
+					zBin.data[j].rangedMaxLightIdx = glm::max(currIdx, prevIdx);
+			}
+		}
+
+		// Second pass - fill in implicit ranges (gaps) where indices are still undefined (-1)
+		//   but have prior (in the case of max) or following (in the case of min) lights.
+		// TODO: There may be a way to combine this into the pass above for O(2n) -> O(n).
+		int minIdxCache = zBin.maxLight;
+		int maxIdxCache = zBin.minLight;
+
+		uint32_t minPtr;
+		for (uint32_t maxPtr = 0; maxPtr <= lastZbinIdx; maxPtr++) {
+			// rMin
+			minPtr = lastZbinIdx - maxPtr;
+			if (minPtr <= zBin.lastFullIdx) {
+				int currMinIdx = zBin.data[minPtr].rangedMinLightIdx;
+				if (currMinIdx == -1) {
+					zBin.data[minPtr].rangedMinLightIdx = minIdxCache;
+				}
+				else if (minPtr == 0 || zBin.data[minPtr - 1].rangedMinLightIdx == -1) {
+					minIdxCache = currMinIdx;
+				}
+			}
+
+			// rMax
+			if (maxPtr >= zBin.firstFullIdx) {
+				int currMaxIdx = zBin.data[maxPtr].rangedMaxLightIdx;
+				if (currMaxIdx == -1) {
+					zBin.data[maxPtr].rangedMaxLightIdx = maxIdxCache;
+				}
+				else if (maxPtr == lastZbinIdx || zBin.data[maxPtr + 1].rangedMaxLightIdx == -1) {
+					maxIdxCache = currMaxIdx;
+				}
 			}
 		}
 	}

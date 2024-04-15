@@ -44,7 +44,7 @@ namespace sumire {
 			glm::mat4 view
 		);
 
-		const std::vector<structs::zBinData>& getZbinData() { return zBinData; }
+		const structs::zBin& getZbin() { return zBin; }
 
 	private:
 		void generateZbin(
@@ -59,8 +59,9 @@ namespace sumire {
 		void generateDeferredShadowMaps();
 		void compositeHighQualityShadows();
 
-		std::vector<structs::zBinData> zBinData = std::vector<structs::zBinData>(NUM_SLICES);
-		std::unique_ptr<SumiBuffer> zBin;
+		structs::zBin zBin{ NUM_SLICES };
+		
+		std::unique_ptr<SumiBuffer> zBinBuffer;
 		std::unique_ptr<SumiBuffer> lightMaskBuffer;
 		
 	};
