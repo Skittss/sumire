@@ -72,5 +72,8 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
 - [ ] Pipeline caching (if pipeline initialisation becomes slow - currently non-issue)
 
 ## High Quality Shadow Mapping
-- [ ] Zbin testing
+- [X] Zbin testing
+- [X] Ranged Zbin population
 - [X] Fix view space depth calculation for out of bounds / extreme view frustum fovs
+- [ ] Light culling.
+    - This could / should be frustum based, or AABB.
