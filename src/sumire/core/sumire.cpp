@@ -347,7 +347,7 @@ namespace sumire {
 				gui.drawStatWindow(
 					frameInfo, 
 					cameraController, 
-					shadowMapper.getZbinData()
+					shadowMapper.getZbin()
 				);
 				gui.endFrame();
 
@@ -406,6 +406,31 @@ namespace sumire {
 			light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
 			lights.emplace(light.getId(), std::move(light));
 		}
+
+		// zBin Light Tests
+		//auto light1 = SumiLight::createPointLight({ 0.0f, 1.0f, 0.0f });
+		//light1.range = 1.0f;
+		//lights.emplace(light1.getId(), std::move(light1));
+
+		//auto light2 = SumiLight::createPointLight({ -1.0f, 1.0f, -5.5f });
+		//light2.range = 2.0f;
+		//lights.emplace(light2.getId(), std::move(light2));
+
+		//auto light3 = SumiLight::createPointLight({ 1.0f, 1.0f, -5.0f });
+		//light3.range = 1.0f;
+		//lights.emplace(light3.getId(), std::move(light3));
+
+		//auto light4 = SumiLight::createPointLight({ -2.0f, 1.0f, -10.0f });
+		//light4.range = 1.0f;
+		//lights.emplace(light4.getId(), std::move(light4));
+
+		//auto light5 = SumiLight::createPointLight({ 0.5f, 1.0f, -11.0f });
+		//light5.range = 1.0f;
+		//lights.emplace(light5.getId(), std::move(light5));
+
+		//auto light6 = SumiLight::createPointLight({ 0.5f, 1.0f, -100.0f });
+		//light6.range = 1.0f;
+		//lights.emplace(light6.getId(), std::move(light6));
 
 	}
 }
