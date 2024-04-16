@@ -2,9 +2,11 @@
 
 #include <sumire/math/view_space_depth.hpp>
 
-#include <glm/gtx/string_cast.hpp>
-
 #include <algorithm>
+
+// debug
+#include <glm/gtx/string_cast.hpp>
+#include <iostream>
 
 namespace sumire {
 
@@ -53,17 +55,20 @@ namespace sumire {
 	void HighQualityShadowMapper::prepare(
 		const std::vector<structs::viewSpaceLight>& lights,
 		float near, float far,
-		glm::mat4 view
+		const glm::mat4& view,
+		const glm::mat4& projection,
+		float screenWidth, float screenHeight
 	) {
 		// We end up doing this preparation step on the CPU as the light list needs
 		//  to be view-depth sorted prior to zBin and light mask generation for memory reduction.
 		generateZbin(lights, near, far, view);
+		generateLightMaskBuffer(lights, screenWidth, screenHeight, projection);
 	}
 
 	void HighQualityShadowMapper::generateZbin(
 		const std::vector<structs::viewSpaceLight>& lights,
 		float near, float far,
-		glm::mat4 view
+		const glm::mat4 &view
 	) {
 		// Bin lights into discrete z intervals between the near and far camera plane.
 		// Note: lights MUST BE PRE-SORTED BY VIEWSPACE DISTANCE. ( see sortLightsByViewSpaceDepth() ).
@@ -184,6 +189,27 @@ namespace sumire {
 					maxIdxCache = currMaxIdx;
 				}
 			}
+		}
+	}
+
+	void HighQualityShadowMapper::generateLightMaskBuffer(
+		const std::vector<structs::viewSpaceLight>& lights,
+		float screenWidth, float screenHeight,
+		const glm::mat4& projection
+	) {
+		uint32_t lightMaskTileX = 32u;
+		uint32_t lightMaskTileY = 32u;
+
+		for (auto& light : lights) {
+			// light -> raster space
+			glm::vec4 screenPos = projection * glm::vec4(light.viewSpacePosition, 1.0);
+			screenPos /= screenPos.w;
+			
+			glm::vec2 ndcPos = 0.5f + 0.5f * glm::vec2(screenPos);
+			glm::vec2 rasterPos = glm::floor(glm::vec2{
+				ndcPos.x * screenWidth,
+				(1.0f - ndcPos.y) * screenHeight
+			});
 		}
 	}
 }

@@ -17,6 +17,20 @@ namespace sumire::structs {
 		float maxDepth = 0.0f;
 	};
 
+	struct lightMaskBitField {
+	
+	};
+
+	struct lightMask {
+		// Idx 0 is reserved for light *groups* for speeding up iteration
+		//  of this buffer.
+		std::vector<lightMaskBitField> bits;
+
+		lightMask(const uint32_t tileX, const uint32_t tileY) {
+			bits = std::vector<lightMaskBitField>(tileY);
+		}
+	};
+
 	// Combination of Zbin and Ranged Zbin.
 	//   Ranged Zbin values offer more conservative estimates for 
 	//   light queries over a range (>2) of multiple contiguous Zbins.

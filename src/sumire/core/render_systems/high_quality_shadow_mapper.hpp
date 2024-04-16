@@ -41,7 +41,9 @@ namespace sumire {
 		void prepare(
 			const std::vector<structs::viewSpaceLight>& lights,
 			float near, float far,
-			glm::mat4 view
+			const glm::mat4& view,
+			const glm::mat4& projection,
+			float screenWidth, float screenHeight
 		);
 
 		const structs::zBin& getZbin() { return zBin; }
@@ -50,9 +52,13 @@ namespace sumire {
 		void generateZbin(
 			const std::vector<structs::viewSpaceLight>& lights,
 			float near, float far,
-			glm::mat4 view
+			const glm::mat4& view
 		);
-		void generateLightMaskBuffer();
+		void generateLightMaskBuffer(
+			const std::vector<structs::viewSpaceLight>& lights,
+			float screenWidth, float screenHeight,
+			const glm::mat4& projection
+		);
 
 		void findLightsApproximate();
 		void findLightsAccurate();
