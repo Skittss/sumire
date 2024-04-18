@@ -27,7 +27,7 @@ namespace sumire {
 
 	class HighQualityShadowMapper {
 	public:
-		HighQualityShadowMapper();
+		HighQualityShadowMapper(uint32_t screenWidth, uint32_t screenHeight);
 		~HighQualityShadowMapper();
 
 		static constexpr uint32_t NUM_SLICES = 1024u;
@@ -38,15 +38,17 @@ namespace sumire {
 			float near
 		);
 
+		void updateScreenBounds(uint32_t width, uint32_t height);
+
 		void prepare(
 			const std::vector<structs::viewSpaceLight>& lights,
 			float near, float far,
 			const glm::mat4& view,
-			const glm::mat4& projection,
-			float screenWidth, float screenHeight
+			const glm::mat4& projection
 		);
 
 		const structs::zBin& getZbin() { return zBin; }
+		structs::lightMask* getLightMask() { return lightMask.get(); }
 
 	private:
 		void generateZbin(
@@ -56,7 +58,6 @@ namespace sumire {
 		);
 		void generateLightMaskBuffer(
 			const std::vector<structs::viewSpaceLight>& lights,
-			float screenWidth, float screenHeight,
 			const glm::mat4& projection
 		);
 
@@ -65,7 +66,11 @@ namespace sumire {
 		void generateDeferredShadowMaps();
 		void compositeHighQualityShadows();
 
-		structs::zBin zBin{ NUM_SLICES };
+		uint32_t screenWidth;
+		uint32_t screenHeight;
+
+		structs::zBin zBin;
+		std::unique_ptr<structs::lightMask> lightMask;
 		
 		std::unique_ptr<SumiBuffer> zBinBuffer;
 		std::unique_ptr<SumiBuffer> lightMaskBuffer;

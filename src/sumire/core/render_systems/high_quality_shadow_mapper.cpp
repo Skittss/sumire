@@ -10,13 +10,16 @@
 
 namespace sumire {
 
-	HighQualityShadowMapper::HighQualityShadowMapper() {
-
+	HighQualityShadowMapper::HighQualityShadowMapper(
+		const uint32_t screenWidth, const uint32_t screenHeight
+	) : screenWidth{ screenWidth }, 
+		screenHeight{ screenHeight }, 
+		zBin{ NUM_SLICES }
+	{
+		lightMask = std::make_unique<structs::lightMask>(screenWidth, screenHeight);
 	}
 
-	HighQualityShadowMapper::~HighQualityShadowMapper() {
-
-	}
+	HighQualityShadowMapper::~HighQualityShadowMapper() {}
 
 	std::vector<structs::viewSpaceLight> HighQualityShadowMapper::sortLightsByViewSpaceDepth(
 		SumiLight::Map& lights,
@@ -52,17 +55,22 @@ namespace sumire {
 		return viewSpaceLights;
 	}
 
+	void HighQualityShadowMapper::updateScreenBounds(uint32_t width, uint32_t height) {
+		screenWidth = width;
+		screenHeight = height;
+		lightMask = std::make_unique<structs::lightMask>(screenWidth, screenHeight);
+	}
+
 	void HighQualityShadowMapper::prepare(
 		const std::vector<structs::viewSpaceLight>& lights,
 		float near, float far,
 		const glm::mat4& view,
-		const glm::mat4& projection,
-		float screenWidth, float screenHeight
+		const glm::mat4& projection
 	) {
 		// We end up doing this preparation step on the CPU as the light list needs
 		//  to be view-depth sorted prior to zBin and light mask generation for memory reduction.
 		generateZbin(lights, near, far, view);
-		generateLightMaskBuffer(lights, screenWidth, screenHeight, projection);
+		generateLightMaskBuffer(lights, projection);
 	}
 
 	void HighQualityShadowMapper::generateZbin(
@@ -194,13 +202,19 @@ namespace sumire {
 
 	void HighQualityShadowMapper::generateLightMaskBuffer(
 		const std::vector<structs::viewSpaceLight>& lights,
-		float screenWidth, float screenHeight,
 		const glm::mat4& projection
 	) {
-		uint32_t lightMaskTileX = 32u;
-		uint32_t lightMaskTileY = 32u;
+		assert(lights.size() < 1025);
 
-		for (auto& light : lights) {
+		lightMask->clear();
+
+		for (uint32_t i = 0; i < lights.size(); i++) {
+			// TODO: should we be culling all lights off-screen?
+			//         there are some details on this at the end of the paper.
+			//if (light.viewSpaceDepth < near)
+
+			auto& light = lights[i];
+
 			// light -> raster space
 			glm::vec4 screenPos = projection * glm::vec4(light.viewSpacePosition, 1.0);
 			screenPos /= screenPos.w;
@@ -209,7 +223,17 @@ namespace sumire {
 			glm::vec2 rasterPos = glm::floor(glm::vec2{
 				ndcPos.x * screenWidth,
 				(1.0f - ndcPos.y) * screenHeight
-			});
+				});
+
+			if (rasterPos.x < 0 || rasterPos.y < 0 ||
+				rasterPos.x >= screenWidth || rasterPos.y >= screenHeight) { continue; }
+
+			// Set light validity for tile
+			uint32_t tileIdx_x = rasterPos.x / 32u;
+			uint32_t tileIdx_y = rasterPos.y / 32u;
+
+			structs::lightMaskTile& tile = lightMask->tileAtIdx(tileIdx_x, tileIdx_y);
+			tile.setLightBit(i);
 		}
 	}
 }
