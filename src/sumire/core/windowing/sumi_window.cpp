@@ -7,7 +7,9 @@
 
 namespace sumire {
 
-	SumiWindow::SumiWindow(int w, int h, std::string name) : width(w), height(h), windowName(name) {
+	SumiWindow::SumiWindow(
+		int w, int h, std::string name
+	) : width(w), height(h), windowName(name) {
 		initWindow();
 	}
 

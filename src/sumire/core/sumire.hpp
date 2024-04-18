@@ -15,9 +15,12 @@ namespace sumire {
 
 	class Sumire {
 	public:
-		static constexpr int WIDTH  = 1920;
-		static constexpr int HEIGHT = 1080;
-		static constexpr uint32_t MAX_N_LIGHTS = 100;
+		static constexpr uint32_t STARTUP_WIDTH = 1920u;
+		static constexpr uint32_t STARTUP_HEIGHT = 1080u;
+		static constexpr uint32_t MAX_N_LIGHTS = 1024u;
+
+		uint32_t screenWidth  = STARTUP_WIDTH;
+		uint32_t screenHeight = STARTUP_HEIGHT;
 
 		void run();
 
@@ -31,7 +34,11 @@ namespace sumire {
 		void loadObjects();
 		void loadLights(); 
 
-		SumiWindow sumiWindow{ WIDTH, HEIGHT, "Sumire" };
+		SumiWindow sumiWindow{ 
+			static_cast<int>(screenWidth), 
+			static_cast<int>(screenHeight), 
+			"Sumire" 
+		};
 		SumiDevice sumiDevice{ sumiWindow };
 		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice };
 
