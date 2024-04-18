@@ -137,7 +137,7 @@ namespace sumire {
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
 
-		HighQualityShadowMapper shadowMapper{};
+		HighQualityShadowMapper shadowMapper{screenWidth, screenHeight};
 
 		PostProcessor postProcessor{
 			sumiDevice,
@@ -229,9 +229,15 @@ namespace sumire {
 			camera.setViewYXZ(camera.transform.getTranslation(), camera.transform.getRotation());
 
 			if (sumiRenderer.wasSwapChainRecreated()) {
+				// Update main application viewport size tracking vars
+				VkExtent2D newExtent = sumiRenderer.getWindow().getExtent();
+				screenWidth = newExtent.width;
+				screenHeight = newExtent.height;
+
 				float aspect = sumiRenderer.getAspect();
 				camera.setAspect(aspect, true);
 				postProcessor.updateDescriptors(sumiRenderer.getIntermediateColorAttachments());
+				shadowMapper.updateScreenBounds(screenWidth, screenHeight);
 				sumiRenderer.resetScRecreatedFlag();
 			}
 
@@ -303,8 +309,7 @@ namespace sumire {
 					sortedLights,
 					camera.getNear(), camera.getFar(),
 					cameraUbo.viewMatrix,
-					cameraUbo.projectionMatrix,
-					WIDTH, HEIGHT
+					cameraUbo.projectionMatrix
 				);
 
 				// Main scene render pass
@@ -347,9 +352,10 @@ namespace sumire {
 
 				gui.beginFrame();
 				gui.drawStatWindow(
-					frameInfo, 
-					cameraController, 
-					shadowMapper.getZbin()
+					frameInfo,
+					cameraController,
+					shadowMapper.getZbin(),
+					shadowMapper.getLightMask()
 				);
 				gui.endFrame();
 
@@ -400,14 +406,14 @@ namespace sumire {
 	}
 
 	void Sumire::loadLights() {
-		//constexpr float radial_n_lights = 20.0;
-		//for (float i = 0; i < radial_n_lights; i++) {
-		//	float rads = i * glm::two_pi<float>() / radial_n_lights;
-		//	auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});
-		//	float hue = i * 360.0f / radial_n_lights;
-		//	light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
-		//	lights.emplace(light.getId(), std::move(light));
-		//}
+		constexpr float radial_n_lights = 40.0;
+		for (float i = 0; i < radial_n_lights; i++) {
+			float rads = i * glm::two_pi<float>() / radial_n_lights;
+			auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});
+			float hue = i * 360.0f / radial_n_lights;
+			light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
+			lights.emplace(light.getId(), std::move(light));
+		}
 
 		// zBin Light Tests
 		//auto light1 = SumiLight::createPointLight({ 0.0f, 1.0f, 0.0f });
@@ -418,9 +424,9 @@ namespace sumire {
 		//light2.range = 2.0f;
 		//lights.emplace(light2.getId(), std::move(light2));
 
-		auto light3 = SumiLight::createPointLight({ 1.0f, 1.0f, -5.0f });
-		light3.range = 1.0f;
-		lights.emplace(light3.getId(), std::move(light3));
+		//auto light3 = SumiLight::createPointLight({ 1.0f, 1.0f, -5.0f });
+		//light3.range = 1.0f;
+		//lights.emplace(light3.getId(), std::move(light3));
 
 		//auto light4 = SumiLight::createPointLight({ -2.0f, 1.0f, -10.0f });
 		//light4.range = 1.0f;
