@@ -2,6 +2,8 @@
 
 #include <sumire/core/rendering/sumi_light.hpp>
 
+#include <sumire/util/bit_field_operators.hpp>
+
 #include <glm/glm.hpp>
 
 #include <cstdint>
@@ -34,17 +36,16 @@ namespace sumire::structs {
 
 		bool isBitSet(uint32_t x, uint32_t y) const {
 			assert(x < 32 && y < 33 && "queried bit index is out of range");
-			return bitFields[y].bits & x;
+			return BIT_IS_SET(bitFields[y].bits, x);
 		}
 
 		void setLightBit(uint32_t lightIdx) {
 			uint32_t lightGroupIdx = lightIdx / 32u;
-
-			// Set light bit and light group bit
-			bitFields[0].bits |= lightGroupIdx;
-
 			uint32_t bitIdx = lightIdx - 32u * lightGroupIdx;
-			bitFields[lightGroupIdx + 1].bits |= bitIdx;
+
+			// Set light group bit and light bit
+			BIT_SET(bitFields[0].bits, lightGroupIdx);
+			BIT_SET(bitFields[lightGroupIdx + 1].bits, bitIdx);
 		}
 	};
 
@@ -82,8 +83,10 @@ namespace sumire::structs {
 
 		lightMask(
 			const uint32_t width, const uint32_t height
-		) : width{ width }, height{ height }, 
-			numTilesX{ width / 32u }, numTilesY{ height / 32u } 
+		) : width{ width }, 
+			height{ height }, 
+			numTilesX{ static_cast<uint32_t>(glm::ceil(static_cast<float>(width) / 32)) }, 
+			numTilesY{ static_cast<uint32_t>(glm::ceil(static_cast<float>(height) / 32)) }
 		{
 
 			tiles = std::vector<lightMaskTile>(numTilesX * numTilesY);
