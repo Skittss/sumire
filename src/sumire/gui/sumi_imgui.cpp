@@ -117,9 +117,10 @@ namespace sumire {
     void SumiImgui::drawStatWindow(
         FrameInfo &frameInfo, 
         SumiKBMcontroller &cameraController,
-        const structs::zBin& zBin
+        const structs::zBin& zBin,
+        structs::lightMask* lightMask
     ) {
-        //ImGui::ShowDemoWindow();
+        ImGui::ShowDemoWindow();
         
         ImGui::Begin("Sumire Scene Viewer");
         ImGui::Text("Sumire Build v0.0.1");
@@ -127,7 +128,7 @@ namespace sumire {
         ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
 
         ImGui::Spacing();
-        drawDebugUI(zBin);
+        drawDebugUI(zBin, lightMask);
 
         ImGui::Spacing();
         drawConfigUI(cameraController);
@@ -416,10 +417,13 @@ namespace sumire {
         }
     }
 
-    void SumiImgui::drawDebugUI(const structs::zBin& zBin) {
+    void SumiImgui::drawDebugUI(
+        const structs::zBin& zBin,
+        structs::lightMask* lightMask
+    ) {
         if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
             drawFrameTimingsSection();
-            drawHighQualityShadowMappingSection(zBin);
+            drawHighQualityShadowMappingSection(zBin, lightMask);
 
             ImGui::Spacing();
         }
@@ -434,7 +438,10 @@ namespace sumire {
         }
     }
 
-    void SumiImgui::drawHighQualityShadowMappingSection(const structs::zBin& zBin) {
+    void SumiImgui::drawHighQualityShadowMappingSection(
+        const structs::zBin& zBin,
+        structs::lightMask* lightMask
+    ) {
         if (ImGui::TreeNode("High Quality Shadow Mapping")) {
             if (ImGui::TreeNode("zBin")) {
 
@@ -457,7 +464,7 @@ namespace sumire {
                 const ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
                 if (ImGui::BeginTable("zBin Data", cols, flags, outer_size)) {
                     ImGui::TableSetupScrollFreeze(1, 1);
-                    ImGui::TableSetupColumn("bin", 
+                    ImGui::TableSetupColumn("bin",
                         ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_WidthFixed, 30.0f);
                     ImGui::TableSetupColumn("min", ImGuiTableColumnFlags_WidthFixed, 50.0f);
                     ImGui::TableSetupColumn("max", ImGuiTableColumnFlags_WidthFixed, 50.0f);
@@ -484,7 +491,7 @@ namespace sumire {
                                     break;
                                 case 2:
                                     ImGui::Text("%d", zBin.data[i].maxLightIdx);
-                                    break; 
+                                    break;
                                 case 3:
                                     ImGui::Text("%d", zBin.data[i].rangedMinLightIdx);
                                     break;
@@ -498,12 +505,96 @@ namespace sumire {
                     }
                     ImGui::EndTable();
                 }
+                ImGui::Spacing();
                 ImGui::TreePop();
+            }
 
+            if (ImGui::TreeNode("Light Mask")) {
+                ImGui::Text("Num Tiles: [%u, %u]", lightMask->numTilesX, lightMask->numTilesY);
+                ImGui::Spacing();
+
+                ImGui::Text("Currently Inspecting: ");
+                static int tileIdx[2]{ 0, 0 };
+                ImGui::InputInt2("", tileIdx);
+                tileIdx[0] = glm::clamp<int>(tileIdx[0], 0, lightMask->numTilesX - 1);
+                tileIdx[1] = glm::clamp<int>(tileIdx[1], 0, lightMask->numTilesY - 1);
+                ImGui::Spacing();
+
+                constexpr ImGuiTableFlags flags =
+                    ImGuiTableFlags_ScrollX |
+                    ImGuiTableFlags_ScrollY |
+                    ImGuiTableFlags_RowBg |
+                    ImGuiTableFlags_BordersOuter |
+                    ImGuiTableFlags_BordersV |
+                    ImGuiTableFlags_NoHostExtendX;
+
+                constexpr int tileRows = 33;
+                constexpr int tileCols = 32;
+
+                const ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
+                const ImU32 bitSetColor = ImGui::GetColorU32(ImVec4(0.1f, 0.9f, 0.1f, 0.6f));
+                const ImU32 bitNotSetColor = ImGui::GetColorU32(ImVec4(0.9f, 0.1f, 0.1f, 0.6f));
+
+                if (ImGui::BeginTable("Tile Light Mask", tileCols + 1, flags, outer_size)) {
+                    ImGui::TableSetupScrollFreeze(1, 1);
+                    for (int c = 0; c < tileCols + 1; c++) {
+                        switch (c) {
+                        case 0:
+                            ImGui::TableSetupColumn("");
+                            break;
+                        default:
+                            ImGui::TableSetupColumn(
+                                std::to_string(c - 1).c_str(), ImGuiTableColumnFlags_WidthFixed, 12.0f);
+                            break;
+                        }
+                    }
+                    ImGui::TableHeadersRow();
+
+                    for (int row = 0; row < tileRows; row++) {
+                        ImGui::TableNextRow();
+
+                        for (int col = 0; col < tileCols + 1; col++) {
+                            if (!ImGui::TableSetColumnIndex(col) && col > 0)
+                                continue;
+
+                            if (col == 0) {
+                                switch (row) {
+                                case 0:
+                                    ImGui::Text("[Groups]");
+                                    break;
+                                default:
+                                    uint32_t groupIdx = static_cast<uint32_t>(row) - 1u;
+                                    ImGui::Text("[%u, %u]",
+                                        groupIdx * 32, groupIdx * 32 + 31);
+                                }
+                            }
+                            else {
+                                uint32_t tileX = static_cast<uint32_t>(tileIdx[0]);
+                                uint32_t tileY = static_cast<uint32_t>(tileIdx[1]);
+                                if (lightMask->readTileAtIdx(tileX, tileY).isBitSet(col - 1, row)) {
+                                    ImGui::PushStyleColor(ImGuiCol_Text, bitSetColor);
+                                    ImGui::Text("1");
+                                    ImGui::PopStyleColor();
+                                }
+                                else {
+                                    ImGui::PushStyleColor(ImGuiCol_Text, bitNotSetColor);
+                                    ImGui::Text("0");
+                                    ImGui::PopStyleColor();
+                                }
+                            }
+                        }
+                    }
+                    ImGui::EndTable();
+                }
+                ImGui::TreePop();
             }
 
             ImGui::TreePop();
         }
+    }
+
+    void SumiImgui::drawZbinTable(const structs::zBin& zbin) {
+
     }
 
     void SumiImgui::drawTransformUI(Transform3DComponent &transform, bool includeScale) {

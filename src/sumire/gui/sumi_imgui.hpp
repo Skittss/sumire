@@ -48,7 +48,8 @@ namespace sumire {
             void drawStatWindow(
                 FrameInfo &frameInfo, 
                 SumiKBMcontroller &cameraController,
-                const structs::zBin& zBin
+                const structs::zBin& zBin,
+                structs::lightMask* lightMask
             );
 
             ImGuiIO& getIO();
@@ -72,9 +73,14 @@ namespace sumire {
             void drawConfigUI(SumiKBMcontroller &cameraController);
             void drawSceneUI(FrameInfo &frameInfo);
 
-            void drawDebugUI(const structs::zBin& zBin);
+            void drawDebugUI(
+                const structs::zBin& zBin, structs::lightMask* lightMask);
             void drawFrameTimingsSection();
-            void drawHighQualityShadowMappingSection(const structs::zBin& zBin);
+
+            void drawHighQualityShadowMappingSection(
+                const structs::zBin& zBin, structs::lightMask* lightMask);
+            void drawZbinTable(const structs::zBin& zbin);
+            void drawLightMaskTable(structs::lightMask* lightMask);
 
             void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 
