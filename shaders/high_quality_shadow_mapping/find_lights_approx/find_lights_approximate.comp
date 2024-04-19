@@ -1,0 +1,69 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(push_constant) uniform Push {
+	uvec2 tileResolution;
+	uint numZbinSlices;
+	float cameraNear;
+	float cameraFar;
+} push;
+
+#include "../includes/inc_zbin.glsl"
+
+layout(set = 0, binding = 0) buffer ZbinBuffer {
+	zBin zBins[];
+};
+
+#include "../includes/inc_light_mask.glsl"
+
+layout(set = 0, binding = 1) buffer LightMaskBuffer {
+	lightMask lightMasks[];
+};
+
+uint getTileIdx(in uvec2 tileCoord) {
+	return tileCoord.x + tileCoord.y * push.tileResolution.x;
+}
+
+uvec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
+	// Exponential view space mapping to mirror calculation of zBin.
+	// Slice calculation from Tiago Sous' DOOM 2016 Siggraph presentation.
+	//   Interactive graph: https://www.desmos.com/calculator/bf0g6n0hqp.
+	
+	const float logFarNear = log(push.cameraFar / push.cameraNear);
+	const float nSlices = float(push.numZbinSlices);
+	const float sliceFrac1 = nSlices / logFarNear;
+	const float sliceFrac2 = sliceFrac1 * log(push.cameraNear);
+
+	const uvec2 minMaxIdx = uvec2(
+		floor(log(minMaxDepth.x) * sliceFrac1 - sliceFrac2),
+		floor(log(minMaxDepth.y) * sliceFrac1 - sliceFrac2)
+	);
+
+	return minMaxIdx;
+}
+
+void main() {
+	// Two main objectives here:
+	//   - Find potentially valid lights per shadow tile
+	//   - Reserve memory for storage of light lists built in the following phases
+
+	// We only evaluate 1 shadow tile per thread instead of per-pixel
+
+	uvec2 inTileCoord = ivec2(gl_GlobalInvocationID.xy);
+	bool isValidTile = all(lessThan(inTileCoord, push.tileResolution));
+
+	if (isValidTile) {
+		const uint tileIdx = getTileIdx(inTileCoord);
+		//const uvec2 zBinMinMaxIdx = getZbinMinMaxIdx();
+		//const zBin bin = zBins[zBinMinMaxIdx];
+
+		uint tileLightCount = 0;
+	
+		// process valid groups of 32 lights
+
+		// process each light within valid groups
+
+	}
+}
