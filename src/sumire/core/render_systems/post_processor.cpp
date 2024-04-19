@@ -54,7 +54,9 @@ namespace sumire {
 		);
 
 		// If we lock the aspect ratio to 16:9 we can remove these ceils and thus avoid extra work.
-		vkCmdDispatch(commandBuffer, glm::ceil(push.resolution.x / 16), glm::ceil(push.resolution.y / 16), 1);
+		uint32_t groupSizeX = glm::ceil(push.resolution.x / 16.0f);
+		uint32_t groupSizeY = glm::ceil(push.resolution.y / 16.0f);
+		vkCmdDispatch(commandBuffer, groupSizeX, groupSizeY, 1);
 	}
 
 	void PostProcessor::compositeFrame(VkCommandBuffer commandBuffer, uint32_t frameIdx) {
