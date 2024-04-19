@@ -71,11 +71,11 @@ namespace sumire {
 			pipelineConfig);
 	}
 
-	void PointLightRenderSys::render(FrameInfo &frameInfo) {
-		sumiPipeline->bind(frameInfo.commandBuffer);
+	void PointLightRenderSys::render(VkCommandBuffer commandBuffer, FrameInfo &frameInfo) {
+		sumiPipeline->bind(commandBuffer);
 
 		vkCmdBindDescriptorSets(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			pipelineLayout,
 			0, 1,
@@ -85,7 +85,7 @@ namespace sumire {
 
 		uint32_t nLights = static_cast<uint32_t>(frameInfo.lights.size());
 
-		vkCmdDraw(frameInfo.commandBuffer, 6, nLights, 0, 0);
+		vkCmdDraw(commandBuffer, 6, nLights, 0, 0);
 
 	}
 }

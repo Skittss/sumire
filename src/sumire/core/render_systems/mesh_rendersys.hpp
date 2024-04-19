@@ -26,7 +26,7 @@ namespace sumire {
 			MeshRenderSys(const MeshRenderSys&) = delete;
 			MeshRenderSys& operator=(const MeshRenderSys&) = delete;
 
-			void renderObjects(FrameInfo &frameInfo);
+			void renderObjects(VkCommandBuffer commandBuffer, FrameInfo &frameInfo);
 
 		private:
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);

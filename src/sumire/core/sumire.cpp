@@ -60,6 +60,10 @@ namespace sumire {
 		globalDescriptorPool = nullptr; // Clean up pools before device etc are cleaned up.
 	}
 
+	void Sumire::init() {
+
+	}
+
 	void Sumire::run() {
 
 		// --------------------- GLOBAL DESCRIPTORS (SET 0)
@@ -254,7 +258,7 @@ namespace sumire {
 				-1,        // frameIdx
 				frameTime,
 				cumulativeFrameTime,
-				nullptr,   // commandBuffer
+				//nullptr,   // commandBuffer
 				camera,
 				nullptr,   // globalDescriptorSet
 				objects,
@@ -270,7 +274,7 @@ namespace sumire {
 
 				// Fill in rest of frame-specific frameinfo props
 				frameInfo.frameIdx = frameIdx;
-				frameInfo.commandBuffer = frameCommandBuffers.graphics;
+				//frameInfo.commandBuffer = frameCommandBuffers.graphics;
 				frameInfo.globalDescriptorSet = globalDescriptorSets[frameIdx];
 
 				// Populate uniform buffers with data
@@ -326,25 +330,25 @@ namespace sumire {
 				//shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
 
 				// Main scene render pass
-				frameInfo.commandBuffer = frameCommandBuffers.graphics;
+				//frameInfo.commandBuffer = frameCommandBuffers.graphics;
 				sumiRenderer.beginRenderPass(frameCommandBuffers.graphics);
 
 				// Deferred fill subpass
-				deferredMeshRenderSystem.fillGbuffer(frameInfo);
+				deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.graphics, frameInfo);
 
 				sumiRenderer.nextSubpass(frameCommandBuffers.graphics);
 
 				// Deferred resolve subpass
-				deferredMeshRenderSystem.resolveGbuffer(frameInfo);
+				deferredMeshRenderSystem.resolveGbuffer(frameCommandBuffers.graphics, frameInfo);
 
 				sumiRenderer.nextSubpass(frameCommandBuffers.graphics);
 
 				// Forward rendering subpass
-				pointLightSystem.render(frameInfo);
+				pointLightSystem.render(frameCommandBuffers.graphics, frameInfo);
 				
 				if (gui.showGrid && gui.gridOpacity > 0.0f) {
 					auto gridUbo = gui.getGridUboData();
-					gridRenderSystem.render(frameInfo, gridUbo);
+					gridRenderSystem.render(frameCommandBuffers.graphics, frameInfo, gridUbo);
 				}
 				
 				sumiRenderer.endRenderPass(frameCommandBuffers.graphics);

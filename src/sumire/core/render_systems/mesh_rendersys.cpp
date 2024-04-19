@@ -136,10 +136,10 @@ namespace sumire {
 		}
 	}
 
-	void MeshRenderSys::renderObjects(FrameInfo &frameInfo) {
+	void MeshRenderSys::renderObjects(VkCommandBuffer commandBuffer, FrameInfo &frameInfo) {
 
 		vkCmdBindDescriptorSets(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			pipelineLayout,
 			0, 1,
@@ -158,7 +158,7 @@ namespace sumire {
 			push.normalMatrix = obj.transform.normalMatrix();
 
 			vkCmdPushConstants(
-				frameInfo.commandBuffer, 
+				commandBuffer, 
 				pipelineLayout,
 				VK_SHADER_STAGE_VERTEX_BIT,
 				0,
@@ -177,8 +177,8 @@ namespace sumire {
 			}
 			
 			// SumiModel handles the binding of descriptor sets 1-3 and frag push constants
-			obj.model->bind(frameInfo.commandBuffer);
-			obj.model->draw(frameInfo.commandBuffer, pipelineLayout, pipelines);
+			obj.model->bind(commandBuffer);
+			obj.model->draw(commandBuffer, pipelineLayout, pipelines);
 		}
 	}
 }

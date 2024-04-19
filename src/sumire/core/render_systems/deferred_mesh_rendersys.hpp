@@ -29,8 +29,8 @@ namespace sumire {
 			DeferredMeshRenderSys(const DeferredMeshRenderSys&) = delete;
 			DeferredMeshRenderSys& operator=(const DeferredMeshRenderSys&) = delete;
 
-			void fillGbuffer(FrameInfo &frameInfo);
-			void resolveGbuffer(FrameInfo &frameInfo);
+			void fillGbuffer(VkCommandBuffer commandBuffer, FrameInfo &frameInfo);
+			void resolveGbuffer(VkCommandBuffer commandBuffer, FrameInfo &frameInfo);
 
 			void updateResolveDescriptors(SumiGbuffer* gbuffer);
 

@@ -12,7 +12,6 @@ namespace sumire {
         int frameIdx;
         float frameTime;
         float cumulativeFrameTime;
-        VkCommandBuffer commandBuffer;
         SumiCamera &camera;
         VkDescriptorSet globalDescriptorSet;
         SumiObject::Map &objects;

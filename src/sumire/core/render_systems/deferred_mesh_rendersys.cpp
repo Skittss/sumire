@@ -296,16 +296,16 @@ namespace sumire {
 		);
 	}
 
-	void DeferredMeshRenderSys::resolveGbuffer(FrameInfo &frameInfo) {
+	void DeferredMeshRenderSys::resolveGbuffer(VkCommandBuffer commandBuffer, FrameInfo &frameInfo) {
 
 		// Bind composite pipeline
-		resolvePipeline->bind(frameInfo.commandBuffer);
+		resolvePipeline->bind(commandBuffer);
 
 		structs::CompositePushConstantData push{};
 		push.nLights = 1;
 
 		vkCmdPushConstants(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			resolvePipelineLayout,
 			VK_SHADER_STAGE_FRAGMENT_BIT,
 			0,
@@ -320,7 +320,7 @@ namespace sumire {
 
 		// Bind descriptor sets (Gbuffer)
 		vkCmdBindDescriptorSets(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			resolvePipelineLayout,
 			0, static_cast<uint32_t>(resolveDescriptors.size()),
@@ -329,13 +329,13 @@ namespace sumire {
 		);
 
 		// Composite with a FS quad
-		vkCmdDraw(frameInfo.commandBuffer, 3, 1, 0, 0);
+		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 	}
 
-	void DeferredMeshRenderSys::fillGbuffer(FrameInfo &frameInfo) {
+	void DeferredMeshRenderSys::fillGbuffer(VkCommandBuffer commandBuffer, FrameInfo &frameInfo) {
 
 		vkCmdBindDescriptorSets(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			pipelineLayout,
 			0, 1,
@@ -354,7 +354,7 @@ namespace sumire {
 			push.normalMatrix = obj.transform.normalMatrix();
 
 			vkCmdPushConstants(
-				frameInfo.commandBuffer, 
+				commandBuffer, 
 				pipelineLayout,
 				VK_SHADER_STAGE_VERTEX_BIT,
 				0,
@@ -373,9 +373,9 @@ namespace sumire {
 			}
 			
 			// SumiModel handles the binding of descriptor sets 1-3 and frag push constants
-			obj.model->bind(frameInfo.commandBuffer);
+			obj.model->bind(commandBuffer);
 			// Each draw command may need a different pipeline, so the model draw binds pipelines at call time.
-			obj.model->draw(frameInfo.commandBuffer, pipelineLayout, pipelines);
+			obj.model->draw(commandBuffer, pipelineLayout, pipelines);
 		}
 	}
 }

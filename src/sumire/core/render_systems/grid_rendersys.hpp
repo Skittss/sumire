@@ -49,7 +49,11 @@ namespace sumire {
 			GridRendersys(const GridRendersys&) = delete;
 			GridRendersys& operator=(const GridRendersys&) = delete;
 
-			void render(FrameInfo &frameInfo, GridRendersys::GridUBOdata &uniforms);
+			void render(
+				VkCommandBuffer commandBuffer, 
+				FrameInfo &frameInfo, 
+				GridRendersys::GridUBOdata &uniforms
+			);
 
 		private:
 			void createGridQuadBuffers();

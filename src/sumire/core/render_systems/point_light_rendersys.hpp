@@ -24,7 +24,7 @@ namespace sumire {
 			PointLightRenderSys(const PointLightRenderSys&) = delete;
 			PointLightRenderSys& operator=(const PointLightRenderSys&) = delete;
 
-			void render(FrameInfo &frameInfo);
+			void render(VkCommandBuffer commandBuffer, FrameInfo &frameInfo);
 
 		private:
 			void createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout);

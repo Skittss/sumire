@@ -208,8 +208,12 @@ namespace sumire {
 		vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	}
 
-	void GridRendersys::render(FrameInfo &frameInfo, GridRendersys::GridUBOdata &uniforms) {
-		sumiPipeline->bind(frameInfo.commandBuffer);
+	void GridRendersys::render(
+		VkCommandBuffer commandBuffer, 
+		FrameInfo &frameInfo,
+		GridRendersys::GridUBOdata &uniforms
+	) {
+		sumiPipeline->bind(commandBuffer);
 
 		std::vector<VkDescriptorSet> frameDescriptorSets{
 			frameInfo.globalDescriptorSet,
@@ -218,7 +222,7 @@ namespace sumire {
 
 		// descriptors
 		vkCmdBindDescriptorSets(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			pipelineLayout,
 			0, 2,
@@ -234,7 +238,7 @@ namespace sumire {
 		vertPush.modelMatrix = glm::mat4{1.0f}; // identity
 
 		vkCmdPushConstants(
-			frameInfo.commandBuffer, 
+			commandBuffer,
 			pipelineLayout,
 			VK_SHADER_STAGE_VERTEX_BIT,
 			0,
@@ -247,7 +251,7 @@ namespace sumire {
 		fragPush.majorLineThickness = 0.02f;
 
 		vkCmdPushConstants(
-			frameInfo.commandBuffer, 
+			commandBuffer,
 			pipelineLayout,
 			VK_SHADER_STAGE_FRAGMENT_BIT,
 			sizeof(structs::GridVertPushConstantData),
@@ -256,7 +260,7 @@ namespace sumire {
 		);
 
 		// bind & draw grid quad
-		bindGridQuadBuffers(frameInfo.commandBuffer);
-		vkCmdDrawIndexed(frameInfo.commandBuffer, 6, 1, 0, 0, 0);
+		bindGridQuadBuffers(commandBuffer);
+		vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
 	}
 }

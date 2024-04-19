@@ -17,16 +17,17 @@ namespace sumire {
 
 	class Sumire {
 	public:
-		uint32_t screenWidth  = config::STARTUP_WIDTH;
-		uint32_t screenHeight = config::STARTUP_HEIGHT;
-
-		void run();
-
 		Sumire();
 		~Sumire();
 
 		Sumire(const Sumire&) = delete;
 		Sumire& operator=(const Sumire&) = delete;
+
+		uint32_t screenWidth  = config::STARTUP_WIDTH;
+		uint32_t screenHeight = config::STARTUP_HEIGHT;
+
+		void init();
+		void run();
 
 	private:
 		void loadObjects();
@@ -41,6 +42,7 @@ namespace sumire {
 		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice };
 
 		std::unique_ptr<SumiDescriptorPool> globalDescriptorPool{};
+
 		SumiObject::Map objects;
 		SumiLight::Map lights;
 	};
