@@ -66,6 +66,7 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
     - [ ] Pipeline bind caching may have to be updated to accommodate more complex queue family ecosystem
     - [ ] Compute -> Fragment interleaving needs profiling to ensure it's working correctly. (Cannot test on my Pascal GPU)
 - [X] Compute-based post-processing dispatch.
+- [ ] Pre-draw compute needs to be ring-buffered or better synchroinzed.
 - [ ] High quality deferred shadows (modification on cascaded shadow maps) via compute.
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
