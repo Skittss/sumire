@@ -41,7 +41,14 @@ namespace sumire {
 		SumiDevice sumiDevice{ sumiWindow };
 		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice };
 
-		std::unique_ptr<SumiDescriptorPool> globalDescriptorPool{};
+		// Global descriptors and buffers
+		std::unique_ptr<SumiDescriptorPool> globalDescriptorPool;
+		std::unique_ptr<SumiDescriptorSetLayout> globalDescriptorSetLayout;
+		std::vector<VkDescriptorSet> globalDescriptorSets{};
+
+		std::vector<std::unique_ptr<SumiBuffer>> globalUniformBuffers;
+		std::vector<std::unique_ptr<SumiBuffer>> cameraUniformBuffers;
+		std::unique_ptr<SumiBuffer> lightSSBO;
 
 		SumiObject::Map objects;
 		SumiLight::Map lights;

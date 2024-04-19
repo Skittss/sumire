@@ -52,6 +52,7 @@ namespace sumire {
 			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1) // Light SSBO
 			.build();
 
+		init();
 		loadObjects();
 		loadLights();
 	}
@@ -61,17 +62,12 @@ namespace sumire {
 	}
 
 	void Sumire::init() {
-
-	}
-
-	void Sumire::run() {
-
 		// --------------------- GLOBAL DESCRIPTORS (SET 0)
 		// Uniform Buffers
-		std::vector<std::unique_ptr<SumiBuffer>> globalUniformBuffers(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		std::vector<std::unique_ptr<SumiBuffer>> cameraUniformBuffers(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		globalUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		cameraUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 		for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
-			
+
 			// Global uniforms
 			globalUniformBuffers[i] = std::make_unique<SumiBuffer>(
 				sumiDevice,
@@ -94,7 +90,7 @@ namespace sumire {
 		}
 
 		// Light SSBO
-		std::unique_ptr<SumiBuffer> lightSSBO = std::make_unique<SumiBuffer>(
+		lightSSBO = std::make_unique<SumiBuffer>(
 			sumiDevice,
 			config::MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
 			1,
@@ -104,14 +100,14 @@ namespace sumire {
 		lightSSBO->map();
 
 		// Layout
-		auto globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+		globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
 			.addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
 			.addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
 			.build();
 
 		// Write Descriptor Sets
-		std::vector<VkDescriptorSet> globalDescriptorSets(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		globalDescriptorSets = std::vector<VkDescriptorSet>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 		for (int i = 0; i < globalDescriptorSets.size(); i++) {
 			auto globalBufferInfo = globalUniformBuffers[i]->descriptorInfo();
 			auto cameraBufferInfo = cameraUniformBuffers[i]->descriptorInfo();
@@ -122,6 +118,9 @@ namespace sumire {
 				.writeBuffer(2, &lightSSBOinfo)
 				.build(globalDescriptorSets[i]);
 		}
+	}
+
+	void Sumire::run() {
 
 		// Render Systems
 		MeshRenderSys meshRenderSystem{
@@ -258,7 +257,6 @@ namespace sumire {
 				-1,        // frameIdx
 				frameTime,
 				cumulativeFrameTime,
-				//nullptr,   // commandBuffer
 				camera,
 				nullptr,   // globalDescriptorSet
 				objects,
