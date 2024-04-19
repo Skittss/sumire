@@ -1,8 +1,11 @@
 #include <sumire/core/render_systems/high_quality_shadow_mapper.hpp>
 
 #include <sumire/math/view_space_depth.hpp>
+#include <sumire/util/vk_check_success.hpp>
+#include <sumire/util/sumire_engine_path.hpp>
 
 #include <algorithm>
+#include <array>
 
 // debug
 #include <glm/gtx/string_cast.hpp>
@@ -11,15 +14,25 @@
 namespace sumire {
 
 	HighQualityShadowMapper::HighQualityShadowMapper(
-		const uint32_t screenWidth, const uint32_t screenHeight
-	) : screenWidth{ screenWidth }, 
+		SumiDevice &device,
+		const uint32_t screenWidth, 
+		const uint32_t screenHeight
+	) : sumiDevice{ device },
+		screenWidth{ screenWidth }, 
 		screenHeight{ screenHeight }, 
 		zBin{ NUM_SLICES }
 	{
 		lightMask = std::make_unique<structs::lightMask>(screenWidth, screenHeight);
+
+		initDescriptorLayouts();
+
+		initPreparePhase();
+		initLightsApproxPhase();
 	}
 
-	HighQualityShadowMapper::~HighQualityShadowMapper() {}
+	HighQualityShadowMapper::~HighQualityShadowMapper() {
+		vkDestroyPipelineLayout(sumiDevice.device(), findLightsApproxPipelineLayout, nullptr);
+	}
 
 	std::vector<structs::viewSpaceLight> HighQualityShadowMapper::sortLightsByViewSpaceDepth(
 		SumiLight::Map& lights,
@@ -58,7 +71,10 @@ namespace sumire {
 	void HighQualityShadowMapper::updateScreenBounds(uint32_t width, uint32_t height) {
 		screenWidth = width;
 		screenHeight = height;
+
 		lightMask = std::make_unique<structs::lightMask>(screenWidth, screenHeight);
+		createLightMaskBuffer();
+		updateLightsApproxDescriptorSet();
 	}
 
 	void HighQualityShadowMapper::prepare(
@@ -70,7 +86,76 @@ namespace sumire {
 		// We end up doing this preparation step on the CPU as the light list needs
 		//  to be view-depth sorted prior to zBin and light mask generation for memory reduction.
 		generateZbin(lights, near, far, view);
-		generateLightMaskBuffer(lights, projection);
+		writeZbinBuffer();
+		generateLightMask(lights, projection);
+		writeLightMaskBuffer();
+	}
+
+	void HighQualityShadowMapper::findLightsApproximate(
+		VkCommandBuffer commandBuffer,
+		float near, float far
+	) {
+		findLightsApproxPipeline->bind(commandBuffer);
+
+		structs::findLightsApproxPush push{};
+		push.tileResolution = glm::uvec2(lightMask->numTilesX, lightMask->numTilesY);
+		push.numZbinSlices = NUM_SLICES;
+		push.cameraNear = glm::float32(near);
+		push.cameraFar = glm::float32(far);
+
+		vkCmdPushConstants(
+			commandBuffer,
+			findLightsApproxPipelineLayout,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+			0,
+			sizeof(structs::findLightsApproxPush),
+			&push
+		);
+
+		std::array<VkDescriptorSet, 1> descriptors{
+			lightsApproxDescriptorSet
+		};
+
+		vkCmdBindDescriptorSets(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_COMPUTE,
+			findLightsApproxPipelineLayout,
+			0, static_cast<uint32_t>(descriptors.size()),
+			descriptors.data(),
+			0, nullptr
+		);
+
+		uint32_t groupCountX = glm::ceil<uint32_t>(screenWidth / 8.0f);
+		uint32_t groupCountY = glm::ceil<uint32_t>(screenHeight / 8.0f);
+		vkCmdDispatch(commandBuffer, groupCountX, groupCountY, 1u);
+	}
+
+	void HighQualityShadowMapper::initPreparePhase() {
+		createZbinBuffer();
+		createLightMaskBuffer();
+	}
+
+	void HighQualityShadowMapper::createZbinBuffer() {
+		zBinBuffer = std::make_unique<SumiBuffer>(
+			sumiDevice,
+			NUM_SLICES * sizeof(structs::zBinData),
+			1,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+		);
+		zBinBuffer->map();
+	}
+
+	void HighQualityShadowMapper::createLightMaskBuffer() {
+		uint32_t nTiles = lightMask->numTilesX * lightMask->numTilesY;
+		lightMaskBuffer = std::make_unique<SumiBuffer>(
+			sumiDevice,
+			nTiles * sizeof(structs::lightMaskTile),
+			1,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+		);
+		lightMaskBuffer->map();
 	}
 
 	void HighQualityShadowMapper::generateZbin(
@@ -87,6 +172,7 @@ namespace sumire {
 		const float sliceFrac1 = static_cast<float>(NUM_SLICES) / logFarNear;
 		const float sliceFrac2 = static_cast<float>(NUM_SLICES) * glm::log(near) / logFarNear;
 
+		// Fill standard zBin
 		uint32_t lastLightIdx = static_cast<uint32_t>(lights.size()) - 1u;
 		for (size_t i = 0; i <= lastLightIdx; i++) {
 			float minZ = lights[i].minDepth;
@@ -107,7 +193,6 @@ namespace sumire {
 				zBin.maxLight = static_cast<int>(i);
 			}
 
-			// Fill standard zBin values
 			for (int j = minSlice; j <= maxSlice; j++) {
 				// Disregard lights out of zBin range (either behind near plane or beyond far plane)
  				if (j < 0 || j >= NUM_SLICES) continue;
@@ -200,7 +285,12 @@ namespace sumire {
 		}
 	}
 
-	void HighQualityShadowMapper::generateLightMaskBuffer(
+	void HighQualityShadowMapper::writeZbinBuffer() {
+		zBinBuffer->writeToBuffer(zBin.data.data());
+		zBinBuffer->flush();
+	}
+
+	void HighQualityShadowMapper::generateLightMask(
 		const std::vector<structs::viewSpaceLight>& lights,
 		const glm::mat4& projection
 	) {
@@ -235,5 +325,96 @@ namespace sumire {
 			structs::lightMaskTile& tile = lightMask->tileAtIdx(tileIdx_x, tileIdx_y);
 			tile.setLightBit(i);
 		}
+	}
+
+	void HighQualityShadowMapper::writeLightMaskBuffer() {
+		lightMaskBuffer->writeToBuffer((void *)lightMask->tiles.data());
+		lightMaskBuffer->flush();
+	}
+
+	void HighQualityShadowMapper::initDescriptorLayouts() {
+		descriptorPool = SumiDescriptorPool::Builder(sumiDevice)
+			.setMaxSets(2)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2)
+			.build();
+
+		lightsApproxDescriptorLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+			.addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+			.build();
+	}
+
+	void HighQualityShadowMapper::initLightsApproxPhase() {
+		//createLightsApproxUniformBuffer();
+		initLightsApproxDescriptorSet();
+		initLightsApproxPipeline();
+	}
+
+	//void HighQualityShadowMapper::createLightsApproxUniformBuffer() {
+	//	zBinBuffer = std::make_unique<SumiBuffer>(
+	//		sumiDevice,
+	//		sizeof(structs::findLightsApproxUniforms),
+	//		1,
+	//		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+	//		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+	//	);
+	//	zBinBuffer->map();
+	//}
+
+	void HighQualityShadowMapper::initLightsApproxDescriptorSet() {
+		assert(zBinBuffer != nullptr && "Cannot instantiate descriptor set with null zbin buffer");
+		assert(lightMaskBuffer != nullptr && "Cannot instantiate descriptor set with null light mask buffer");
+
+		VkDescriptorBufferInfo zbinInfo = zBinBuffer->descriptorInfo();
+		VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
+
+		SumiDescriptorWriter(*lightsApproxDescriptorLayout, *descriptorPool)
+			.writeBuffer(0, &zbinInfo)
+			.writeBuffer(1, &lightMaskInfo)
+			.build(lightsApproxDescriptorSet);
+	}
+
+	void HighQualityShadowMapper::updateLightsApproxDescriptorSet() {
+		assert(lightMaskBuffer != nullptr && "Cannot update descriptor set with null light mask buffer");
+
+		VkDescriptorBufferInfo zbinInfo = zBinBuffer->descriptorInfo();
+		VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
+
+		SumiDescriptorWriter(*lightsApproxDescriptorLayout, *descriptorPool)
+			.writeBuffer(0, &zbinInfo)
+			.writeBuffer(1, &lightMaskInfo)
+			.overwrite(lightsApproxDescriptorSet);
+	}
+
+	void HighQualityShadowMapper::initLightsApproxPipeline() {
+
+		VkPushConstantRange pushRange{};
+		pushRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		pushRange.offset = 0;
+		pushRange.size = sizeof(structs::findLightsApproxPush);
+
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{
+			lightsApproxDescriptorLayout->getDescriptorSetLayout()
+		};
+
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges = &pushRange;
+
+		VK_CHECK_SUCCESS(
+			vkCreatePipelineLayout(
+				sumiDevice.device(), &pipelineLayoutInfo, nullptr, &findLightsApproxPipelineLayout),
+			"[Sumire::HighQualityShadowMapper] Failed to create lights approx pipeline layout (Phase 1)."
+		);
+
+		findLightsApproxPipeline = std::make_unique<SumiComputePipeline>(
+			sumiDevice,
+			SUMIRE_ENGINE_PATH(
+				"shaders/high_quality_shadow_mapping/find_lights_approx/find_lights_approximate.comp.spv"),
+			findLightsApproxPipelineLayout
+		);
 	}
 }
