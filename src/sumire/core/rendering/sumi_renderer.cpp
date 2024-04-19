@@ -113,6 +113,20 @@ namespace sumire {
 	void SumiRenderer::createCommandBuffers() {
 		// 1-to-1 relationship on command buffers -> frame buffers.
 
+		// Pre-draw compute command buffers
+		predrawComputeCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+
+		VkCommandBufferAllocateInfo predrawComputeAllocInfo{};
+		predrawComputeAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		predrawComputeAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		predrawComputeAllocInfo.commandPool = sumiDevice.getComputeCommandPool();
+		predrawComputeAllocInfo.commandBufferCount = static_cast<uint32_t>(predrawComputeCommandBuffers.size());
+
+		VK_CHECK_SUCCESS(
+			vkAllocateCommandBuffers(sumiDevice.device(), &predrawComputeAllocInfo, predrawComputeCommandBuffers.data()),
+			"[Sumire::SumiRenderer] Failed to allocate post command buffers."
+		);
+
 		// Graphics Command Buffers
 		graphicsCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 
@@ -157,9 +171,18 @@ namespace sumire {
 	}
 
 	void SumiRenderer::freeCommandBuffers() {
+		VkCommandPool predrawComputeCommandPool = sumiDevice.getComputeCommandPool();
 		VkCommandPool graphicsCommandPool = sumiDevice.getGraphicsCommandPool();
 		VkCommandPool presentCommandPool = sumiDevice.getPresentCommandPool();
 		VkCommandPool computeCommandPool = sumiDevice.getComputeCommandPool();
+
+		vkFreeCommandBuffers(
+			sumiDevice.device(),
+			predrawComputeCommandPool,
+			static_cast<uint32_t>(predrawComputeCommandBuffers.size()),
+			predrawComputeCommandBuffers.data()
+		);
+		predrawComputeCommandBuffers.clear();
 
 		vkFreeCommandBuffers(
 			sumiDevice.device(),
@@ -187,19 +210,24 @@ namespace sumire {
 	}
 
 	void SumiRenderer::createSyncObjects() {
+		predrawComputeFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 		graphicsFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		computeFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		postComputeFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 		for (uint32_t i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
 			VK_CHECK_SUCCESS(
+				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &predrawComputeFinishedSemaphores[i]),
+				"[Sumire::SumiRenderer] Failed to create graphics signaling semaphores."
+			);
+			VK_CHECK_SUCCESS(
 				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &graphicsFinishedSemaphores[i]),
 				"[Sumire::SumiRenderer] Failed to create graphics signaling semaphores."
 			);
 			VK_CHECK_SUCCESS(
-				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &computeFinishedSemaphores[i]),
+				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &postComputeFinishedSemaphores[i]),
 				"[Sumire::SumiRenderer] Failed to create compute signaling semaphores."
 			);
 		}
@@ -207,10 +235,13 @@ namespace sumire {
 	}
 
 	void SumiRenderer::freeSyncObjects() {
+		for (auto& semaphore : predrawComputeFinishedSemaphores) {
+			vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
+		}
 		for (auto& semaphore : graphicsFinishedSemaphores) {
 			vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
 		}
-		for (auto& semaphore : computeFinishedSemaphores) {
+		for (auto& semaphore : postComputeFinishedSemaphores) {
 			vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
 		}
 	}
@@ -518,6 +549,7 @@ namespace sumire {
 		assert(isFrameStarted && "Failed to get command buffers - no frame in flight.");
 
 		FrameCommandBuffers frameCommandBuffers{};
+		frameCommandBuffers.predrawCompute = predrawComputeCommandBuffers[currentFrameIdx];
 		frameCommandBuffers.graphics = graphicsCommandBuffers[currentFrameIdx];
 		frameCommandBuffers.compute = computeCommandBuffers[currentFrameIdx];
 		frameCommandBuffers.present = presentCommandBuffers[currentFrameIdx];
@@ -551,6 +583,10 @@ namespace sumire {
 		FrameCommandBuffers frameCommandBuffers = getCurrentCommandBuffers();
 
 		VK_CHECK_SUCCESS(
+			vkBeginCommandBuffer(frameCommandBuffers.predrawCompute, &beginInfo),
+			"[Sumire::SumiRenderer] Failed to begin recording of pre-draw compute command buffer."
+		);
+		VK_CHECK_SUCCESS(
 			vkBeginCommandBuffer(frameCommandBuffers.graphics, &beginInfo),
 			"[Sumire::SumiRenderer] Failed to begin recording of graphics command buffer."
 		);
@@ -574,6 +610,10 @@ namespace sumire {
 		FrameCommandBuffers frameCommandBuffers = getCurrentCommandBuffers();
 
 		VK_CHECK_SUCCESS(
+			vkEndCommandBuffer(frameCommandBuffers.predrawCompute),
+			"[Sumire::SumiRenderer] Failed to end recording of pre-draw compute command buffer."
+		);
+		VK_CHECK_SUCCESS(
 			vkEndCommandBuffer(frameCommandBuffers.graphics),
 			"[Sumire::SumiRenderer] Failed to end recording of graphics command buffer."
 		);
@@ -589,19 +629,9 @@ namespace sumire {
 		// Semaphores for this frame
 		VkSemaphore frameAvailable = sumiSwapChain->getImageAvailableSemaphore(currentFrameIdx);
 		VkSemaphore renderFinished = sumiSwapChain->getRenderFinishedSemaphore(currentFrameIdx);
+		VkSemaphore preComputeFinished = predrawComputeFinishedSemaphores[currentFrameIdx];
 		VkSemaphore graphicsFinished = graphicsFinishedSemaphores[currentFrameIdx];
-		VkSemaphore computeFinished = computeFinishedSemaphores[currentFrameIdx];
-
-		VkPipelineStageFlags graphicsWaitStageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		VkSubmitInfo sceneSubmitInfo{};
-		sceneSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		sceneSubmitInfo.commandBufferCount = 1;
-		sceneSubmitInfo.pCommandBuffers = &frameCommandBuffers.graphics;
-		sceneSubmitInfo.waitSemaphoreCount = 1;
-		sceneSubmitInfo.pWaitSemaphores = &frameAvailable;
-		sceneSubmitInfo.pWaitDstStageMask = &graphicsWaitStageFlag;
-		sceneSubmitInfo.signalSemaphoreCount = 1;
-		sceneSubmitInfo.pSignalSemaphores = &graphicsFinished;
+		VkSemaphore postComputeFinished = postComputeFinishedSemaphores[currentFrameIdx];
 
 		// If this frame is in flight, we must wait for it to finish before submitting more work,
 		//  else we will end up with a work backlog / compute multiple batches once the semaphore signals
@@ -618,26 +648,59 @@ namespace sumire {
 		
 		// Reset fence pending queue submission.
 		vkResetFences(sumiDevice.device(), 1, &frameInFlightFence);
+
+		// Submit pre-draw compute work
+		// TODO: Check whether submitted to the async compute queue has any negative effect on post-compute.
+		// TODO: If above comment is fine, we can combine the submits for pre and post compute to one 
+		//         vkQueueSubmit call.
+		VkPipelineStageFlags preComputeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		VkSubmitInfo preComputeSubmitInfo{};
+		preComputeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		preComputeSubmitInfo.commandBufferCount = 1;
+		preComputeSubmitInfo.pCommandBuffers = &frameCommandBuffers.predrawCompute;
+		preComputeSubmitInfo.waitSemaphoreCount = 1;
+		preComputeSubmitInfo.pWaitSemaphores = &frameAvailable;
+		preComputeSubmitInfo.pWaitDstStageMask = &preComputeWaitStageFlag;
+		preComputeSubmitInfo.signalSemaphoreCount = 1;
+		preComputeSubmitInfo.pSignalSemaphores = &preComputeFinished;
+
 		VK_CHECK_SUCCESS(
-			vkQueueSubmit(sumiDevice.graphicsQueue(), 1, &sceneSubmitInfo, nullptr),
+			vkQueueSubmit(sumiDevice.computeQueue(), 1, &preComputeSubmitInfo, nullptr),
+			"[Sumire::SumiRenderer] Could not submit pre-draw compute command buffer."
+		);
+
+		// Submit main graphics work
+		VkPipelineStageFlags graphicsWaitStageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		VkSubmitInfo graphicsSubmitInfo{};
+		graphicsSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		graphicsSubmitInfo.commandBufferCount = 1;
+		graphicsSubmitInfo.pCommandBuffers = &frameCommandBuffers.graphics;
+		graphicsSubmitInfo.waitSemaphoreCount = 1;
+		graphicsSubmitInfo.pWaitSemaphores = &preComputeFinished;
+		graphicsSubmitInfo.pWaitDstStageMask = &graphicsWaitStageFlag;
+		graphicsSubmitInfo.signalSemaphoreCount = 1;
+		graphicsSubmitInfo.pSignalSemaphores = &graphicsFinished;
+
+		VK_CHECK_SUCCESS(
+			vkQueueSubmit(sumiDevice.graphicsQueue(), 1, &graphicsSubmitInfo, nullptr),
 			"[Sumire::SumiRenderer] Could not submit graphics command buffer."
 		);
 
 		// Submit post compute work
-		VkPipelineStageFlags computeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		VkPipelineStageFlags postComputeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 		VkSubmitInfo postComputeSubmitInfo{};
 		postComputeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		postComputeSubmitInfo.commandBufferCount = 1;
 		postComputeSubmitInfo.pCommandBuffers = &frameCommandBuffers.compute;
 		postComputeSubmitInfo.waitSemaphoreCount = 1;
 		postComputeSubmitInfo.pWaitSemaphores = &graphicsFinished;
-		postComputeSubmitInfo.pWaitDstStageMask = &computeWaitStageFlag;
+		postComputeSubmitInfo.pWaitDstStageMask = &postComputeWaitStageFlag;
 		postComputeSubmitInfo.signalSemaphoreCount = 1;
-		postComputeSubmitInfo.pSignalSemaphores = &computeFinished;
+		postComputeSubmitInfo.pSignalSemaphores = &postComputeFinished;
 
 		VK_CHECK_SUCCESS(
 			vkQueueSubmit(sumiDevice.computeQueue(), 1, &postComputeSubmitInfo, nullptr),
-			"[Sumire::SumiRenderer] Could not submit compute command buffer."
+			"[Sumire::SumiRenderer] Could not submit post compute command buffer."
 		);
 
 		// Submit present composite work
@@ -647,7 +710,7 @@ namespace sumire {
 		compositeSubmitInfo.commandBufferCount = 1;
 		compositeSubmitInfo.pCommandBuffers = &frameCommandBuffers.present;
 		compositeSubmitInfo.waitSemaphoreCount = 1;
-		compositeSubmitInfo.pWaitSemaphores = &computeFinished;
+		compositeSubmitInfo.pWaitSemaphores = &postComputeFinished;
 		compositeSubmitInfo.pWaitDstStageMask = &compositeWaitStageFlag;
 		compositeSubmitInfo.signalSemaphoreCount = 1;
 		compositeSubmitInfo.pSignalSemaphores = &renderFinished;

@@ -24,12 +24,13 @@ namespace sumire {
         SumiDevice& getDevice() const { return sumiDevice; }
 
         struct FrameCommandBuffers {
+            VkCommandBuffer predrawCompute = VK_NULL_HANDLE;
             VkCommandBuffer graphics = VK_NULL_HANDLE;
             VkCommandBuffer compute = VK_NULL_HANDLE;
             VkCommandBuffer present = VK_NULL_HANDLE;
 
             bool validFrame() const {
-                return (graphics && compute && present);
+                return (predrawCompute && graphics && compute && present);
             }
         };
 
@@ -98,8 +99,9 @@ namespace sumire {
 		SumiWindow& sumiWindow;
 		SumiDevice& sumiDevice;
 
+        std::vector<VkSemaphore> predrawComputeFinishedSemaphores;
         std::vector<VkSemaphore> graphicsFinishedSemaphores;
-        std::vector<VkSemaphore> computeFinishedSemaphores;
+        std::vector<VkSemaphore> postComputeFinishedSemaphores;
 
         // Graphics render pass
         uint32_t currentSubpass = 0;
@@ -109,6 +111,7 @@ namespace sumire {
         VkRenderPass compositionRenderPass = VK_NULL_HANDLE;
 
         // Command buffers
+        std::vector<VkCommandBuffer> predrawComputeCommandBuffers;
 		std::vector<VkCommandBuffer> graphicsCommandBuffers;
         std::vector<VkCommandBuffer> computeCommandBuffers;
         std::vector<VkCommandBuffer> presentCommandBuffers;

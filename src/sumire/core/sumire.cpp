@@ -306,7 +306,7 @@ namespace sumire {
 				lightSSBO->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
 				lightSSBO->flush();
 
-				// Shadow mapping preparation
+				// Shadow mapping preparation on the CPU
 				//  TODO: Only re-prepare if lights / camera view have changed.
 				shadowMapper.prepare(
 					sortedLights,
@@ -314,6 +314,16 @@ namespace sumire {
 					cameraUbo.viewMatrix,
 					cameraUbo.projectionMatrix
 				);
+				
+				// Pre-draw compute dispatches
+				// Shadow mapping
+				shadowMapper.findLightsApproximate(
+					frameCommandBuffers.predrawCompute, 
+					camera.getNear(), camera.getFar()
+				);
+				//shadowMapper.findLightsAccurate(frameCommandBuffers.predrawCompute);
+				//shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.predrawCompute);
+				//shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
 
 				// Main scene render pass
 				frameInfo.commandBuffer = frameCommandBuffers.graphics;
