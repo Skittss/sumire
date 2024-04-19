@@ -92,7 +92,7 @@ namespace sumire {
 		// Light SSBO
 		std::unique_ptr<SumiBuffer> lightSSBO = std::make_unique<SumiBuffer>(
 			sumiDevice,
-			MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
+			config::MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
 			1,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -137,7 +137,10 @@ namespace sumire {
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
 
-		HighQualityShadowMapper shadowMapper{screenWidth, screenHeight};
+		HighQualityShadowMapper shadowMapper{
+			sumiDevice,
+			screenWidth, screenHeight
+		};
 
 		PostProcessor postProcessor{
 			sumiDevice,

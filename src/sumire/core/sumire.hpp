@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sumire/core/sumire_config.hpp>
+
 #include <sumire/core/windowing/sumi_window.hpp>
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 #include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
@@ -15,12 +17,8 @@ namespace sumire {
 
 	class Sumire {
 	public:
-		static constexpr uint32_t STARTUP_WIDTH = 1920u;
-		static constexpr uint32_t STARTUP_HEIGHT = 1080u;
-		static constexpr uint32_t MAX_N_LIGHTS = 1024u;
-
-		uint32_t screenWidth  = STARTUP_WIDTH;
-		uint32_t screenHeight = STARTUP_HEIGHT;
+		uint32_t screenWidth  = config::STARTUP_WIDTH;
+		uint32_t screenHeight = config::STARTUP_HEIGHT;
 
 		void run();
 
