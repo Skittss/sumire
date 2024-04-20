@@ -10,15 +10,23 @@ A lightweight graphics development engine built in vulkan.
 
 - Use the provided CMake template `env_template_win.cmake` (Windows) / `env_template_unix.cmake` (Linux) to create a CMake environment: `.env.cmake`.
 
-- Install Vulkan, GLFW and GLM to directories of your choice, and specify their paths in `.env.cmake` as shown
-in the template.
+- Install Vulkan, GLFW and GLM to directories of your choice, and specify their paths in `.env.cmake`:
+```cmake
+set(GLFW_PATH       "<YOUR PATH HERE>")
+set(GLM_PATH        "<YOUR PATH HERE>")
+set(VULKAN_SDK_PATH "<YOUR PATH HERE>")
+```
 
-- If you are using a standalone C++ compiler (e.g. MinGW) you must also specify its path in `.env.cmake`
+- If you are using a standalone C++ compiler (e.g. MinGW) you must also specify its path in `.env.cmake`. E.g.:
+```cmake
+set(MINGW_PATH "<YOUR PATH HERE>")
+```
 
 ## Building
 A number of build scripts are provided which build the project via CMake. 
 
-Only windows scripts are tested, of which building to a MSVC solution is recommended via running `build_win_msvc`. Sumire is tested primarily using the MSVC compiler then building the provided CMake targets (Sumire executable, and Shaders custom target).
+Building to a MSVC solution is recommended via running `build_win_msvc`. Sumire is tested primarily using the MSVC compiler then building the provided CMake targets (Sumire executable, and Shaders custom target).
+Other build methods are untested and may have issues.
 
 You may also build with a standalone compiler 
 via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
