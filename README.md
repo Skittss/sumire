@@ -10,11 +10,11 @@ A lightweight graphics development engine built in vulkan.
 
 - Use the provided CMake template `env_template_win.cmake` (Windows) / `env_template_unix.cmake` (Linux) to create a CMake environment: `.env.cmake`.
 
-- Install Vulkan, GLFW and GLM to directories of your choice, and specify their paths in `.env.cmake`:
+- Install [Vulkan](https://vulkan.lunarg.com/sdk/home), [GLFW](https://www.glfw.org/download) and [GLM](https://github.com/g-truc/glm) to directories of your choice, and specify their paths in `.env.cmake`. E.g:
 ```cmake
-set(GLFW_PATH       "<YOUR PATH HERE>")
-set(GLM_PATH        "<YOUR PATH HERE>")
-set(VULKAN_SDK_PATH "<YOUR PATH HERE>")
+set(GLFW_PATH       "~/glfw-<version>.bin.<dist>")
+set(GLM_PATH        "~/glm")
+set(VULKAN_SDK_PATH "~/VulkanSDK/<version>")
 ```
 
 - If you are using a standalone C++ compiler (e.g. MinGW) you must also specify its path in `.env.cmake`. E.g.:
