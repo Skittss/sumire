@@ -55,6 +55,7 @@ via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 
 ## Conventions
 - [X] Right handed and +y default camera from Vulkan -y canonical viewing volume.
+- [ ] Config for GPU device selection (in the case of more than 1 gpu)
 
 ## Frame Pipeline
 The current frame pipeline works as follows:
