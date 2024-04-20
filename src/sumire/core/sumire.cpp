@@ -46,14 +46,8 @@ namespace sumire {
 	};
 
 	Sumire::Sumire() {
-		globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
-			.setMaxSets(1 + (2 * SumiSwapChain::MAX_FRAMES_IN_FLIGHT))
-			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // global
-			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // camera
-			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1) // Light SSBO
-			.build();
-
 		init();
+
 		loadObjects();
 		loadLights();
 	}
@@ -100,7 +94,13 @@ namespace sumire {
 		);
 		lightSSBO->map();
 
-		// Layout
+		globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
+			.setMaxSets((3 * SumiSwapChain::MAX_FRAMES_IN_FLIGHT))
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // global
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // camera
+			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // Light SSBO
+			.build();
+
 		globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
 			.addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
