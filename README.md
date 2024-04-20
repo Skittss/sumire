@@ -10,17 +10,21 @@ A lightweight graphics development engine built in vulkan.
 
 - Use the provided CMake template `env_template_win.cmake` (Windows) / `env_template_unix.cmake` (Linux) to create a CMake environment: `.env.cmake`.
 
-- Install [Vulkan](https://vulkan.lunarg.com/sdk/home), [GLFW](https://www.glfw.org/download) and [GLM](https://github.com/g-truc/glm) to directories of your choice, and specify their paths in `.env.cmake`. E.g:
-```cmake
-set(GLFW_PATH       "~/glfw-<version>.bin.<dist>")
-set(GLM_PATH        "~/glm")
-set(VULKAN_SDK_PATH "~/VulkanSDK/<version>")
-```
-
+- Install:
+    - [Vulkan](https://vulkan.lunarg.com/sdk/home) (Latest tested: v1.3.250.1)
+    - [GLFW](https://www.glfw.org/download) (Latest tested: v3.4)
+    - [GLM](https://github.com/g-truc/glm) (Latest tested v3.3.1)
+  
+  to directories of your choice, and specify their paths in `.env.cmake`. E.g:
+  ```cmake
+  set(GLFW_PATH       "~/glfw-<version>.bin.<dist>")
+  set(GLM_PATH        "~/glm")
+  set(VULKAN_SDK_PATH "~/VulkanSDK/<version>")
+  ```
 - If you are using a standalone C++ compiler (e.g. MinGW) you must also specify its path in `.env.cmake`. E.g.:
-```cmake
-set(MINGW_PATH "<YOUR PATH HERE>")
-```
+  ```cmake
+  set(MINGW_PATH "<YOUR PATH HERE>")
+  ```
 
 ## Building
 A number of build scripts are provided which build the project via CMake. 
