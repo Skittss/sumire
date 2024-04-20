@@ -80,7 +80,7 @@ namespace sumire {
 			SumiDescriptorPool(const SumiDescriptorPool &) = delete;
 			SumiDescriptorPool &operator=(const SumiDescriptorPool &) = delete;
 			
-			bool allocateDescriptorSet(
+			void allocateDescriptorSet(
 				const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet &descriptor) const;
 			
 			void freeDescriptorSet(std::vector<VkDescriptorSet> &descriptors) const;
@@ -102,7 +102,7 @@ namespace sumire {
 			SumiDescriptorWriter &writeBuffer(uint32_t binding, VkDescriptorBufferInfo *bufferInfo);
 			SumiDescriptorWriter &writeImage(uint32_t binding, VkDescriptorImageInfo *imageInfo);
 
-			bool build(VkDescriptorSet &set);
+			void build(VkDescriptorSet &set);
 			void overwrite(VkDescriptorSet &set);
 
 		private:

@@ -130,7 +130,7 @@ SumiDescriptorPool::~SumiDescriptorPool() {
 	vkDestroyDescriptorPool(sumiDevice.device(), descriptorPool, nullptr);
 }
  
-bool SumiDescriptorPool::allocateDescriptorSet(
+void SumiDescriptorPool::allocateDescriptorSet(
 	const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet &descriptor
 ) const {
 	VkDescriptorSetAllocateInfo allocInfo{};
@@ -144,10 +144,10 @@ bool SumiDescriptorPool::allocateDescriptorSet(
 
 	// Would keep track of a list of pool objects, if a pool becomes full, a new pool can be created 
 	// and added to the list.
-	if (vkAllocateDescriptorSets(sumiDevice.device(), &allocInfo, &descriptor) != VK_SUCCESS)
-		return false;
-
-	return true;
+	VK_CHECK_SUCCESS(
+		vkAllocateDescriptorSets(sumiDevice.device(), &allocInfo, &descriptor),
+		"[Sumire::SumiDescriptorPool] Failed to allocate a descriptor set."
+	)
 }
  
 void SumiDescriptorPool::freeDescriptorSet(std::vector<VkDescriptorSet> &descriptors) const {
@@ -211,12 +211,9 @@ SumiDescriptorWriter &SumiDescriptorWriter::writeImage(
 	return *this;
 }
  
-bool SumiDescriptorWriter::build(VkDescriptorSet &set) {
-	bool success = pool.allocateDescriptorSet(setLayout.getDescriptorSetLayout(), set);
-	if (!success) return false;
-
+void SumiDescriptorWriter::build(VkDescriptorSet &set) {
+	pool.allocateDescriptorSet(setLayout.getDescriptorSetLayout(), set);
 	overwrite(set);
-	return true;
 }
  
 void SumiDescriptorWriter::overwrite(VkDescriptorSet &set) {
