@@ -1,6 +1,8 @@
 #include <sumire/input/sumi_kbm_controller.hpp>
 
 #include <iostream>
+
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
 
 namespace sumire {

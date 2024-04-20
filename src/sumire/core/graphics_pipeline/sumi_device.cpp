@@ -293,6 +293,13 @@ namespace sumire {
 
 	void SumiDevice::createSurface() { window.createWindowSurface(instance, &surface_); }
 
+	bool SumiDevice::supportedFeaturesAreSuitable(const VkPhysicalDeviceFeatures& supportedFeatures) const {
+		return (
+			supportedFeatures.samplerAnisotropy &&
+			supportedFeatures.independentBlend
+		);
+	}
+
 	bool SumiDevice::isDeviceSuitable(VkPhysicalDevice device) {
 		QueueFamilyIndices indices = findQueueFamilies(device);
 
@@ -307,8 +314,12 @@ namespace sumire {
 		VkPhysicalDeviceFeatures supportedFeatures;
 		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-		return indices.hasValidQueueSupport() && extensionsSupported && swapChainAdequate &&
-			supportedFeatures.samplerAnisotropy;
+		return (
+			indices.hasValidQueueSupport() &&
+			extensionsSupported &&
+			swapChainAdequate &&
+			supportedFeaturesAreSuitable(supportedFeatures)
+		);
 	}
 
 	void SumiDevice::populateDebugMessengerCreateInfo(

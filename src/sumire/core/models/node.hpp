@@ -3,6 +3,7 @@
 #include <sumire/core/models/mesh.hpp>
 #include <sumire/core/models/skin.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
