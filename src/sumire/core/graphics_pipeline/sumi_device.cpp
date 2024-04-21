@@ -174,10 +174,10 @@ namespace sumire {
 			physicalDevice = devices[chosenDeviceIdx];
 		}
 
-		const auto& chosenDeviceDetails = physicalDeviceList[chosenDeviceIdx];
-		std::cout << "[Sumire::SumiDevice] Using physical device: "	<< chosenDeviceDetails.name << std::endl;
+		physicalDeviceDetails = physicalDeviceList[chosenDeviceIdx];
+		std::cout << "[Sumire::SumiDevice] Using physical device: "	<< physicalDeviceDetails.name << std::endl;
 		std::cout << "[Sumire::SumiDevice] Physical device has ~"
-			<< glm::floor<uint32_t>(chosenDeviceDetails.localMemorySize / 1e9) << " GB of local memory available." << std::endl;
+			<< glm::floor<uint32_t>(physicalDeviceDetails.localMemorySize / 1e9) << " GB of local memory available." << std::endl;
 	}
 
 	void SumiDevice::createLogicalDevice() {

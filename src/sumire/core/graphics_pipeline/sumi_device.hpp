@@ -69,6 +69,11 @@ namespace sumire {
 
 		VkDevice device() const { return device_; }
 		VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
+		PhysicalDeviceDetails getPhysicalDeviceDetails() const { return physicalDeviceDetails; }
+		const std::vector<PhysicalDeviceDetails>& getPhysicalDeviceList() const { 
+			return physicalDeviceList; 
+		}
+
 		VkInstance getInstance() const { return instance; }
 		VkSurfaceKHR surface() const { return surface_; }
 
@@ -182,6 +187,7 @@ namespace sumire {
 
 		// this should be a static member if we ever want more than one SumiDevice
 		std::vector<PhysicalDeviceDetails> physicalDeviceList{};
+		PhysicalDeviceDetails physicalDeviceDetails;
 
 		const std::vector<const char*> validationLayers = { 
 			"VK_LAYER_KHRONOS_validation" 
