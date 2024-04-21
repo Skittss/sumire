@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sumire/config/sumi_config.hpp>
 #include <sumire/core/sumire_config.hpp>
 
 #include <sumire/core/windowing/sumi_window.hpp>
@@ -33,6 +34,7 @@ namespace sumire {
 		void loadObjects();
 		void loadLights(); 
 
+		SumiConfig sumiConfig{};
 		SumiWindow sumiWindow{ 
 			static_cast<int>(screenWidth), 
 			static_cast<int>(screenHeight), 
