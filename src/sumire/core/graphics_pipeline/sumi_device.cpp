@@ -6,6 +6,7 @@
 #include <iostream>
 #include <set>
 #include <unordered_set>
+#include <algorithm>
 
 namespace sumire {
 
@@ -130,19 +131,55 @@ namespace sumire {
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-		for (const auto& device : devices) {
-			if (isDeviceSuitable(device)) {
-				physicalDevice = device;
-				break;
-			}
+		physicalDeviceList = std::vector<PhysicalDeviceDetails>(deviceCount);
+		uint32_t suitableDeviceCount = 0;
+		for (uint32_t i = 0; i < deviceCount; i++) {
+			const auto& device = devices[i];
+			bool suitable = isDeviceSuitable(device);
+			if (suitable) suitableDeviceCount++;
+
+			VkPhysicalDeviceProperties deviceProperties;
+			vkGetPhysicalDeviceProperties(device, &deviceProperties);
+			bool discrete = deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+
+			VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
+			vkGetPhysicalDeviceMemoryProperties(device, &deviceMemoryProperties);
+
+			physicalDeviceList[i] = PhysicalDeviceDetails{
+				deviceProperties.deviceName,
+				getLocalHeapSize(deviceMemoryProperties),
+				i,
+				suitable,
+				discrete
+			};
+
+			std::cout << physicalDeviceList[i].localMemorySize / 1e9 << std::endl;
 		}
 
-		if (physicalDevice == VK_NULL_HANDLE) {
+		uint32_t chosenDeviceIdx = 0;
+		if (suitableDeviceCount == 0) {
 			throw std::runtime_error("[Sumire::SumiDevice] Failed to find a suitable GPU from candidates.");
 		}
+		else {
+			std::vector<PhysicalDeviceDetails> sortedPhysicalDeviceList = physicalDeviceList;
+			// Pick device with highest local memory size by default, prioritizing discrete GPUs.
+			std::sort(sortedPhysicalDeviceList.begin(), sortedPhysicalDeviceList.end(),
+				[](const PhysicalDeviceDetails& a, const PhysicalDeviceDetails& b) {
+					if (a.discrete && !b.discrete) return true;
+					if (!a.discrete && b.discrete) return false;
+					return true;
+					return a.localMemorySize < b.localMemorySize;
+				}
+			);
 
-		vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-		std::cout << "[Sumire::SumiDevice] Using physical device: " << properties.deviceName << std::endl;
+			chosenDeviceIdx = sortedPhysicalDeviceList[0].idx;
+			physicalDevice = devices[chosenDeviceIdx];
+		}
+
+		const auto& chosenDeviceDetails = physicalDeviceList[chosenDeviceIdx];
+		std::cout << "[Sumire::SumiDevice] Using physical device: "	<< chosenDeviceDetails.name << std::endl;
+		std::cout << "[Sumire::SumiDevice] Physical device has ~"
+			<< glm::floor<uint32_t>(chosenDeviceDetails.localMemorySize / 1e9) << " GB of local memory available." << std::endl;
 	}
 
 	void SumiDevice::createLogicalDevice() {
@@ -200,19 +237,21 @@ namespace sumire {
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
 
+		// NOTE: If any extra features / extensions are added here, make sure to update
+		//        the deviceExtensions list / supportedFeaturesAreSuitable function.
+
 		// Enable descriptor indexing features
 		VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
 		descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 		descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
 
-		// TODO: Should check for feature support and log a warning if not supported.
 		VkPhysicalDeviceFeatures deviceFeatures = {};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
 		deviceFeatures.independentBlend = VK_TRUE;
 
 		VkDeviceCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		createInfo.pNext = &descriptorIndexingFeatures; // pass indexing features to device create info
+		createInfo.pNext = &descriptorIndexingFeatures;
 
 		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -292,6 +331,20 @@ namespace sumire {
 	}
 
 	void SumiDevice::createSurface() { window.createWindowSurface(instance, &surface_); }
+
+	VkDeviceSize SumiDevice::getLocalHeapSize(
+		const VkPhysicalDeviceMemoryProperties& memoryProperties
+	) const {
+		VkDeviceSize localHeapSize = 0;
+		for (uint32_t i = 0; i < memoryProperties.memoryHeapCount; i++) {
+			const VkMemoryHeap& heap = memoryProperties.memoryHeaps[i];
+			if (heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+				localHeapSize += heap.size;
+			}
+		}
+
+		return localHeapSize;
+	}
 
 	bool SumiDevice::supportedFeaturesAreSuitable(const VkPhysicalDeviceFeatures& supportedFeatures) const {
 		return (
@@ -771,6 +824,7 @@ namespace sumire {
 		if (needsCommandBuffer) endSingleTimeCommands(commandBuffer);
 	}
 
+	// TODO: Deprecated. Move to using explicit imageMemoryBarriers instead.
 	void SumiDevice::transitionImageLayout(
 		VkImage image, 
 		VkImageSubresourceRange subresourceRange, 

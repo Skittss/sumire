@@ -1,12 +1,23 @@
 #pragma once
 
+#include <vulkan/vulkan.h>
+
 #include <sumire/core/windowing/sumi_window.hpp>
 
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <array>
 
 namespace sumire {
+
+	struct PhysicalDeviceDetails {
+		std::string name;
+		VkDeviceSize localMemorySize;
+		uint32_t idx;
+		bool suitable;
+		bool discrete;
+	};
 
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
@@ -134,6 +145,8 @@ namespace sumire {
 		void createLogicalDevice();
 		void createCommandPools();
 
+		VkDeviceSize getLocalHeapSize(
+			const VkPhysicalDeviceMemoryProperties& memoryProperties) const;
 		bool supportedFeaturesAreSuitable(
 			const VkPhysicalDeviceFeatures& supportedFeautres) const;
 		bool isDeviceSuitable(VkPhysicalDevice device);
@@ -167,7 +180,12 @@ namespace sumire {
 		VkQueue computeQueue_;
 		VkQueue presentQueue_;
 
-		const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+		// this should be a static member if we ever want more than one SumiDevice
+		std::vector<PhysicalDeviceDetails> physicalDeviceList{};
+
+		const std::vector<const char*> validationLayers = { 
+			"VK_LAYER_KHRONOS_validation" 
+		};
 		const std::vector<const char*> deviceExtensions = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME, 
 			"VK_EXT_descriptor_indexing"
