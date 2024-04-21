@@ -1,7 +1,6 @@
 #pragma once
 
 #include <sumire/config/sumi_config.hpp>
-#include <sumire/core/sumire_config.hpp>
 
 #include <sumire/core/windowing/sumi_window.hpp>
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>

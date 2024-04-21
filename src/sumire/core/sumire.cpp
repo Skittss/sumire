@@ -86,7 +86,7 @@ namespace sumire {
 		// Light SSBO
 		lightSSBO = std::make_unique<SumiBuffer>(
 			sumiDevice,
-			config::MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
+			sumiConfig.configData.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
 			1,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
