@@ -71,6 +71,7 @@ namespace sumire {
             void initImgui(VkRenderPass renderPass, uint32_t subpassIdx, VkQueue workQueue);
 
             void drawConfigSection(SumiKBMcontroller &cameraController);
+            void drawConfigGraphicsSubsection();
             void drawConfigInputSubsection(SumiKBMcontroller& cameraController);
             void drawConfigUIsubsection();
 
@@ -85,7 +86,6 @@ namespace sumire {
                 const structs::zBin& zBin, structs::lightMask* lightMask);
             void drawZbinSubsection(const structs::zBin& zbin);
             void drawLightMaskSubsection(structs::lightMask* lightMask);
-
 
             SumiRenderer &sumiRenderer;
             VkDescriptorPool imguiDescriptorPool;

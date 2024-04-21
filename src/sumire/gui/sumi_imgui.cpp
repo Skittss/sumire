@@ -120,7 +120,7 @@ namespace sumire {
         const structs::zBin& zBin,
         structs::lightMask* lightMask
     ) {
-        ImGui::ShowDemoWindow();
+        //ImGui::ShowDemoWindow();
         
         ImGui::Begin("Sumire Scene Viewer");
         ImGui::Text("Sumire Build v0.0.1");
@@ -142,10 +142,32 @@ namespace sumire {
     void SumiImgui::drawConfigSection(SumiKBMcontroller& cameraController) {
         if (ImGui::CollapsingHeader("Config")) {
 
+            drawConfigGraphicsSubsection();
+            ImGui::Spacing();
             drawConfigInputSubsection(cameraController);
             ImGui::Spacing();
             drawConfigUIsubsection();
 
+        }
+    }
+
+    void SumiImgui::drawConfigGraphicsSubsection() {
+        ImGui::SeparatorText("Graphics");
+        if (ImGui::TreeNode("Settings")) {
+            SumiDevice& device = sumiRenderer.getDevice();
+            PhysicalDeviceDetails activeDeviceDetails = device.getPhysicalDeviceDetails();
+            const std::vector<PhysicalDeviceDetails>& deviceList = device.getPhysicalDeviceList();
+
+            std::vector<const char*> deviceNames(deviceList.size());
+            for (uint32_t i = 0; i < deviceList.size(); i++) {
+                deviceNames[i] = deviceList[i].name.c_str();
+            }
+
+            static int deviceListIdx = activeDeviceDetails.idx;
+            ImGui::Combo("Device", &deviceListIdx, deviceNames.data(), deviceNames.size());
+            // device.updateConfig();
+
+            ImGui::TreePop();
         }
     }
 
