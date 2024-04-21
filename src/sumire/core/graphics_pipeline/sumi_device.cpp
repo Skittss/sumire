@@ -152,8 +152,6 @@ namespace sumire {
 				suitable,
 				discrete
 			};
-
-			std::cout << physicalDeviceList[i].localMemorySize / 1e9 << std::endl;
 		}
 
 		uint32_t chosenDeviceIdx = 0;
