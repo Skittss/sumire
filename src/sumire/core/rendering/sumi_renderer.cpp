@@ -670,6 +670,7 @@ namespace sumire {
 		);
 
 		// Submit main graphics work
+		// TODO: We probably need to wait on at least the start of the fragment shader
 		VkPipelineStageFlags graphicsWaitStageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		VkSubmitInfo graphicsSubmitInfo{};
 		graphicsSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
