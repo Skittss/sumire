@@ -45,7 +45,7 @@ namespace sumire {
             void endFrame();
             void renderToCmdBuffer(VkCommandBuffer &buffer);
 
-            void drawStatWindow(
+            void drawSceneViewer(
                 FrameInfo &frameInfo, 
                 SumiKBMcontroller &cameraController,
                 const structs::zBin& zBin,
@@ -70,19 +70,22 @@ namespace sumire {
         private:
             void initImgui(VkRenderPass renderPass, uint32_t subpassIdx, VkQueue workQueue);
 
-            void drawConfigUI(SumiKBMcontroller &cameraController);
-            void drawSceneUI(FrameInfo &frameInfo);
+            void drawConfigSection(SumiKBMcontroller &cameraController);
+            void drawConfigInputSubsection(SumiKBMcontroller& cameraController);
+            void drawConfigUIsubsection();
 
-            void drawDebugUI(
+            void drawSceneSection(FrameInfo &frameInfo);
+            void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
+
+            void drawDebugSection(
                 const structs::zBin& zBin, structs::lightMask* lightMask);
-            void drawFrameTimingsSection();
+            void drawFrameTimingSubsection();
 
             void drawHighQualityShadowMappingSection(
                 const structs::zBin& zBin, structs::lightMask* lightMask);
-            void drawZbinTable(const structs::zBin& zbin);
-            void drawLightMaskTable(structs::lightMask* lightMask);
+            void drawZbinSubsection(const structs::zBin& zbin);
+            void drawLightMaskSubsection(structs::lightMask* lightMask);
 
-            void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 
             SumiRenderer &sumiRenderer;
             VkDescriptorPool imguiDescriptorPool;

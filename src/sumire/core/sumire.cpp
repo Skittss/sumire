@@ -367,7 +367,7 @@ namespace sumire {
 				// GUI should *ALWAYS* render last after post-processing.
 
 				gui.beginFrame();
-				gui.drawStatWindow(
+				gui.drawSceneViewer(
 					frameInfo,
 					cameraController,
 					shadowMapper.getZbin(),

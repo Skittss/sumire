@@ -114,7 +114,7 @@ namespace sumire {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer);
     }
     
-    void SumiImgui::drawStatWindow(
+    void SumiImgui::drawSceneViewer(
         FrameInfo &frameInfo, 
         SumiKBMcontroller &cameraController,
         const structs::zBin& zBin,
@@ -128,87 +128,95 @@ namespace sumire {
         ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
 
         ImGui::Spacing();
-        drawDebugUI(zBin, lightMask);
+        drawDebugSection(zBin, lightMask);
 
         ImGui::Spacing();
-        drawConfigUI(cameraController);
+        drawConfigSection(cameraController);
 
         ImGui::Spacing();
-        drawSceneUI(frameInfo);
+        drawSceneSection(frameInfo);
 
         ImGui::End();
     }
 
-    void SumiImgui::drawConfigUI(SumiKBMcontroller &cameraController) {
+    void SumiImgui::drawConfigSection(SumiKBMcontroller& cameraController) {
         if (ImGui::CollapsingHeader("Config")) {
 
-            ImGui::SeparatorText("Input");
-            if (ImGui::TreeNode("Mouse")) {
-                glm::vec2 mousePos = sumiRenderer.getWindow().mousePos;
-                ImGui::Text("Mouse pos: %.2f, %.2f", mousePos.x, mousePos.y);
-                glm::vec2 mouseDelta = sumiRenderer.getWindow().mouseDelta;
-                ImGui::Text("Mouse delta: %.2f, %.2f", mouseDelta.x, mouseDelta.y);
-                ImGui::Spacing();
-                ImGui::TreePop();
-            }
-            if (ImGui::TreeNode("Keyboard")) {
-                ImGui::Text("Todo");
-                ImGui::Spacing();
-                ImGui::TreePop();
-            }
-            if (ImGui::TreeNode("Camera Controls")) {
-                const char* controlTypes[] = {"Walk", "FPS"};
-                static int controlTypesIdx = cameraController.getControllerType();
-                ImGui::Combo("Type", &controlTypesIdx, controlTypes, IM_ARRAYSIZE(controlTypes));
-                SumiKBMcontroller::ControllerType controlType = static_cast<SumiKBMcontroller::ControllerType>(controlTypesIdx);
-                cameraController.setControllerType(controlType);
-
-                ImGui::Spacing();
-                switch(controlType) {
-                    case SumiKBMcontroller::ControllerType::FPS: {
-                        ImGui::Checkbox("Toggle show cursor", &cameraController.toggleShowCursor);
-                        ImGui::Spacing();
-                        ImGui::DragFloat("Mouse Sensitivity", &cameraController.mouseLookSensitivity, 0.01f, 0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-                    }
-                    break;
-                    case SumiKBMcontroller::ControllerType::WALK: {
-                        ImGui::DragFloat("Look Sensitivity", &cameraController.keyboardLookSensitivity, 0.01f, 0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-                    }
-                    break;
-                }
-                ImGui::Spacing();
-                ImGui::DragFloat("Move Speed", &cameraController.moveSensitivity, 0.1f, 0.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-                ImGui::DragFloat("Sprint Speed", &cameraController.sprintSensitivity, 0.1f, 0.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-                ImGui::Spacing();
-                ImGui::TreePop();
-            }
+            drawConfigInputSubsection(cameraController);
             ImGui::Spacing();
-            ImGui::SeparatorText("UI");
-            if (ImGui::TreeNode("Grid")) {
-                ImGui::SeparatorText("Visibility");
-                ImGui::Checkbox("Show", &showGrid);
-                ImGui::DragFloat("Opacity", &gridOpacity, 0.01f, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-                ImGui::Spacing();
-                //ImGui::DragFloat("Fog Near", &gridFogNear, 0.1f, 0.0, 100.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-                ImGui::DragFloat("Fog Far", &gridFogFar, 0.1f, 0.0, 100.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            drawConfigUIsubsection();
 
-                ImGui::Spacing();
-                ImGui::SeparatorText("Size");
-                ImGui::DragFloat("Tile size", &gridTileSize, 1.0f, 0.0, 50.0, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-
-                ImGui::Spacing();
-                ImGui::SeparatorText("Gridline Colours");
-                const ImGuiColorEditFlags colorPickerFlags = ImGuiColorEditFlags_AlphaPreview;
-                ImGui::ColorEdit3("Minor", (float*)&gridMinorLineCol, colorPickerFlags);
-                ImGui::ColorEdit3("X Axis", (float*)&gridXaxisCol, colorPickerFlags);
-                ImGui::ColorEdit3("Z Axis", (float*)&gridZaxisCol, colorPickerFlags);
-                ImGui::TreePop();
-            }
-            
         }
     }
 
-    void SumiImgui::drawSceneUI(FrameInfo &frameInfo) {
+    void SumiImgui::drawConfigInputSubsection(SumiKBMcontroller &cameraController) {
+        ImGui::SeparatorText("Input");
+        if (ImGui::TreeNode("Mouse")) {
+            glm::vec2 mousePos = sumiRenderer.getWindow().mousePos;
+            ImGui::Text("Mouse pos: %.2f, %.2f", mousePos.x, mousePos.y);
+            glm::vec2 mouseDelta = sumiRenderer.getWindow().mouseDelta;
+            ImGui::Text("Mouse delta: %.2f, %.2f", mouseDelta.x, mouseDelta.y);
+            ImGui::Spacing();
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Keyboard")) {
+            ImGui::Text("Todo");
+            ImGui::Spacing();
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Camera Controls")) {
+            const char* controlTypes[] = { "Walk", "FPS" };
+            static int controlTypesIdx = cameraController.getControllerType();
+            ImGui::Combo("Type", &controlTypesIdx, controlTypes, IM_ARRAYSIZE(controlTypes));
+            SumiKBMcontroller::ControllerType controlType = static_cast<SumiKBMcontroller::ControllerType>(controlTypesIdx);
+            cameraController.setControllerType(controlType);
+
+            ImGui::Spacing();
+            switch (controlType) {
+            case SumiKBMcontroller::ControllerType::FPS: {
+                ImGui::Checkbox("Toggle show cursor", &cameraController.toggleShowCursor);
+                ImGui::Spacing();
+                ImGui::DragFloat("Mouse Sensitivity", &cameraController.mouseLookSensitivity, 0.01f, 0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            }
+            break;
+            case SumiKBMcontroller::ControllerType::WALK: {
+                ImGui::DragFloat("Look Sensitivity", &cameraController.keyboardLookSensitivity, 0.01f, 0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            }
+            break;
+            }
+            ImGui::Spacing();
+            ImGui::DragFloat("Move Speed", &cameraController.moveSensitivity, 0.1f, 0.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat("Sprint Speed", &cameraController.sprintSensitivity, 0.1f, 0.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::Spacing();
+            ImGui::TreePop();
+        }
+    }
+
+    void SumiImgui::drawConfigUIsubsection() {
+        ImGui::SeparatorText("UI");
+        if (ImGui::TreeNode("Grid")) {
+            ImGui::SeparatorText("Visibility");
+            ImGui::Checkbox("Show", &showGrid);
+            ImGui::DragFloat("Opacity", &gridOpacity, 0.01f, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::Spacing();
+            //ImGui::DragFloat("Fog Near", &gridFogNear, 0.1f, 0.0, 100.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat("Fog Far", &gridFogFar, 0.1f, 0.0, 100.0, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+
+            ImGui::Spacing();
+            ImGui::SeparatorText("Size");
+            ImGui::DragFloat("Tile size", &gridTileSize, 1.0f, 0.0, 50.0, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+
+            ImGui::Spacing();
+            ImGui::SeparatorText("Gridline Colours");
+            const ImGuiColorEditFlags colorPickerFlags = ImGuiColorEditFlags_AlphaPreview;
+            ImGui::ColorEdit3("Minor", (float*)&gridMinorLineCol, colorPickerFlags);
+            ImGui::ColorEdit3("X Axis", (float*)&gridXaxisCol, colorPickerFlags);
+            ImGui::ColorEdit3("Z Axis", (float*)&gridZaxisCol, colorPickerFlags);
+            ImGui::TreePop();
+        }
+    }
+
+    void SumiImgui::drawSceneSection(FrameInfo &frameInfo) {
         if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::TreeNode("Camera")) {
                 
@@ -417,211 +425,31 @@ namespace sumire {
         }
     }
 
-    void SumiImgui::drawDebugUI(
-        const structs::zBin& zBin,
-        structs::lightMask* lightMask
-    ) {
-        if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
-            drawFrameTimingsSection();
-            drawHighQualityShadowMappingSection(zBin, lightMask);
-
-            ImGui::Spacing();
-        }
-
-    }
-
-    void SumiImgui::drawFrameTimingsSection() {
-        if (ImGui::TreeNode("Frame Timings")) {
-            ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
-
-            ImGui::TreePop();
-        }
-    }
-
-    void SumiImgui::drawHighQualityShadowMappingSection(
-        const structs::zBin& zBin,
-        structs::lightMask* lightMask
-    ) {
-        if (ImGui::TreeNode("High Quality Shadow Mapping")) {
-            if (ImGui::TreeNode("zBin")) {
-
-                uint32_t nBins = static_cast<uint32_t>(zBin.data.size());
-                ImGui::Text("zBin size: %u", nBins);
-                ImGui::Spacing();
-                ImGui::Text("Light index range: [%d, %d]", zBin.minLight, zBin.maxLight);
-                ImGui::Text("Full bin index range: [%d, %d]", zBin.firstFullIdx, zBin.lastFullIdx);
-                ImGui::Spacing();
-
-                constexpr ImGuiTableFlags flags =
-                    ImGuiTableFlags_ScrollX |
-                    ImGuiTableFlags_ScrollY |
-                    ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_BordersOuter |
-                    ImGuiTableFlags_BordersV;
-
-                constexpr int cols = 5;
-
-                const ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
-                if (ImGui::BeginTable("zBin Data", cols, flags, outer_size)) {
-                    ImGui::TableSetupScrollFreeze(1, 1);
-                    ImGui::TableSetupColumn("bin",
-                        ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_WidthFixed, 30.0f);
-                    ImGui::TableSetupColumn("min", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-                    ImGui::TableSetupColumn("max", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-                    ImGui::TableSetupColumn("rMin", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-                    ImGui::TableSetupColumn("rMax", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-                    ImGui::TableHeadersRow();
-
-                    for (size_t i = 0; i < zBin.data.size(); i++) {
-                        uint32_t idx = static_cast<uint32_t>(i);
-                        ImGui::TableNextRow();
-                        for (int j = 0; j < cols; j++) {
-                            if (!ImGui::TableSetColumnIndex(j) && j > 0)
-                                continue;
-
-                            if (j == 0)
-                                ImGui::Text("%u", static_cast<uint32_t>(i));
-                            else
-                                switch (j) {
-                                case 0:
-                                    ImGui::Text("%u", i);
-                                    break;
-                                case 1:
-                                    ImGui::Text("%d", zBin.data[i].minLightIdx);
-                                    break;
-                                case 2:
-                                    ImGui::Text("%d", zBin.data[i].maxLightIdx);
-                                    break;
-                                case 3:
-                                    ImGui::Text("%d", zBin.data[i].rangedMinLightIdx);
-                                    break;
-                                case 4:
-                                    ImGui::Text("%d", zBin.data[i].rangedMaxLightIdx);
-                                    break;
-                                default:
-                                    ImGui::Text("OOB!");
-                                }
-                        }
-                    }
-                    ImGui::EndTable();
-                }
-                ImGui::Spacing();
-                ImGui::TreePop();
-            }
-
-            if (ImGui::TreeNode("Light Mask")) {
-                ImGui::Text("Num Tiles: [%u, %u]", lightMask->numTilesX, lightMask->numTilesY);
-                ImGui::Spacing();
-
-                ImGui::Text("Currently Inspecting: ");
-                static int tileIdx[2]{ 0, 0 };
-                ImGui::InputInt2("", tileIdx);
-                tileIdx[0] = glm::clamp<int>(tileIdx[0], 0, lightMask->numTilesX - 1);
-                tileIdx[1] = glm::clamp<int>(tileIdx[1], 0, lightMask->numTilesY - 1);
-                ImGui::Spacing();
-
-                constexpr ImGuiTableFlags flags =
-                    ImGuiTableFlags_ScrollX |
-                    ImGuiTableFlags_ScrollY |
-                    ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_BordersOuter |
-                    ImGuiTableFlags_BordersV |
-                    ImGuiTableFlags_NoHostExtendX;
-
-                constexpr int tileRows = 33;
-                constexpr int tileCols = 32;
-
-                const ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
-                const ImU32 bitSetColor = ImGui::GetColorU32(ImVec4(0.1f, 0.9f, 0.1f, 0.6f));
-                const ImU32 bitNotSetColor = ImGui::GetColorU32(ImVec4(0.9f, 0.1f, 0.1f, 0.6f));
-
-                if (ImGui::BeginTable("Tile Light Mask", tileCols + 1, flags, outer_size)) {
-                    ImGui::TableSetupScrollFreeze(1, 1);
-                    for (int c = 0; c < tileCols + 1; c++) {
-                        switch (c) {
-                        case 0:
-                            ImGui::TableSetupColumn("");
-                            break;
-                        default:
-                            ImGui::TableSetupColumn(
-                                std::to_string(c - 1).c_str(), ImGuiTableColumnFlags_WidthFixed, 12.0f);
-                            break;
-                        }
-                    }
-                    ImGui::TableHeadersRow();
-
-                    for (int row = 0; row < tileRows; row++) {
-                        ImGui::TableNextRow();
-
-                        for (int col = 0; col < tileCols + 1; col++) {
-                            if (!ImGui::TableSetColumnIndex(col) && col > 0)
-                                continue;
-
-                            if (col == 0) {
-                                switch (row) {
-                                case 0:
-                                    ImGui::Text("[Groups]");
-                                    break;
-                                default:
-                                    uint32_t groupIdx = static_cast<uint32_t>(row) - 1u;
-                                    ImGui::Text("[%u, %u]",
-                                        groupIdx * 32, groupIdx * 32 + 31);
-                                }
-                            }
-                            else {
-                                uint32_t tileX = static_cast<uint32_t>(tileIdx[0]);
-                                uint32_t tileY = static_cast<uint32_t>(tileIdx[1]);
-                                if (lightMask->readTileAtIdx(tileX, tileY).isBitSet(col - 1, row)) {
-                                    ImGui::PushStyleColor(ImGuiCol_Text, bitSetColor);
-                                    ImGui::Text("1");
-                                    ImGui::PopStyleColor();
-                                }
-                                else {
-                                    ImGui::PushStyleColor(ImGuiCol_Text, bitNotSetColor);
-                                    ImGui::Text("0");
-                                    ImGui::PopStyleColor();
-                                }
-                            }
-                        }
-                    }
-                    ImGui::EndTable();
-                }
-                ImGui::TreePop();
-            }
-
-            ImGui::TreePop();
-        }
-    }
-
-    void SumiImgui::drawZbinTable(const structs::zBin& zbin) {
-
-    }
-
-    void SumiImgui::drawTransformUI(Transform3DComponent &transform, bool includeScale) {
+    void SumiImgui::drawTransformUI(Transform3DComponent& transform, bool includeScale) {
         ImGui::SeparatorText("Transform");
 
         glm::vec3 translation = transform.getTranslation();
         float pos[3] = {
-            translation.x, 
-            translation.y, 
+            translation.x,
+            translation.y,
             translation.z
         };
         ImGui::InputFloat3("translation", pos);
-        transform.setTranslation(glm::vec3{pos[0], pos[1], pos[2]});
+        transform.setTranslation(glm::vec3{ pos[0], pos[1], pos[2] });
 
         glm::vec3 rotation = transform.getRotation();
         float rot[3] = {
-            glm::degrees(rotation.x), 
-            glm::degrees(rotation.y), 
+            glm::degrees(rotation.x),
+            glm::degrees(rotation.y),
             glm::degrees(rotation.z)
         };
         ImGui::InputFloat3("rotation (deg)", rot, "%.1f");
         transform.setRotation(glm::vec3{
-            glm::radians(rot[0]), 
-            glm::radians(rot[1]), 
+            glm::radians(rot[0]),
+            glm::radians(rot[1]),
             glm::radians(rot[2])
-        });
-        
+            });
+
         if (includeScale) {
             ImGui::Spacing();
 
@@ -637,18 +465,202 @@ namespace sumire {
                     scale.z
                 };
                 ImGui::InputFloat3("scale", sca);
-                transform.setScale(glm::vec3{sca[0], sca[1], sca[2]});
+                transform.setScale(glm::vec3{ sca[0], sca[1], sca[2] });
 
-            } else {
+            }
+            else {
 
                 float sca = (scale.x + scale.y + scale.z) / 3.0;
                 ImGui::DragFloat("scale", &sca, 0.1f);
-                transform.setScale(glm::vec3{sca});
+                transform.setScale(glm::vec3{ sca });
 
             }
         }
 
         ImGui::Spacing();
+    }
+
+    void SumiImgui::drawDebugSection(
+        const structs::zBin& zBin,
+        structs::lightMask* lightMask
+    ) {
+        if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
+            drawFrameTimingSubsection();
+            drawHighQualityShadowMappingSection(zBin, lightMask);
+
+            ImGui::Spacing();
+        }
+
+    }
+
+    void SumiImgui::drawFrameTimingSubsection() {
+        if (ImGui::TreeNode("Frame Timings")) {
+            ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
+
+            ImGui::TreePop();
+        }
+    }
+
+    void SumiImgui::drawHighQualityShadowMappingSection(
+        const structs::zBin& zBin,
+        structs::lightMask* lightMask
+    ) {
+        if (ImGui::TreeNode("High Quality Shadow Mapping")) {
+            drawZbinSubsection(zBin);
+            drawLightMaskSubsection(lightMask);
+
+            ImGui::TreePop();
+        }
+    }
+
+    void SumiImgui::drawZbinSubsection(const structs::zBin& zBin) {
+        if (ImGui::TreeNode("zBin")) {
+
+            uint32_t nBins = static_cast<uint32_t>(zBin.data.size());
+            ImGui::Text("zBin size: %u", nBins);
+            ImGui::Spacing();
+            ImGui::Text("Light index range: [%d, %d]", zBin.minLight, zBin.maxLight);
+            ImGui::Text("Full bin index range: [%d, %d]", zBin.firstFullIdx, zBin.lastFullIdx);
+            ImGui::Spacing();
+
+            constexpr ImGuiTableFlags flags =
+                ImGuiTableFlags_ScrollX |
+                ImGuiTableFlags_ScrollY |
+                ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_BordersOuter |
+                ImGuiTableFlags_BordersV;
+
+            constexpr int cols = 5;
+
+            const ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
+            if (ImGui::BeginTable("zBin Data", cols, flags, outer_size)) {
+                ImGui::TableSetupScrollFreeze(1, 1);
+                ImGui::TableSetupColumn("bin",
+                    ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_WidthFixed, 30.0f);
+                ImGui::TableSetupColumn("min", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                ImGui::TableSetupColumn("max", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                ImGui::TableSetupColumn("rMin", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                ImGui::TableSetupColumn("rMax", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                ImGui::TableHeadersRow();
+
+                for (size_t i = 0; i < zBin.data.size(); i++) {
+                    uint32_t idx = static_cast<uint32_t>(i);
+                    ImGui::TableNextRow();
+                    for (int j = 0; j < cols; j++) {
+                        if (!ImGui::TableSetColumnIndex(j) && j > 0)
+                            continue;
+
+                        if (j == 0)
+                            ImGui::Text("%u", static_cast<uint32_t>(i));
+                        else
+                            switch (j) {
+                            case 0:
+                                ImGui::Text("%u", i);
+                                break;
+                            case 1:
+                                ImGui::Text("%d", zBin.data[i].minLightIdx);
+                                break;
+                            case 2:
+                                ImGui::Text("%d", zBin.data[i].maxLightIdx);
+                                break;
+                            case 3:
+                                ImGui::Text("%d", zBin.data[i].rangedMinLightIdx);
+                                break;
+                            case 4:
+                                ImGui::Text("%d", zBin.data[i].rangedMaxLightIdx);
+                                break;
+                            default:
+                                ImGui::Text("OOB!");
+                            }
+                    }
+                }
+                ImGui::EndTable();
+            }
+            ImGui::Spacing();
+            ImGui::TreePop();
+        }
+    }
+
+    void SumiImgui::drawLightMaskSubsection(structs::lightMask* lightMask) {
+        if (ImGui::TreeNode("Light Mask")) {
+            ImGui::Text("Num Tiles: [%u, %u]", lightMask->numTilesX, lightMask->numTilesY);
+            ImGui::Spacing();
+
+            ImGui::Text("Currently Inspecting: ");
+            static int tileIdx[2]{ 0, 0 };
+            ImGui::InputInt2("", tileIdx);
+            tileIdx[0] = glm::clamp<int>(tileIdx[0], 0, lightMask->numTilesX - 1);
+            tileIdx[1] = glm::clamp<int>(tileIdx[1], 0, lightMask->numTilesY - 1);
+            ImGui::Spacing();
+
+            constexpr ImGuiTableFlags flags =
+                ImGuiTableFlags_ScrollX |
+                ImGuiTableFlags_ScrollY |
+                ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_BordersOuter |
+                ImGuiTableFlags_BordersV |
+                ImGuiTableFlags_NoHostExtendX;
+
+            constexpr int tileRows = 33;
+            constexpr int tileCols = 32;
+
+            const ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
+            const ImU32 bitSetColor = ImGui::GetColorU32(ImVec4(0.1f, 0.9f, 0.1f, 0.6f));
+            const ImU32 bitNotSetColor = ImGui::GetColorU32(ImVec4(0.9f, 0.1f, 0.1f, 0.6f));
+
+            if (ImGui::BeginTable("Tile Light Mask", tileCols + 1, flags, outer_size)) {
+                ImGui::TableSetupScrollFreeze(1, 1);
+                for (int c = 0; c < tileCols + 1; c++) {
+                    switch (c) {
+                    case 0:
+                        ImGui::TableSetupColumn("");
+                        break;
+                    default:
+                        ImGui::TableSetupColumn(
+                            std::to_string(c - 1).c_str(), ImGuiTableColumnFlags_WidthFixed, 12.0f);
+                        break;
+                    }
+                }
+                ImGui::TableHeadersRow();
+
+                for (int row = 0; row < tileRows; row++) {
+                    ImGui::TableNextRow();
+
+                    for (int col = 0; col < tileCols + 1; col++) {
+                        if (!ImGui::TableSetColumnIndex(col) && col > 0)
+                            continue;
+
+                        if (col == 0) {
+                            switch (row) {
+                            case 0:
+                                ImGui::Text("[Groups]");
+                                break;
+                            default:
+                                uint32_t groupIdx = static_cast<uint32_t>(row) - 1u;
+                                ImGui::Text("[%u, %u]",
+                                    groupIdx * 32, groupIdx * 32 + 31);
+                            }
+                        }
+                        else {
+                            uint32_t tileX = static_cast<uint32_t>(tileIdx[0]);
+                            uint32_t tileY = static_cast<uint32_t>(tileIdx[1]);
+                            if (lightMask->readTileAtIdx(tileX, tileY).isBitSet(col - 1, row)) {
+                                ImGui::PushStyleColor(ImGuiCol_Text, bitSetColor);
+                                ImGui::Text("1");
+                                ImGui::PopStyleColor();
+                            }
+                            else {
+                                ImGui::PushStyleColor(ImGuiCol_Text, bitNotSetColor);
+                                ImGui::Text("0");
+                                ImGui::PopStyleColor();
+                            }
+                        }
+                    }
+                }
+                ImGui::EndTable();
+            }
+            ImGui::TreePop();
+        }
     }
 
 }
