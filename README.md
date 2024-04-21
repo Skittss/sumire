@@ -45,7 +45,8 @@ via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 ## GLTF support
 - [X] faster glTF skinned animation updating
     - Cached local node transforms and swapped to top-down update rather than bottom up
-    - [ ] This could be even faster if we dispatched compute for it.
+- [ ] Move skinning to the compute dispatches.
+    - Currently skinning will have read-after-write hazards due to not ring buffering the joint buffers.
 - [X] Model normal matrices (and normal matrices for skinning)
 - [ ] Morph-target support (and their animation)
 - [ ] Bone space on the GPU can be reduced to half by encoding the matrices as a quaternion rotation and vec4 offset rather than mat4
@@ -91,3 +92,6 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
 - [X] Fix view space depth calculation for out of bounds / extreme view frustum fovs
 - [ ] Light culling.
     - This could / should be frustum based, or AABB.
+
+## Application Config
+- [ ] Persistent Physical Device (GPU) selection via config system (e.g. .ini file)
