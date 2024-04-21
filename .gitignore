@@ -12,8 +12,7 @@ assets/models/*
 assets/textures/*
 !assets/textures/empty.*
 
-config/*
-!config/default_config.json
+config/config.json
 
 external/*
 !external/tinygltf

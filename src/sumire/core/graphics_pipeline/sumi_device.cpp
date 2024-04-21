@@ -50,13 +50,17 @@ namespace sumire {
 	}
 
 	// class member functions
-	SumiDevice::SumiDevice(SumiWindow& window) : window{ window } {
+	SumiDevice::SumiDevice(
+		SumiWindow& window,
+		SumiConfig* config
+	) : window{ window } {
 		createInstance();
 		setupDebugMessenger();
 		createSurface();
-		pickPhysicalDevice();
+		pickPhysicalDevice(config);
 		createLogicalDevice();
 		createCommandPools();
+		writeDeviceInfoToConfig(config);
 	}
 
 	SumiDevice::~SumiDevice() {
@@ -74,6 +78,16 @@ namespace sumire {
 
 		vkDestroySurfaceKHR(instance, surface_, nullptr);
 		vkDestroyInstance(instance, nullptr);
+	}
+
+	void SumiDevice::writeDeviceInfoToConfig(SumiConfig* config) {
+		if (config != nullptr) {
+			config->configData.GRAPHICS_DEVICE = {
+				physicalDeviceDetails.idx,
+				physicalDeviceDetails.name.c_str()
+			};
+			config->writeConfig();
+		}
 	}
 
 	void SumiDevice::createInstance() {
@@ -121,7 +135,7 @@ namespace sumire {
 		hasGflwRequiredInstanceExtensions();
 	}
 
-	void SumiDevice::pickPhysicalDevice() {
+	void SumiDevice::pickPhysicalDevice(SumiConfig* config) {
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 		if (deviceCount == 0) {
@@ -131,12 +145,11 @@ namespace sumire {
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
+		bool foundConfigSpecifiedGpu = false;
 		physicalDeviceList = std::vector<PhysicalDeviceDetails>(deviceCount);
 		uint32_t suitableDeviceCount = 0;
 		for (uint32_t i = 0; i < deviceCount; i++) {
 			const auto& device = devices[i];
-			bool suitable = isDeviceSuitable(device);
-			if (suitable) suitableDeviceCount++;
 
 			VkPhysicalDeviceProperties deviceProperties;
 			vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -144,6 +157,18 @@ namespace sumire {
 
 			VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
 			vkGetPhysicalDeviceMemoryProperties(device, &deviceMemoryProperties);
+
+			bool suitable = isDeviceSuitable(device);
+			if (suitable) {
+				suitableDeviceCount++;
+
+				if (config != nullptr && 
+					config->configData.GRAPHICS_DEVICE.idx  == i &&
+					config->configData.GRAPHICS_DEVICE.name == deviceProperties.deviceName
+				) {
+					foundConfigSpecifiedGpu = true;
+				}
+			}
 
 			physicalDeviceList[i] = PhysicalDeviceDetails{
 				deviceProperties.deviceName,
@@ -154,9 +179,20 @@ namespace sumire {
 			};
 		}
 
-		uint32_t chosenDeviceIdx = 0;
 		if (suitableDeviceCount == 0) {
 			throw std::runtime_error("[Sumire::SumiDevice] Failed to find a suitable GPU from candidates.");
+		}
+
+		if (!foundConfigSpecifiedGpu && config != nullptr) {
+			std::cout << "[Sumire::SumiDevice] WARNING: Could not find gpu specified by config: ["
+				<< config->configData.GRAPHICS_DEVICE.idx << ", " << config->configData.GRAPHICS_DEVICE.name
+				<< "]. The device is missing or is not supported." << std::endl;
+		}
+
+		uint32_t chosenDeviceIdx = 0;
+		if (foundConfigSpecifiedGpu && config != nullptr) {
+			std::cout << "[Sumire::SumiDevice] Using device specified by config." << std::endl;
+			chosenDeviceIdx = config->configData.GRAPHICS_DEVICE.idx;
 		}
 		else {
 			std::vector<PhysicalDeviceDetails> sortedPhysicalDeviceList = physicalDeviceList;
@@ -171,8 +207,9 @@ namespace sumire {
 			);
 
 			chosenDeviceIdx = sortedPhysicalDeviceList[0].idx;
-			physicalDevice = devices[chosenDeviceIdx];
 		}
+
+		physicalDevice = devices[chosenDeviceIdx];
 
 		physicalDeviceDetails = physicalDeviceList[chosenDeviceIdx];
 		std::cout << "[Sumire::SumiDevice] Using physical device: "	<< physicalDeviceDetails.name << std::endl;

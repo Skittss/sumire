@@ -1,12 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace sumire {
 
 	struct PersistentGraphicsDeviceData {
 		uint32_t idx = 0;
-		const char* name = "unset";
+		std::string name = "unset";
 	};
 
 	struct SumiConfigData {

@@ -76,9 +76,37 @@ namespace sumire {
 		// max_n_lights
 		if (config.HasMember("max_n_lights") && config["max_n_lights"].IsUint()) {
 			configData.MAX_N_LIGHTS = config["max_n_lights"].GetUint();
-		} else {
+		} 
+		else {
 			std::cout << FIELD_PARSE_WARNING_STR("max_n_lights") << std::endl;
 		}
+
+		// graphics_device
+		if (config.HasMember("graphics_device") && config["graphics_device"].IsObject()) {
+			const rapidjson::Value& graphicsDevice = config["graphics_device"];
+
+			// graphics_device.idx
+			if (graphicsDevice.HasMember("idx") && graphicsDevice["idx"].IsUint()) {
+				configData.GRAPHICS_DEVICE.idx = graphicsDevice["idx"].GetUint();
+			}
+			else {
+				std::cout << FIELD_PARSE_WARNING_STR("graphics_device.idx") << std::endl;
+			}
+
+			// graphics_device.name
+			if (graphicsDevice.HasMember("name") && graphicsDevice["name"].IsString()) {
+				configData.GRAPHICS_DEVICE.name = graphicsDevice["name"].GetString();
+			}
+			else {
+				std::cout << FIELD_PARSE_WARNING_STR("graphics_device.name") << std::endl;
+			}
+		}
+		else {
+			std::cout << OBJECT_PARSE_WARNING_STR("graphics_device") << std::endl;
+		}
+
+		// Update config to fix any errors
+		writeConfig();
 
 		std::cout << "[Sumire::SumiConfig] Read config from " + config_pth_string << std::endl;
 	}
@@ -105,7 +133,7 @@ namespace sumire {
 		writer.Key("idx");
 		writer.Uint(configData.GRAPHICS_DEVICE.idx);
 		writer.Key("name");
-		writer.String(configData.GRAPHICS_DEVICE.name);
+		writer.String(configData.GRAPHICS_DEVICE.name.c_str());
 		writer.EndObject();
 
 		writer.EndObject();

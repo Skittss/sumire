@@ -12,11 +12,14 @@
 namespace sumire {
 
     SumiImgui::SumiImgui(
+        SumiDevice& device,
+        SumiConfig& config,
         SumiRenderer &renderer,
         VkRenderPass renderPass,
         uint32_t subpassIdx,
         VkQueue workQueue
-    ) : sumiRenderer{ renderer } {
+    ) : sumiDevice{ device }, sumiConfig{ config }, sumiRenderer { renderer } 
+    {
         initImgui(renderPass, subpassIdx, workQueue);
     }
 
@@ -24,7 +27,7 @@ namespace sumire {
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
-        vkDestroyDescriptorPool(sumiRenderer.getDevice().device(), imguiDescriptorPool, nullptr);
+        vkDestroyDescriptorPool(sumiDevice.device(), imguiDescriptorPool, nullptr);
     }
 
     ImGuiIO& SumiImgui::getIO() { return ImGui::GetIO(); }
@@ -67,7 +70,7 @@ namespace sumire {
         poolInfo.pPoolSizes = poolSizes;
 
         VK_CHECK_SUCCESS(
-            vkCreateDescriptorPool(sumiRenderer.getDevice().device(), &poolInfo, nullptr, &imguiDescriptorPool),
+            vkCreateDescriptorPool(sumiDevice.device(), &poolInfo, nullptr, &imguiDescriptorPool),
             "[Sumire::SumiImgui] Failed to create ImGui's required descriptor pool."
         );
 
@@ -82,9 +85,9 @@ namespace sumire {
         ImGui_ImplGlfw_InitForVulkan(sumiRenderer.getWindow().getGLFWwindow(), true);
 
         ImGui_ImplVulkan_InitInfo initInfo{};
-        initInfo.Instance = sumiRenderer.getDevice().getInstance();
-        initInfo.PhysicalDevice = sumiRenderer.getDevice().getPhysicalDevice();
-        initInfo.Device = sumiRenderer.getDevice().device();
+        initInfo.Instance = sumiDevice.getInstance();
+        initInfo.PhysicalDevice = sumiDevice.getPhysicalDevice();
+        initInfo.Device = sumiDevice.device();
         initInfo.Queue = workQueue;
         initInfo.DescriptorPool = imguiDescriptorPool;
         initInfo.MinImageCount = 2; // double buffer
@@ -154,9 +157,8 @@ namespace sumire {
     void SumiImgui::drawConfigGraphicsSubsection() {
         ImGui::SeparatorText("Graphics");
         if (ImGui::TreeNode("Settings")) {
-            SumiDevice& device = sumiRenderer.getDevice();
-            PhysicalDeviceDetails activeDeviceDetails = device.getPhysicalDeviceDetails();
-            const std::vector<PhysicalDeviceDetails>& deviceList = device.getPhysicalDeviceList();
+            PhysicalDeviceDetails activeDeviceDetails = sumiDevice.getPhysicalDeviceDetails();
+            const std::vector<PhysicalDeviceDetails>& deviceList = sumiDevice.getPhysicalDeviceList();
 
             std::vector<const char*> deviceNames(deviceList.size());
             for (uint32_t i = 0; i < deviceList.size(); i++) {
@@ -165,7 +167,21 @@ namespace sumire {
 
             static int deviceListIdx = activeDeviceDetails.idx;
             ImGui::Combo("Device", &deviceListIdx, deviceNames.data(), deviceNames.size());
-            // device.updateConfig();
+
+            uint32_t selectedDeviceIdx = static_cast<uint32_t>(deviceListIdx);
+            if (selectedDeviceIdx != sumiConfig.configData.GRAPHICS_DEVICE.idx) {
+                sumiConfig.configData.GRAPHICS_DEVICE = {
+                    selectedDeviceIdx,
+                    deviceList[selectedDeviceIdx].name.c_str(),
+                };
+                sumiConfig.writeConfig();
+            }
+
+            if (selectedDeviceIdx != activeDeviceDetails.idx) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                ImGui::Text("A restart is required to change the active graphics device.");
+                ImGui::PopStyleColor();
+            }
 
             ImGui::TreePop();
         }

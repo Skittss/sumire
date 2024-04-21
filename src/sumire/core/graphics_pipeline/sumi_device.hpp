@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <sumire/config/sumi_config.hpp>
 #include <sumire/core/windowing/sumi_window.hpp>
 
 #include <cstdint>
@@ -59,7 +60,10 @@ namespace sumire {
 		const bool enableValidationLayers = true;
 	#endif
 
-		SumiDevice(SumiWindow& window);
+		SumiDevice(
+			SumiWindow& window,
+			SumiConfig* config = nullptr
+		);
 		~SumiDevice();
 
 		SumiDevice(const SumiDevice&) = delete;
@@ -146,9 +150,10 @@ namespace sumire {
 		void createInstance();
 		void setupDebugMessenger();
 		void createSurface();
-		void pickPhysicalDevice();
+		void pickPhysicalDevice(SumiConfig* config);
 		void createLogicalDevice();
 		void createCommandPools();
+		void writeDeviceInfoToConfig(SumiConfig* config);
 
 		VkDeviceSize getLocalHeapSize(
 			const VkPhysicalDeviceMemoryProperties& memoryProperties) const;

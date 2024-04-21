@@ -19,13 +19,13 @@ namespace sumire {
 	class Sumire {
 	public:
 		Sumire();
-		~Sumire();
+		~Sumire() = default;
 
 		Sumire(const Sumire&) = delete;
 		Sumire& operator=(const Sumire&) = delete;
 
-		uint32_t screenWidth  = config::STARTUP_WIDTH;
-		uint32_t screenHeight = config::STARTUP_HEIGHT;
+		uint32_t screenWidth = 0;
+		uint32_t screenHeight = 0;
 
 		void init();
 		void run();
@@ -36,11 +36,11 @@ namespace sumire {
 
 		SumiConfig sumiConfig{};
 		SumiWindow sumiWindow{ 
-			static_cast<int>(screenWidth), 
-			static_cast<int>(screenHeight), 
+			static_cast<int>(sumiConfig.configData.STARTUP_WIDTH),
+			static_cast<int>(sumiConfig.configData.STARTUP_HEIGHT),
 			"Sumire" 
 		};
-		SumiDevice sumiDevice{ sumiWindow };
+		SumiDevice sumiDevice{ sumiWindow, &sumiConfig };
 		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice };
 
 		// Global descriptors and buffers

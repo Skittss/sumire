@@ -46,14 +46,13 @@ namespace sumire {
 	};
 
 	Sumire::Sumire() {
+		screenWidth = sumiConfig.configData.STARTUP_WIDTH;
+		screenHeight = sumiConfig.configData.STARTUP_HEIGHT;
+
 		init();
 
 		loadObjects();
 		loadLights();
-	}
-
-	Sumire::~Sumire() {
-		globalDescriptorPool = nullptr; // Clean up pools before device etc are cleaned up.
 	}
 
 	void Sumire::init() {
@@ -178,6 +177,8 @@ namespace sumire {
 
 		// GUI
 		SumiImgui gui{
+			sumiDevice,
+			sumiConfig,
 			sumiRenderer,
 			sumiRenderer.getCompositionRenderPass(),
 			sumiRenderer.compositionSubpassIdx(),

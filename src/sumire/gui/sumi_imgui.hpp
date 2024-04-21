@@ -31,7 +31,9 @@ namespace sumire {
     class SumiImgui {
         public:
             SumiImgui(
-                SumiRenderer &renderer,
+                SumiDevice& device,
+                SumiConfig& config,
+                SumiRenderer& renderer,
                 VkRenderPass renderPass,
                 uint32_t subpassIdx,
                 VkQueue workQueue
@@ -87,7 +89,9 @@ namespace sumire {
             void drawZbinSubsection(const structs::zBin& zbin);
             void drawLightMaskSubsection(structs::lightMask* lightMask);
 
-            SumiRenderer &sumiRenderer;
+            SumiConfig& sumiConfig;
+            SumiDevice& sumiDevice;
+            SumiRenderer& sumiRenderer;
             VkDescriptorPool imguiDescriptorPool;
 
             int resetProjParamsCounter{0};
