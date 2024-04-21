@@ -78,6 +78,11 @@ if (NOT MIKKTSPACE_PATH)
 	set(MIKKTSPACE_PATH external/mikktspace)
 endif()
 
+if (NOT RAPIDJSON_PATH)
+	message(STATUS "RAPIDJSON_PATH not specified in .env.cmake, using external/rapidjson")
+	set(RAPIDJSON_PATH external/rapidjson)
+endif()
+
 # Bin path
 set(OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
@@ -120,6 +125,7 @@ if (WIN32)
 			${TINYGLTF_PATH}
 			${IMGUI_PATH}
 			${MIKKTSPACE_PATH}
+			${RAPIDJSON_PATH}/include
 			${GLFW_INCLUDE_DIRS}
 			${GLM_PATH}
 		PRIVATE 
@@ -142,6 +148,7 @@ elseif (UNIX)
 		${TINYGLTF_PATH}
 		${IMGUI_PATH}
 		${MIKKTSPACE_PATH}
+		${RAPIDJSON_PATH}/include
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src
 	)
@@ -150,10 +157,10 @@ elseif (UNIX)
 endif()
  
  
-############## Build SHADERS #######################
+############## Custom Target SHADERS #######################
  
 message(STATUS "COMPILING SHADERS")
-# Find all vertex and fragment sources within shaders directory
+# Find all shader sources within shaders directory
 # taken from VBlancos vulkan tutorial
 # https://github.com/vblanco20-1/vulkan-guide/blob/all-chapters/CMakeLists.txt
 find_program(GLSL_VALIDATOR glslangValidator HINTS 
@@ -166,7 +173,6 @@ find_program(GLSL_VALIDATOR glslangValidator HINTS
 	$ENV{VULKAN_SDK}/Bin32/
 )
  
-# get all .vert and .frag files in shaders directory
 file(GLOB_RECURSE GLSL_SOURCE_FILES
 	"${PROJECT_SOURCE_DIR}/shaders/*.frag"
 	"${PROJECT_SOURCE_DIR}/shaders/*.vert"

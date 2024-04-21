@@ -12,8 +12,12 @@ assets/models/*
 assets/textures/*
 !assets/textures/empty.*
 
+config/*
+!config/default_config.json
+
 external/*
 !external/tinygltf
 !external/tinyobjloader
 !external/imgui
 !external/mikktspace
+!external/rapidjson
