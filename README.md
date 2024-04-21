@@ -94,4 +94,5 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
     - This could / should be frustum based, or AABB.
 
 ## Application Config
-- [ ] Persistent Physical Device (GPU) selection via config system (e.g. .ini file)
+- [X] Persistent Physical Device (GPU) selection via config system (json)
+    - [ ] Config data should be constant and instead written to a mirror when it needs changing

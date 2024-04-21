@@ -15,6 +15,9 @@ namespace sumire {
 		void readConfig();
 		void writeConfig() const;
 
+		// TODO: It would be a good idea to make this struct const so it does not 
+		//        change at runtime for important constants.
+		//       Instead write config changes to a separate object and write that one.
 		SumiConfigData configData{};
 
 	private:
