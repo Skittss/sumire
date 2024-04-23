@@ -35,12 +35,12 @@ namespace sumire {
 
 		SumiConfig sumiConfig{};
 		SumiWindow sumiWindow{ 
-			static_cast<int>(sumiConfig.configData.STARTUP_WIDTH),
-			static_cast<int>(sumiConfig.configData.STARTUP_HEIGHT),
+			static_cast<int>(sumiConfig.configData.RESOLUTION.WIDTH),
+			static_cast<int>(sumiConfig.configData.RESOLUTION.HEIGHT),
 			"Sumire" 
 		};
 		SumiDevice sumiDevice{ sumiWindow, &sumiConfig };
-		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice };
+		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice, sumiConfig };
 
 		// Global descriptors and buffers
 		std::unique_ptr<SumiDescriptorPool> globalDescriptorPool;

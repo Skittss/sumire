@@ -187,8 +187,20 @@ namespace sumire {
             }
 
             // --------- Vsync -----------------------------------------------------------------------
-            static int vsync = 0;
-            ImGui::Combo("Vsync", &vsync, "On\0Off\0\0");
+            static int vsyncIdx = sumiConfig.configData.VSYNC ? 0 : 1;
+            ImGui::Combo("Vsync", &vsyncIdx, "On\0Off\0\0");
+            bool vsync = vsyncIdx == 0 ? true : false;
+            if (vsync != sumiConfig.configData.VSYNC) {
+                sumiConfig.configData.VSYNC = vsync;
+                sumiConfig.writeConfig();
+
+                // Update swapchain present mode
+                bool test1 = sumiConfig.configData.VSYNC;
+                bool test2 = sumiRenderer.getSwapChain()->isVsyncEnabled();
+                if (sumiConfig.configData.VSYNC != sumiRenderer.getSwapChain()->isVsyncEnabled()) {
+                    sumiRenderer.changeSwapChainPresentMode(sumiConfig.configData.VSYNC);
+                }
+            }
 
             ImGui::TreePop();
         }

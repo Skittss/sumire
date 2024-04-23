@@ -1,11 +1,13 @@
 {
-    "resolution": {
-        "width": 1920,
-        "height": 1080
-    },
-    "max_n_lights": 1024,
     "graphics_device": {
         "idx": 0,
         "name": "unset"
     }
+    "resolution": {
+        "width": 1920,
+        "height": 1080
+    },
+    "vsync": false,
+    "max_n_lights": 1024
+
 }

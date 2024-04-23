@@ -46,8 +46,8 @@ namespace sumire {
 	};
 
 	Sumire::Sumire() {
-		screenWidth = sumiConfig.configData.STARTUP_WIDTH;
-		screenHeight = sumiConfig.configData.STARTUP_HEIGHT;
+		screenWidth = sumiConfig.configData.RESOLUTION.WIDTH;
+		screenHeight = sumiConfig.configData.RESOLUTION.HEIGHT;
 
 		init();
 
