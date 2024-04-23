@@ -12,16 +12,20 @@
 
 namespace sumire {
 
-	SumiSwapChain::SumiSwapChain(SumiDevice& deviceRef, VkExtent2D extent
-	) : device{ deviceRef }, windowExtent{ extent } {
+	SumiSwapChain::SumiSwapChain(
+		SumiDevice& deviceRef, 
+		VkExtent2D extent,
+		bool vsync
+	) : device{ deviceRef }, windowExtent{ extent }, vsyncEnabled{ vsync } {
 		init();
 	}
 
 	SumiSwapChain::SumiSwapChain(
 		SumiDevice& deviceRef, 
 		VkExtent2D extent, 
-		std::shared_ptr<SumiSwapChain> previous
-	) : device{ deviceRef }, windowExtent{ extent }, oldSwapChain{ previous } {
+		std::shared_ptr<SumiSwapChain> previous,
+		bool vsync
+	) : device{ deviceRef }, windowExtent{ extent }, oldSwapChain{ previous }, vsyncEnabled{ vsync } {
 		init();
 
 		// Only use old swap chain ptr to init a new one to potentially save resources
@@ -225,26 +229,27 @@ namespace sumire {
 	VkPresentModeKHR SumiSwapChain::chooseSwapPresentMode(
 		const std::vector<VkPresentModeKHR>& availablePresentModes
 	) {
-		// Default Mailbox; GPU never idles and does not wait for Vsync, instead overwrites old buffers
-		// FIFO can be used to force a wait for the Vsync, this will introduce idling time on the GPU.
-		// These are both Vsync approaches, i.e. no screen tearing.
-
-		//for (const auto& availablePresentMode : availablePresentModes) {
-		//	if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-		//		std::cout << "[Sumire::SumiSwapChain] Swapped to present mode: Mailbox" << std::endl;
-		//		return availablePresentMode;
-		//	}
-		//}
-
-		// Immediate mode does not wait for a vsync to update buffers.
-		for (const auto &availablePresentMode : availablePresentModes) {
-			if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-				std::cout << "Present mode: Immediate" << std::endl;
-				return availablePresentMode;
+		if (vsyncEnabled) {
+			// Mailbox
+			for (const auto& availablePresentMode : availablePresentModes) {
+				if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+					std::cout << "[Sumire::SumiSwapChain] Using present mode: Mailbox (Vsync ON)" << std::endl;
+					return availablePresentMode;
+				}
+			}
+		} else {
+			// Immediate
+			for (const auto& availablePresentMode : availablePresentModes) {
+				if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+					std::cout << "[Sumire::SumiSwapChain] Using present mode: Immediate (Vsync OFF)" << std::endl;
+					return availablePresentMode;
+				}
 			}
 		}
 
-		std::cout << "[Sumire::SumiSwapChain] Swapped to present mode: V-Sync" << std::endl;
+		// FIFO fallback
+		std::cout << "[Sumire::SumiSwapChain] WARNING: Chosen present mode is not supported - " 
+					 "Falling back on FIFO (Vsync ON)." << std::endl;
 		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 

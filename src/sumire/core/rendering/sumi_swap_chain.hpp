@@ -15,14 +15,24 @@ namespace sumire {
 	public:
 		static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
-		SumiSwapChain(SumiDevice& deviceRef, VkExtent2D windowExtent);
-		SumiSwapChain(SumiDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<SumiSwapChain> previous);
+		SumiSwapChain(
+			SumiDevice& deviceRef,
+			VkExtent2D windowExtent, 
+			bool vsync = false
+		);
+		SumiSwapChain(
+			SumiDevice& deviceRef,
+			VkExtent2D windowExtent,
+			std::shared_ptr<SumiSwapChain> previous,
+			bool vsync = false
+		);
 		~SumiSwapChain();
 
 		SumiSwapChain(const SumiSwapChain&) = delete;
 		SumiSwapChain& operator=(const SumiSwapChain&) = delete;
 
 		size_t imageCount() { return colorAttachments.size(); }
+		bool isVsyncEnabled() { return vsyncEnabled; }
 		
 		SumiAttachment* getColorAttachment(uint32_t idx) const { return colorAttachments[idx].get(); }
 		SumiAttachment* getDepthAttachment() const { return depthAttachment.get(); }
@@ -74,6 +84,7 @@ namespace sumire {
 
 		SumiDevice& device;
 		VkExtent2D windowExtent;
+		bool vsyncEnabled;
 
 		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		std::shared_ptr<SumiSwapChain> oldSwapChain;
