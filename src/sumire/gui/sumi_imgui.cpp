@@ -155,8 +155,11 @@ namespace sumire {
     }
 
     void SumiImgui::drawConfigGraphicsSubsection() {
+        // TODO: If we had some menu system for this it would be better to write the graphics settings
+        //       Once on menu close rather than on field change.
         ImGui::SeparatorText("Graphics");
         if (ImGui::TreeNode("Settings")) {
+            // --------- Device Selection ------------------------------------------------------------
             PhysicalDeviceDetails activeDeviceDetails = sumiDevice.getPhysicalDeviceDetails();
             const std::vector<PhysicalDeviceDetails>& deviceList = sumiDevice.getPhysicalDeviceList();
 
@@ -169,7 +172,7 @@ namespace sumire {
             ImGui::Combo("Device", &deviceListIdx, deviceNames.data(), deviceNames.size());
 
             uint32_t selectedDeviceIdx = static_cast<uint32_t>(deviceListIdx);
-            if (selectedDeviceIdx != sumiConfig.configData.GRAPHICS_DEVICE.idx) {
+            if (selectedDeviceIdx != sumiConfig.configData.GRAPHICS_DEVICE.IDX) {
                 sumiConfig.configData.GRAPHICS_DEVICE = {
                     selectedDeviceIdx,
                     deviceList[selectedDeviceIdx].name.c_str(),
@@ -182,6 +185,10 @@ namespace sumire {
                 ImGui::Text("A restart is required to change the active graphics device.");
                 ImGui::PopStyleColor();
             }
+
+            // --------- Vsync -----------------------------------------------------------------------
+            static int vsync = 0;
+            ImGui::Combo("Vsync", &vsync, "On\0Off\0\0");
 
             ImGui::TreePop();
         }

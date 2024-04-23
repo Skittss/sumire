@@ -50,20 +50,44 @@ namespace sumire {
 		
 		configData = SumiConfigData{};
 
+		// graphics_device
+		if (config.HasMember("graphics_device") && config["graphics_device"].IsObject()) {
+			const rapidjson::Value& graphicsDevice = config["graphics_device"];
+
+			// graphics_device.idx
+			if (graphicsDevice.HasMember("idx") && graphicsDevice["idx"].IsUint()) {
+				configData.GRAPHICS_DEVICE.IDX = graphicsDevice["idx"].GetUint();
+			}
+			else {
+				std::cout << FIELD_PARSE_WARNING_STR("graphics_device.idx") << std::endl;
+			}
+
+			// graphics_device.name
+			if (graphicsDevice.HasMember("name") && graphicsDevice["name"].IsString()) {
+				configData.GRAPHICS_DEVICE.NAME = graphicsDevice["name"].GetString();
+			}
+			else {
+				std::cout << FIELD_PARSE_WARNING_STR("graphics_device.name") << std::endl;
+			}
+		}
+		else {
+			std::cout << OBJECT_PARSE_WARNING_STR("graphics_device") << std::endl;
+		}
+
 		// resolution
 		if (config.HasMember("resolution") && config["resolution"].IsObject()) {
 			const rapidjson::Value& resolution = config["resolution"];
 
 			// resolution.width
 			if (resolution.HasMember("width") && resolution["width"].IsUint()) {
-				configData.STARTUP_WIDTH = resolution["width"].GetUint();
+				configData.RESOLUTION.WIDTH = resolution["width"].GetUint();
 			} else {
 				std::cout << FIELD_PARSE_WARNING_STR("resolution.width") << std::endl;
 			}
 
 			// resolution.height
 			if (resolution.HasMember("height") && resolution["height"].IsUint()) {
-				configData.STARTUP_HEIGHT = resolution["height"].GetUint();
+				configData.RESOLUTION.HEIGHT = resolution["height"].GetUint();
 			}
 			else {
 				std::cout << FIELD_PARSE_WARNING_STR("resolution.height") << std::endl;
@@ -73,36 +97,20 @@ namespace sumire {
 			std::cout << OBJECT_PARSE_WARNING_STR("resolution") << std::endl;
 		}
 
+		// vsync
+		if (config.HasMember("vsync") && config["vsync"].IsBool()) {
+			configData.VSYNC = config["vsync"].GetBool();
+		}
+		else {
+			std::cout << FIELD_PARSE_WARNING_STR("vsync") << std::endl;
+		}
+
 		// max_n_lights
 		if (config.HasMember("max_n_lights") && config["max_n_lights"].IsUint()) {
 			configData.MAX_N_LIGHTS = config["max_n_lights"].GetUint();
 		} 
 		else {
 			std::cout << FIELD_PARSE_WARNING_STR("max_n_lights") << std::endl;
-		}
-
-		// graphics_device
-		if (config.HasMember("graphics_device") && config["graphics_device"].IsObject()) {
-			const rapidjson::Value& graphicsDevice = config["graphics_device"];
-
-			// graphics_device.idx
-			if (graphicsDevice.HasMember("idx") && graphicsDevice["idx"].IsUint()) {
-				configData.GRAPHICS_DEVICE.idx = graphicsDevice["idx"].GetUint();
-			}
-			else {
-				std::cout << FIELD_PARSE_WARNING_STR("graphics_device.idx") << std::endl;
-			}
-
-			// graphics_device.name
-			if (graphicsDevice.HasMember("name") && graphicsDevice["name"].IsString()) {
-				configData.GRAPHICS_DEVICE.name = graphicsDevice["name"].GetString();
-			}
-			else {
-				std::cout << FIELD_PARSE_WARNING_STR("graphics_device.name") << std::endl;
-			}
-		}
-		else {
-			std::cout << OBJECT_PARSE_WARNING_STR("graphics_device") << std::endl;
 		}
 
 		// Update config to fix any errors
@@ -117,24 +125,27 @@ namespace sumire {
 
 		writer.StartObject();
 
-		writer.Key("resolution");
-		writer.StartObject();
-		writer.Key("width");
-		writer.Uint(configData.STARTUP_WIDTH);
-		writer.Key("height");
-		writer.Uint(configData.STARTUP_HEIGHT);
-		writer.EndObject();
-
-		writer.Key("max_n_lights");
-		writer.Uint(configData.MAX_N_LIGHTS);
-
 		writer.Key("graphics_device");
 		writer.StartObject();
 		writer.Key("idx");
-		writer.Uint(configData.GRAPHICS_DEVICE.idx);
+		writer.Uint(configData.GRAPHICS_DEVICE.IDX);
 		writer.Key("name");
-		writer.String(configData.GRAPHICS_DEVICE.name.c_str());
+		writer.String(configData.GRAPHICS_DEVICE.NAME.c_str());
 		writer.EndObject();
+
+		writer.Key("resolution");
+		writer.StartObject();
+		writer.Key("width");
+		writer.Uint(configData.RESOLUTION.WIDTH);
+		writer.Key("height");
+		writer.Uint(configData.RESOLUTION.HEIGHT);
+		writer.EndObject();
+
+		writer.Key("vsync");
+		writer.Bool(configData.VSYNC);
+
+		writer.Key("max_n_lights");
+		writer.Uint(configData.MAX_N_LIGHTS);
 
 		writer.EndObject();
 
