@@ -7,7 +7,11 @@
 
 namespace sumire {
 
-	SumiRenderer::SumiRenderer(SumiWindow &window, SumiDevice &device) : sumiWindow{window}, sumiDevice{device} {
+	SumiRenderer::SumiRenderer(
+		SumiWindow &window, SumiDevice &device, SumiConfig &config
+	) : sumiWindow{ window }, sumiDevice{ device }, sumiConfig{ config } {
+		swapChainUseVsync = config.configData.VSYNC;
+
 		recreateSwapChain();
 		recreateGbuffer();
 		createRenderPass();
@@ -50,11 +54,11 @@ namespace sumire {
 		vkDeviceWaitIdle(sumiDevice.device());
 		
 		if (sumiSwapChain == nullptr) {
-			sumiSwapChain = std::make_unique<SumiSwapChain>(sumiDevice, extent);
+			sumiSwapChain = std::make_unique<SumiSwapChain>(sumiDevice, extent, swapChainUseVsync);
 		}
 		else {
             std::shared_ptr<SumiSwapChain> oldSwapChain = std::move(sumiSwapChain);
-			sumiSwapChain = std::make_unique<SumiSwapChain>(sumiDevice, extent, oldSwapChain);
+			sumiSwapChain = std::make_unique<SumiSwapChain>(sumiDevice, extent, oldSwapChain, swapChainUseVsync);
 
             if (!oldSwapChain->compareSwapFormats(*sumiSwapChain.get())) {
                 throw std::runtime_error("[Sumire::SumiRenderer] Could not use old swapchain as base for recreation - swap chain format has changed.");
@@ -86,6 +90,13 @@ namespace sumire {
 		}
 
 		scRecreatedFlag = true;
+		swapChainNeedsRecreate = false;
+	}
+	
+	// Change the swap chain's present mode. Queue's recreation for the start of the next frame.
+	void SumiRenderer::changeSwapChainPresentMode(bool vsync) {
+		swapChainUseVsync = vsync;
+		swapChainNeedsRecreate = true;
 	}
 
 	void SumiRenderer::recreateGbuffer() {
@@ -563,7 +574,10 @@ namespace sumire {
 
 		auto result = sumiSwapChain->acquireNextImage(currentFrameIdx, &currentImageIdx);
 
-		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		if (
+			swapChainNeedsRecreate || 
+			result == VK_ERROR_OUT_OF_DATE_KHR
+		) {
 			recreateRenderObjects();
 			return FrameCommandBuffers{};
 		}
@@ -721,7 +735,7 @@ namespace sumire {
 			"[Sumire::SumiRenderer] Could not submit present command buffer."
 		);
 
-		auto result = sumiSwapChain->queuePresent(&currentImageIdx, 1, &renderFinished);
+		VkResult result = sumiSwapChain->queuePresent(&currentImageIdx, 1, &renderFinished);
 
 		if (
 			result == VK_ERROR_OUT_OF_DATE_KHR ||

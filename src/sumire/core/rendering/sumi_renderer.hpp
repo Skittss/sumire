@@ -14,7 +14,7 @@ namespace sumire {
 
 	class SumiRenderer {
 	public:
-		SumiRenderer(SumiWindow& window, SumiDevice& device);
+		SumiRenderer(SumiWindow& window, SumiDevice& device, SumiConfig& config);
 		~SumiRenderer();
 
 		SumiRenderer(const SumiRenderer&) = delete;
@@ -22,6 +22,7 @@ namespace sumire {
 
         SumiWindow& getWindow() const { return sumiWindow; }
         SumiDevice& getDevice() const { return sumiDevice; }
+        SumiSwapChain* getSwapChain() const { return sumiSwapChain.get(); }
 
         struct FrameCommandBuffers {
             VkCommandBuffer predrawCompute = VK_NULL_HANDLE;
@@ -75,6 +76,7 @@ namespace sumire {
 
         float getAspect() const { return sumiSwapChain->getAspectRatio(); }
         VkFormat getSwapChainColorFormat () const { return sumiSwapChain->getColorFormat(); }
+        void changeSwapChainPresentMode(bool vsync);
         bool wasSwapChainRecreated() const { return scRecreatedFlag; }
         void resetScRecreatedFlag() { scRecreatedFlag = false; }
 
@@ -82,7 +84,7 @@ namespace sumire {
 		void createCommandBuffers();
 		void freeCommandBuffers();
         void recreateRenderObjects();
-		void recreateSwapChain();
+        void recreateSwapChain();
         void recreateGbuffer();
 
         void createRenderPass();
@@ -98,6 +100,7 @@ namespace sumire {
 
 		SumiWindow& sumiWindow;
 		SumiDevice& sumiDevice;
+        SumiConfig& sumiConfig;
 
         std::vector<VkSemaphore> predrawComputeFinishedSemaphores;
         std::vector<VkSemaphore> graphicsFinishedSemaphores;
@@ -121,6 +124,8 @@ namespace sumire {
         std::vector<VkFramebuffer> framebuffers;
 
         // Swap chain
+        bool swapChainNeedsRecreate = false;
+        bool swapChainUseVsync;
 		std::unique_ptr<SumiSwapChain> sumiSwapChain;
 
         // Offscreen Deferred Rendering Targets
