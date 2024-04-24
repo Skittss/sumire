@@ -195,8 +195,8 @@ namespace sumire {
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		sumiPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,
-			SUMIRE_ENGINE_PATH("shaders/grid.vert.spv"),
-			SUMIRE_ENGINE_PATH("shaders/grid.frag.spv"),
+			SUMIRE_ENGINE_PATH("shaders/world_ui/grid.vert.spv"),
+			SUMIRE_ENGINE_PATH("shaders/world_ui/grid.frag.spv"),
 			pipelineConfig);
 
 	}

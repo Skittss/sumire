@@ -66,8 +66,8 @@ namespace sumire {
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		sumiPipeline = std::make_unique<SumiPipeline>(
 			sumiDevice,
-			SUMIRE_ENGINE_PATH("shaders/point_light.vert.spv"),
-			SUMIRE_ENGINE_PATH("shaders/point_light.frag.spv"),
+			SUMIRE_ENGINE_PATH("shaders/world_ui/point_light.vert.spv"),
+			SUMIRE_ENGINE_PATH("shaders/world_ui/point_light.frag.spv"),
 			pipelineConfig);
 	}
 

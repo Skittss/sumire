@@ -17,7 +17,7 @@ layout(set = 0, binding = 1) uniform Camera {
 	vec3 cameraPosition;
 };
 
-#include "includes/inc_light.glsl"
+#include "../includes/inc_light.glsl"
 
 layout(set = 0, binding = 2) buffer LightSSBO {
 	Light lights[];
