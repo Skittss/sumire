@@ -320,11 +320,17 @@ namespace sumire {
 				);
 				
 				// Pre-draw compute dispatches
+				// TODO: Compute based culling and skinning.
+
 				// Shadow mapping
 				shadowMapper.findLightsApproximate(
 					frameCommandBuffers.predrawCompute, 
 					camera.getNear(), camera.getFar()
 				);
+
+				// TODO: I'm leaning on a z-prepass here to compute tiled shadows asynchronously with the
+				//       Gbuffer fill pass. This lets us keep the tile-based subpasses for the gbuffer
+				//       fill/resolve.
 				//shadowMapper.findLightsAccurate(frameCommandBuffers.predrawCompute);
 				//shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.predrawCompute);
 				//shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
