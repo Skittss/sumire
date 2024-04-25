@@ -26,7 +26,15 @@ uint getTileIdx(in uvec2 tileCoord) {
 	return tileCoord.x + tileCoord.y * push.tileResolution.x;
 }
 
-uvec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
+vec2 getTileNearFarDepth(in uvec2 tileCoord) {
+	// Fetch from HZB. 
+	// Resolution is 1/8th of full res so each pixel corresponds to a shadow tile.
+
+	// TODO: query from HZB input texture(s)
+	return  vec2(0.0, 0.0);
+}
+
+ivec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
 	// Exponential view space mapping to mirror calculation of zBin.
 	// Slice calculation from Tiago Sous' DOOM 2016 Siggraph presentation.
 	//   Interactive graph: https://www.desmos.com/calculator/bf0g6n0hqp.
@@ -36,12 +44,24 @@ uvec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
 	const float sliceFrac1 = nSlices / logFarNear;
 	const float sliceFrac2 = sliceFrac1 * log(push.cameraNear);
 
-	const uvec2 minMaxIdx = uvec2(
+	const ivec2 minMaxIdx = ivec2(
 		floor(log(minMaxDepth.x) * sliceFrac1 - sliceFrac2),
 		floor(log(minMaxDepth.y) * sliceFrac1 - sliceFrac2)
 	);
 
 	return minMaxIdx;
+}
+
+uint getTileLightGroupMask(in uvec2 tileCoord) {
+	// Light mask tiles are 32x32 whereas tiles are 8x8
+	uint lightMaskIdx = (tileCoord.x + tileCoord.y * push.tileResolution.x) / 4;
+
+	// Get first 32 bits of the light mask reserved for groups
+	return lightMasks[lightMaskIdx].bits[0];
+}
+
+uint getTileLightMask(in uint lightGroupBit) {
+	return 0;
 }
 
 void main() {
@@ -55,15 +75,36 @@ void main() {
 	bool isValidTile = all(lessThan(inTileCoord, push.tileResolution));
 
 	if (isValidTile) {
-		const uint tileIdx = getTileIdx(inTileCoord);
-		//const uvec2 zBinMinMaxIdx = getZbinMinMaxIdx();
+		const uint tileIdx         = getTileIdx(inTileCoord);
+		const vec2 tileMinMaxDepth = getTileNearFarDepth(inTileCoord);
+		const ivec2 zBinMinMaxIdx  = getZbinMinMaxIdx(tileMinMaxDepth);
 		//const zBin bin = zBins[zBinMinMaxIdx];
 
+		uint lightGroupMask = getTileLightGroupMask(inTileCoord);
+
+		
 		uint tileLightCount = 0;
+
+		// Process Light Groups (of 32)
+		while (lightGroupMask != 0) {
+			uint validLightMask = 0;
+			uint lightGroupBit  = findLSB(lightGroupMask);
+			uint lightMask      = getTileLightMask(lightGroupBit);
+
+			// Process lights within set light groups
+			while (lightMask != 0) {
+				uint lightBit   = findLSB(lightMask);
+				uint lightIdx   = lightGroupBit * 32 + lightBit;
+
+				lightMask      ^= 1u << lightBit; // Unset bit of processed light
+			}
+
+			lightGroupMask     ^= 1u << lightGroupBit; // Unset bit of processed group
+		}
 	
-		// process valid groups of 32 lights
-
-		// process each light within valid groups
-
+		// First subgroup stores the LightGroup mask entry for the TileGroup, 
+		//if (subgroupElect()) {
+		//	
+		//}
 	}
 }
