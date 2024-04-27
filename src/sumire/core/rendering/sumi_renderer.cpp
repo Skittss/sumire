@@ -113,7 +113,7 @@ namespace sumire {
 
         vkDeviceWaitIdle(sumiDevice.device());
 
-        VkImageUsageFlags gbufferAttachmentExtraFlags = VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+        VkImageUsageFlags gbufferAttachmentExtraFlags = VK_IMAGE_USAGE_SAMPLED_BIT;
         gbuffer = std::make_unique<SumiGbuffer>(
             sumiDevice, 
             extent,
@@ -329,53 +329,53 @@ namespace sumire {
         attachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         // 1: Gbuffer Position
         attachmentDescriptions[1].format = gbuffer->positionAttachment()->getFormat();
         attachmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         // 2: Gbuffer Normal
         attachmentDescriptions[2].format = gbuffer->normalAttachment()->getFormat();
         attachmentDescriptions[2].samples = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachmentDescriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescriptions[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[2].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachmentDescriptions[2].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         // 3: Gbuffer Albedo
         attachmentDescriptions[3].format = gbuffer->albedoAttachment()->getFormat();
         attachmentDescriptions[3].samples = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescriptions[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[3].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachmentDescriptions[3].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescriptions[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[3].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachmentDescriptions[3].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         // 4: Gbuffer AoMetalRoughEmissive (PBR)
         attachmentDescriptions[4].format = gbuffer->aoMetalRoughEmissiveAttachment()->getFormat();
         attachmentDescriptions[4].samples = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescriptions[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[4].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachmentDescriptions[4].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescriptions[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[4].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachmentDescriptions[4].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         // 5: Shared Depth
         attachmentDescriptions[5].format = sumiSwapChain->findDepthFormat();
         attachmentDescriptions[5].samples = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescriptions[5].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[5].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachmentDescriptions[5].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescriptions[5].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[5].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[5].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -448,89 +448,40 @@ namespace sumire {
         //    - Forward render to swapchain (for transparency, etc.)
 
         // Attachment descriptions
-        std::array<VkAttachmentDescription, 6> attachmentDescriptions{};
+        std::array<VkAttachmentDescription, 2> attachmentDescriptions{};
 
         // 0: Swap Chain Color (Intermediate targets)
         attachmentDescriptions[0].format = getIntermediateColorAttachmentFormat();
         attachmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         attachmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL; //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        attachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL; // Prepare for compute write
 
-        // 1: Gbuffer Position
-        attachmentDescriptions[1].format = gbuffer->positionAttachment()->getFormat();
+        // 1: Shared Depth
+        attachmentDescriptions[1].format = sumiSwapChain->findDepthFormat();
         attachmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         attachmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-        // 2: Gbuffer Normal
-        attachmentDescriptions[2].format = gbuffer->normalAttachment()->getFormat();
-        attachmentDescriptions[2].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDescriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[2].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        // 3: Gbuffer Albedo
-        attachmentDescriptions[3].format = gbuffer->albedoAttachment()->getFormat();
-        attachmentDescriptions[3].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDescriptions[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[3].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[3].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        // 4: Gbuffer AoMetalRoughEmissive (PBR)
-        attachmentDescriptions[4].format = gbuffer->aoMetalRoughEmissiveAttachment()->getFormat();
-        attachmentDescriptions[4].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDescriptions[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[4].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[4].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        // 5: Shared Depth
-        attachmentDescriptions[5].format = sumiSwapChain->findDepthFormat();
-        attachmentDescriptions[5].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDescriptions[5].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[5].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[5].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[5].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[5].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[5].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        std::array<VkSubpassDescription, 3> subpassDescriptions{};
-        std::array<VkSubpassDependency, 5> subpassDependencies{};
-
-        // 0 - Gbuffer Fill ------------------------------------------------------------------
-        // Use 5 color attachments (gbuffer + swap chain image) 
-        //   so that unlit meshes can be rendered straight to the swap chain, bypassing the lighting resolve.
-        std::array<VkAttachmentReference, 5> gbufferFillColorRefs{};
-        gbufferFillColorRefs[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-        gbufferFillColorRefs[1] = { 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-        gbufferFillColorRefs[2] = { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-        gbufferFillColorRefs[3] = { 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-        gbufferFillColorRefs[4] = { 4, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-        VkAttachmentReference gbufferFillDepthRef = { 5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+        std::array<VkSubpassDescription, 2> subpassDescriptions{};
+        std::array<VkSubpassDependency, 4> subpassDependencies{};
         
-        subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpassDescriptions[0].colorAttachmentCount = static_cast<uint32_t>(gbufferFillColorRefs.size());
-        subpassDescriptions[0].pColorAttachments = gbufferFillColorRefs.data();
-        subpassDescriptions[0].pDepthStencilAttachment = &gbufferFillDepthRef;
+        // 0 - Gbuffer Resolve  --------------------------------------------------------------
+        VkAttachmentReference gbufferResolveColorRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        VkAttachmentReference gbufferResolveDepthRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-        // --- Dependencies
-        // ----- EXT -> 0 - Make sure all previous renderpass depth/color writes are finished before we begin here.
+        subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpassDescriptions[0].colorAttachmentCount = 1;
+        subpassDescriptions[0].pColorAttachments = &gbufferResolveColorRef;
+        subpassDescriptions[0].pDepthStencilAttachment = &gbufferResolveDepthRef;
+
         subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
         subpassDependencies[0].dstSubpass = 0;
         subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
@@ -543,30 +494,20 @@ namespace sumire {
         subpassDependencies[1].dstSubpass = 0;
         subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpassDependencies[1].srcAccessMask = 0;
+        subpassDependencies[1].srcAccessMask = 0x0;
         subpassDependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         subpassDependencies[1].dependencyFlags = 0x0;
-        
-        // 1 - Gbuffer Resolve  --------------------------------------------------------------
-        VkAttachmentReference gbufferResolveColorRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
-        std::array<VkAttachmentReference, 4> gbufferResolveInputReferences{};
-        gbufferResolveInputReferences[0] = { 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        gbufferResolveInputReferences[1] = { 2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        gbufferResolveInputReferences[2] = { 3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        gbufferResolveInputReferences[3] = { 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-
-        VkAttachmentReference gbufferResolveDepthRef = { 5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+        // 1 - Forward Render To Swapchain ---------------------------------------------------
+        // Reuse the depth buffer from the Gbuffer Fill subpass
+        VkAttachmentReference forwardColorRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        VkAttachmentReference forwardDepthRef = { 5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
         subpassDescriptions[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpassDescriptions[1].colorAttachmentCount = 1;
-        subpassDescriptions[1].pColorAttachments = &gbufferResolveColorRef;
+        subpassDescriptions[1].pColorAttachments = &forwardColorRef;
         subpassDescriptions[1].pDepthStencilAttachment = &gbufferResolveDepthRef;
-        subpassDescriptions[1].inputAttachmentCount = static_cast<uint32_t>(gbufferResolveInputReferences.size());
-        subpassDescriptions[1].pInputAttachments = gbufferResolveInputReferences.data();
 
-        // --- Dependencies
-        // ----- 0 -> 1 - Transition attachments to input read values.
         subpassDependencies[2].srcSubpass = 0;
         subpassDependencies[2].dstSubpass = 1;
         subpassDependencies[2].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -575,31 +516,13 @@ namespace sumire {
         subpassDependencies[2].dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         subpassDependencies[2].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-        // 2 - Forward Render To Swapchain ---------------------------------------------------
-        // Reuse the depth buffer from the Gbuffer Fill subpass
-        VkAttachmentReference forwardColorRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-        VkAttachmentReference forwardDepthRef = { 5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-        subpassDescriptions[2].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpassDescriptions[2].colorAttachmentCount = 1;
-        subpassDescriptions[2].pColorAttachments = &forwardColorRef;
-        subpassDescriptions[2].pDepthStencilAttachment = &gbufferResolveDepthRef;
-
         subpassDependencies[3].srcSubpass = 1;
-        subpassDependencies[3].dstSubpass = 2;
+        subpassDependencies[3].dstSubpass = VK_SUBPASS_EXTERNAL;
         subpassDependencies[3].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpassDependencies[3].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        subpassDependencies[3].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        subpassDependencies[3].dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+        subpassDependencies[3].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        subpassDependencies[3].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+        subpassDependencies[3].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
         subpassDependencies[3].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-        subpassDependencies[4].srcSubpass = 2;
-        subpassDependencies[4].dstSubpass = VK_SUBPASS_EXTERNAL;
-        subpassDependencies[4].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpassDependencies[4].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        subpassDependencies[4].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-        subpassDependencies[4].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        subpassDependencies[4].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -1100,7 +1023,7 @@ namespace sumire {
 
         currentLateGraphicsSubpass++;
 
-        if (currentLateGraphicsSubpass > 3) {
+        if (currentLateGraphicsSubpass > 1) {
             throw std::runtime_error(
                 "[Sumire::SumiRenderer] Could not advance to next late graphics subpass - subpass index out of range.");
         }
