@@ -120,7 +120,6 @@ namespace sumire {
         SumiDevice& sumiDevice;
         SumiConfig& sumiConfig;
 
-
         std::vector<VkSemaphore> predrawComputeFinishedSemaphores;
         std::vector<VkSemaphore> earlyGraphicsFinishedSemaphores;
         std::vector<VkSemaphore> earlyComputeFinishedSemaphores;

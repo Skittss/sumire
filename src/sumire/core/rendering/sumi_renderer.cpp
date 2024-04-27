@@ -292,14 +292,12 @@ namespace sumire {
     }
 
     void SumiRenderer::freeSyncObjects() {
-        for (auto& semaphore : predrawComputeFinishedSemaphores) {
-            vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
-        }
-        for (auto& semaphore : lateGraphicsFinishedSemaphores) {
-            vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
-        }
-        for (auto& semaphore : lateComputeFinishedSemaphores) {
-            vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
+        for (uint32_t i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
+            vkDestroySemaphore(sumiDevice.device(), predrawComputeFinishedSemaphores[i], nullptr);
+            vkDestroySemaphore(sumiDevice.device(), earlyGraphicsFinishedSemaphores[i], nullptr);
+            vkDestroySemaphore(sumiDevice.device(), earlyComputeFinishedSemaphores[i], nullptr);
+            vkDestroySemaphore(sumiDevice.device(), lateGraphicsFinishedSemaphores[i], nullptr);
+            vkDestroySemaphore(sumiDevice.device(), lateComputeFinishedSemaphores[i], nullptr);
         }
     }
 
@@ -779,7 +777,7 @@ namespace sumire {
             "[Sumire::SumiRenderer] Failed to begin recording of early graphics command buffer."
         );
         VK_CHECK_SUCCESS(
-            vkBeginCommandBuffer(frameCommandBuffers.earlyGraphics, &beginInfo),
+            vkBeginCommandBuffer(frameCommandBuffers.earlyCompute, &beginInfo),
             "[Sumire::SumiRenderer] Failed to begin recording of early compute command buffer."
         );
         VK_CHECK_SUCCESS(
@@ -856,55 +854,86 @@ namespace sumire {
         // Reset fence pending queue submission.
         vkResetFences(sumiDevice.device(), 1, &frameInFlightFence);
 
-        // Submit pre-draw compute work
-        // TODO: Check whether submitted to the async compute queue has any negative effect on post-compute.
-        // TODO: If above comment is fine, we can combine the submits for pre and post compute to one 
-        //         vkQueueSubmit call.
+        // Submit pre-draw compute
         VkPipelineStageFlags preComputeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         VkSubmitInfo preComputeSubmitInfo{};
-        preComputeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        preComputeSubmitInfo.commandBufferCount = 1;
-        preComputeSubmitInfo.pCommandBuffers = &frameCommandBuffers.predrawCompute;
-        preComputeSubmitInfo.waitSemaphoreCount = 1;
-        preComputeSubmitInfo.pWaitSemaphores = &frameAvailable;
-        preComputeSubmitInfo.pWaitDstStageMask = &preComputeWaitStageFlag;
+        preComputeSubmitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        preComputeSubmitInfo.commandBufferCount   = 1;
+        preComputeSubmitInfo.pCommandBuffers      = &frameCommandBuffers.predrawCompute;
+        preComputeSubmitInfo.waitSemaphoreCount   = 1;
+        preComputeSubmitInfo.pWaitSemaphores      = &frameAvailable;
+        preComputeSubmitInfo.pWaitDstStageMask    = &preComputeWaitStageFlag;
         preComputeSubmitInfo.signalSemaphoreCount = 1;
-        preComputeSubmitInfo.pSignalSemaphores = &preComputeFinished;
+        preComputeSubmitInfo.pSignalSemaphores    = &preComputeFinished;
 
         VK_CHECK_SUCCESS(
             vkQueueSubmit(sumiDevice.computeQueue(), 1, &preComputeSubmitInfo, nullptr),
             "[Sumire::SumiRenderer] Could not submit pre-draw compute command buffer."
         );
 
-        // Submit late graphics work
-        // TODO: We probably need to wait on at least the start of the fragment shader
-        VkPipelineStageFlags graphicsWaitStageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        VkSubmitInfo graphicsSubmitInfo{};
-        graphicsSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        graphicsSubmitInfo.commandBufferCount = 1;
-        graphicsSubmitInfo.pCommandBuffers = &frameCommandBuffers.lateGraphics;
-        graphicsSubmitInfo.waitSemaphoreCount = 1;
-        graphicsSubmitInfo.pWaitSemaphores = &preComputeFinished;
-        graphicsSubmitInfo.pWaitDstStageMask = &graphicsWaitStageFlag;
-        graphicsSubmitInfo.signalSemaphoreCount = 1;
-        graphicsSubmitInfo.pSignalSemaphores = &lateGraphicsFinished;
+        // Submit early graphics
+        VkPipelineStageFlags earlyGraphicsWaitStageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        VkSubmitInfo earlyGraphicsSubmitInfo{};
+        earlyGraphicsSubmitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        earlyGraphicsSubmitInfo.commandBufferCount   = 1;
+        earlyGraphicsSubmitInfo.pCommandBuffers      = &frameCommandBuffers.earlyGraphics;
+        earlyGraphicsSubmitInfo.waitSemaphoreCount   = 1;
+        earlyGraphicsSubmitInfo.pWaitSemaphores      = &preComputeFinished;
+        earlyGraphicsSubmitInfo.pWaitDstStageMask    = &earlyGraphicsWaitStageFlag;
+        earlyGraphicsSubmitInfo.signalSemaphoreCount = 1;
+        earlyGraphicsSubmitInfo.pSignalSemaphores    = &earlyGraphicsFinished;
 
         VK_CHECK_SUCCESS(
-            vkQueueSubmit(sumiDevice.graphicsQueue(), 1, &graphicsSubmitInfo, nullptr),
+            vkQueueSubmit(sumiDevice.graphicsQueue(), 1, &earlyGraphicsSubmitInfo, nullptr),
+            "[Sumire::SumiRenderer] Could not submit early graphics command buffer."
+        );
+
+        // Submit early compute
+        VkPipelineStageFlags earlyComputeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        VkSubmitInfo earlyComputeSubmitInfo{};
+        earlyComputeSubmitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        earlyComputeSubmitInfo.commandBufferCount   = 1;
+        earlyComputeSubmitInfo.pCommandBuffers      = &frameCommandBuffers.earlyCompute;
+        earlyComputeSubmitInfo.waitSemaphoreCount   = 1;
+        earlyComputeSubmitInfo.pWaitSemaphores      = &earlyGraphicsFinished;
+        earlyComputeSubmitInfo.pWaitDstStageMask    = &earlyComputeWaitStageFlag;
+        earlyComputeSubmitInfo.signalSemaphoreCount = 1;
+        earlyComputeSubmitInfo.pSignalSemaphores    = &earlyComputeFinished;
+
+        VK_CHECK_SUCCESS(
+            vkQueueSubmit(sumiDevice.computeQueue(), 1, &earlyComputeSubmitInfo, nullptr),
+            "[Sumire::SumiRenderer] Could not submit early compute command buffer."
+        );
+
+        // Submit late graphics
+        // TODO: We probably need to wait on at least the start of the fragment shader
+        VkPipelineStageFlags lateGraphicsWaitStageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        VkSubmitInfo lateGraphicsSubmitInfo{};
+        lateGraphicsSubmitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        lateGraphicsSubmitInfo.commandBufferCount   = 1;
+        lateGraphicsSubmitInfo.pCommandBuffers      = &frameCommandBuffers.lateGraphics;
+        lateGraphicsSubmitInfo.waitSemaphoreCount   = 1;
+        lateGraphicsSubmitInfo.pWaitSemaphores      = &earlyComputeFinished;
+        lateGraphicsSubmitInfo.pWaitDstStageMask    = &lateGraphicsWaitStageFlag;
+        lateGraphicsSubmitInfo.signalSemaphoreCount = 1;
+        lateGraphicsSubmitInfo.pSignalSemaphores    = &lateGraphicsFinished;
+
+        VK_CHECK_SUCCESS(
+            vkQueueSubmit(sumiDevice.graphicsQueue(), 1, &lateGraphicsSubmitInfo, nullptr),
             "[Sumire::SumiRenderer] Could not submit late graphics command buffer."
         );
 
-        // Submit late compute work
+        // Submit late compute
         VkPipelineStageFlags lateComputeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         VkSubmitInfo lateComputeSubmitInfo{};
-        lateComputeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        lateComputeSubmitInfo.commandBufferCount = 1;
-        lateComputeSubmitInfo.pCommandBuffers = &frameCommandBuffers.lateCompute;
-        lateComputeSubmitInfo.waitSemaphoreCount = 1;
-        lateComputeSubmitInfo.pWaitSemaphores = &lateGraphicsFinished;
-        lateComputeSubmitInfo.pWaitDstStageMask = &lateComputeWaitStageFlag;
+        lateComputeSubmitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        lateComputeSubmitInfo.commandBufferCount   = 1;
+        lateComputeSubmitInfo.pCommandBuffers      = &frameCommandBuffers.lateCompute;
+        lateComputeSubmitInfo.waitSemaphoreCount   = 1;
+        lateComputeSubmitInfo.pWaitSemaphores      = &lateGraphicsFinished;
+        lateComputeSubmitInfo.pWaitDstStageMask    = &lateComputeWaitStageFlag;
         lateComputeSubmitInfo.signalSemaphoreCount = 1;
-        lateComputeSubmitInfo.pSignalSemaphores = &lateComputeFinished;
+        lateComputeSubmitInfo.pSignalSemaphores    = &lateComputeFinished;
 
         VK_CHECK_SUCCESS(
             vkQueueSubmit(sumiDevice.computeQueue(), 1, &lateComputeSubmitInfo, nullptr),
@@ -914,14 +943,14 @@ namespace sumire {
         // Submit present composite work
         VkPipelineStageFlags compositeWaitStageFlag = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         VkSubmitInfo compositeSubmitInfo{};
-        compositeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        compositeSubmitInfo.commandBufferCount = 1;
-        compositeSubmitInfo.pCommandBuffers = &frameCommandBuffers.present;
-        compositeSubmitInfo.waitSemaphoreCount = 1;
-        compositeSubmitInfo.pWaitSemaphores = &lateComputeFinished;
-        compositeSubmitInfo.pWaitDstStageMask = &compositeWaitStageFlag;
+        compositeSubmitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        compositeSubmitInfo.commandBufferCount   = 1;
+        compositeSubmitInfo.pCommandBuffers      = &frameCommandBuffers.present;
+        compositeSubmitInfo.waitSemaphoreCount   = 1;
+        compositeSubmitInfo.pWaitSemaphores      = &lateComputeFinished;
+        compositeSubmitInfo.pWaitDstStageMask    = &compositeWaitStageFlag;
         compositeSubmitInfo.signalSemaphoreCount = 1;
-        compositeSubmitInfo.pSignalSemaphores = &renderFinished;
+        compositeSubmitInfo.pSignalSemaphores    = &renderFinished;
 
         VK_CHECK_SUCCESS(
             vkQueueSubmit(sumiDevice.presentQueue(), 1, &compositeSubmitInfo, frameInFlightFence),
