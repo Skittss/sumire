@@ -88,8 +88,8 @@ namespace sumire {
 
         SumiGbuffer* getGbuffer() const { return gbuffer.get(); }
         uint32_t gbufferFillSubpassIdx() const { return 0; }
-        uint32_t gbufferResolveSubpassIdx() const { return 1; }
-        uint32_t forwardRenderSubpassIdx() const { return 2; }
+        uint32_t gbufferResolveSubpassIdx() const { return 0; }
+        uint32_t forwardRenderSubpassIdx() const { return 1; }
         uint32_t compositionSubpassIdx() const { return 0; }
         bool wasGbufferRecreated() const { return gbufferRecreatedFlag; }
         void resetGbufferRecreatedFlag() { gbufferRecreatedFlag = false; }
@@ -135,6 +135,7 @@ namespace sumire {
         // Graphics render passes
         uint32_t currentEarlyGraphicsSubpass = 0;
         VkRenderPass earlyGraphicsRenderPass = VK_NULL_HANDLE;
+
         uint32_t currentLateGraphicsSubpass = 0;
         VkRenderPass lateGraphicsRenderPass = VK_NULL_HANDLE;
 
