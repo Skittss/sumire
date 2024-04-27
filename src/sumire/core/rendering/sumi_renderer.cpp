@@ -39,7 +39,7 @@ namespace sumire {
 		freeFramebuffers();
 		createFramebuffers();
 
-		if (SumiSwapChain::MAX_FRAMES_IN_FLIGHT != graphicsFinishedSemaphores.size()) {
+		if (SumiSwapChain::MAX_FRAMES_IN_FLIGHT != lateGraphicsFinishedSemaphores.size()) {
 			freeSyncObjects();
 			createSyncObjects();
 		}
@@ -258,8 +258,10 @@ namespace sumire {
 
 	void SumiRenderer::createSyncObjects() {
 		predrawComputeFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		graphicsFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		postComputeFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		earlyGraphicsFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		earlyComputeFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		lateGraphicsFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		lateComputeFinishedSemaphores.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -267,15 +269,23 @@ namespace sumire {
 		for (uint32_t i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
 			VK_CHECK_SUCCESS(
 				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &predrawComputeFinishedSemaphores[i]),
-				"[Sumire::SumiRenderer] Failed to create graphics signaling semaphores."
+				"[Sumire::SumiRenderer] Failed to create predraw compute signaling semaphores."
 			);
 			VK_CHECK_SUCCESS(
-				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &graphicsFinishedSemaphores[i]),
-				"[Sumire::SumiRenderer] Failed to create graphics signaling semaphores."
+				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &earlyGraphicsFinishedSemaphores[i]),
+				"[Sumire::SumiRenderer] Failed to create early graphics signaling semaphores."
 			);
 			VK_CHECK_SUCCESS(
-				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &postComputeFinishedSemaphores[i]),
-				"[Sumire::SumiRenderer] Failed to create compute signaling semaphores."
+				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &earlyComputeFinishedSemaphores[i]),
+				"[Sumire::SumiRenderer] Failed to create early compute signaling semaphores."
+			);
+			VK_CHECK_SUCCESS(
+				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &lateGraphicsFinishedSemaphores[i]),
+				"[Sumire::SumiRenderer] Failed to create late graphics signaling semaphores."
+			);
+			VK_CHECK_SUCCESS(
+				vkCreateSemaphore(sumiDevice.device(), &semaphoreInfo, nullptr, &lateComputeFinishedSemaphores[i]),
+				"[Sumire::SumiRenderer] Failed to create late compute signaling semaphores."
 			);
 		}
 
@@ -285,10 +295,10 @@ namespace sumire {
 		for (auto& semaphore : predrawComputeFinishedSemaphores) {
 			vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
 		}
-		for (auto& semaphore : graphicsFinishedSemaphores) {
+		for (auto& semaphore : lateGraphicsFinishedSemaphores) {
 			vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
 		}
-		for (auto& semaphore : postComputeFinishedSemaphores) {
+		for (auto& semaphore : lateComputeFinishedSemaphores) {
 			vkDestroySemaphore(sumiDevice.device(), semaphore, nullptr);
 		}
 	}
@@ -824,9 +834,11 @@ namespace sumire {
 		VkSemaphore frameAvailable = sumiSwapChain->getImageAvailableSemaphore(currentFrameIdx);
 		VkSemaphore renderFinished = sumiSwapChain->getRenderFinishedSemaphore(currentFrameIdx);
 
-		VkSemaphore preComputeFinished = predrawComputeFinishedSemaphores[currentFrameIdx];
-		VkSemaphore lateGraphicsFinished = graphicsFinishedSemaphores[currentFrameIdx];
-		VkSemaphore lateComputeFinished = postComputeFinishedSemaphores[currentFrameIdx];
+		VkSemaphore preComputeFinished    = predrawComputeFinishedSemaphores[currentFrameIdx];
+		VkSemaphore earlyGraphicsFinished = earlyGraphicsFinishedSemaphores[currentFrameIdx];
+		VkSemaphore earlyComputeFinished  = earlyComputeFinishedSemaphores[currentFrameIdx];
+		VkSemaphore lateGraphicsFinished  = lateGraphicsFinishedSemaphores[currentFrameIdx];
+		VkSemaphore lateComputeFinished   = lateComputeFinishedSemaphores[currentFrameIdx];
 
 		// If this frame is in flight, we must wait for it to finish before submitting more work,
 		//  else we will end up with a work backlog / compute multiple batches once the semaphore signals
@@ -864,7 +876,7 @@ namespace sumire {
 			"[Sumire::SumiRenderer] Could not submit pre-draw compute command buffer."
 		);
 
-		// Submit main graphics work
+		// Submit late graphics work
 		// TODO: We probably need to wait on at least the start of the fragment shader
 		VkPipelineStageFlags graphicsWaitStageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		VkSubmitInfo graphicsSubmitInfo{};
@@ -882,7 +894,7 @@ namespace sumire {
 			"[Sumire::SumiRenderer] Could not submit late graphics command buffer."
 		);
 
-		// Submit post compute work
+		// Submit late compute work
 		VkPipelineStageFlags lateComputeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 		VkSubmitInfo lateComputeSubmitInfo{};
 		lateComputeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
