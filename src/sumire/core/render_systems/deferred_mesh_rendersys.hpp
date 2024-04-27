@@ -35,7 +35,7 @@ namespace sumire {
             void updateResolveDescriptors(SumiGbuffer* gbuffer);
 
         private:
-            //void createGbufferSampler();
+            void createGbufferSampler();
             void initResolveDescriptors(SumiGbuffer* gbuffer);
             void createPipelineLayouts(VkDescriptorSetLayout globalDescriptorSetLayout);
             void createPipelines(
@@ -57,6 +57,8 @@ namespace sumire {
             // Pipelines used all share the same layout, but are configured differently.
             VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
             std::unordered_map<SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>> pipelines;
+
+            VkSampler gbufferSampler = VK_NULL_HANDLE;
 
             // Resolve Descriptors
             std::unique_ptr<SumiDescriptorPool> resolveDescriptorPool;

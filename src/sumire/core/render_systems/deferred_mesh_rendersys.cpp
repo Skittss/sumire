@@ -43,7 +43,7 @@ namespace sumire {
             );
         }
 
-        //createGbufferSampler();
+        createGbufferSampler();
         initResolveDescriptors(gbuffer);
         createPipelineLayouts(globalDescriptorSetLayout);
         createPipelines(
@@ -55,39 +55,65 @@ namespace sumire {
     DeferredMeshRenderSys::~DeferredMeshRenderSys() {
         vkDestroyPipelineLayout(sumiDevice.device(), resolvePipelineLayout, nullptr);
         vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
+        vkDestroySampler(sumiDevice.device(), gbufferSampler, nullptr);
+    }
+
+    void DeferredMeshRenderSys::createGbufferSampler() {
+        VkSamplerCreateInfo samplerCreateInfo{};
+        samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+        samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+        samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerCreateInfo.anisotropyEnable = VK_FALSE;
+        samplerCreateInfo.maxAnisotropy = 0.0f;
+        samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+        samplerCreateInfo.compareEnable = VK_FALSE;
+        samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+        samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerCreateInfo.mipLodBias = 0.0f;
+        samplerCreateInfo.minLod = 0.0f;
+        samplerCreateInfo.maxLod = 0.0f;
+
+        VK_CHECK_SUCCESS(
+            vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &gbufferSampler),
+            "[Sumire::DeferredMeshRenderSys] Failed to create gbuffer sampler."
+        );
     }
 
     void DeferredMeshRenderSys::initResolveDescriptors(SumiGbuffer* gbuffer) {
         resolveDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
             .setMaxSets(4)
-            .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 4)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4)
             .build();
 
         resolveDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-            .addBinding(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .addBinding(1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .addBinding(3, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .addBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .build();
 
         // Gbuffer attachment descriptors
         VkDescriptorImageInfo positionDescriptor{};
-        positionDescriptor.sampler = VK_NULL_HANDLE;
+        positionDescriptor.sampler = gbufferSampler;
         positionDescriptor.imageView = gbuffer->positionAttachment()->getImageView();
         positionDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkDescriptorImageInfo normalDescriptor{};
-        normalDescriptor.sampler = VK_NULL_HANDLE;
+        normalDescriptor.sampler = gbufferSampler;
         normalDescriptor.imageView = gbuffer->normalAttachment()->getImageView();
         normalDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkDescriptorImageInfo albedoDescriptor{};
-        albedoDescriptor.sampler = VK_NULL_HANDLE;
+        albedoDescriptor.sampler = gbufferSampler;
         albedoDescriptor.imageView = gbuffer->albedoAttachment()->getImageView();
         albedoDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkDescriptorImageInfo aoMetalRoughEmissive{};
-        aoMetalRoughEmissive.sampler = VK_NULL_HANDLE;
+        aoMetalRoughEmissive.sampler = gbufferSampler;
         aoMetalRoughEmissive.imageView = gbuffer->aoMetalRoughEmissiveAttachment()->getImageView();
         aoMetalRoughEmissive.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -102,22 +128,22 @@ namespace sumire {
     void DeferredMeshRenderSys::updateResolveDescriptors(SumiGbuffer* gbuffer) {
         // Gbuffer attachment descriptors
         VkDescriptorImageInfo positionDescriptor{};
-        positionDescriptor.sampler = VK_NULL_HANDLE;
+        positionDescriptor.sampler = gbufferSampler;
         positionDescriptor.imageView = gbuffer->positionAttachment()->getImageView();
         positionDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkDescriptorImageInfo normalDescriptor{};
-        normalDescriptor.sampler = VK_NULL_HANDLE;
+        normalDescriptor.sampler = gbufferSampler;
         normalDescriptor.imageView = gbuffer->normalAttachment()->getImageView();
         normalDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkDescriptorImageInfo albedoDescriptor{};
-        albedoDescriptor.sampler = VK_NULL_HANDLE;
+        albedoDescriptor.sampler = gbufferSampler;
         albedoDescriptor.imageView = gbuffer->albedoAttachment()->getImageView();
         albedoDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkDescriptorImageInfo aoMetalRoughEmissive{};
-        aoMetalRoughEmissive.sampler = VK_NULL_HANDLE;
+        aoMetalRoughEmissive.sampler = gbufferSampler;
         aoMetalRoughEmissive.imageView = gbuffer->aoMetalRoughEmissiveAttachment()->getImageView();
         aoMetalRoughEmissive.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -212,7 +238,7 @@ namespace sumire {
         //		 required pipelines at runtime, with (runtime) caching, and generate a common (serialized) 
         //		 pipeline cache that can load up frequently used pipelines from disk.
 
-        // Gbuffer Pipeline - 5 Color attachments
+        // ---- Gbuffer Pipeline - 5 Color attachments -----------------------------------------------------------
 
         // Default pipeline config used as base of permutations
         PipelineConfigInfo defaultConfig{};
@@ -276,7 +302,7 @@ namespace sumire {
             pipelines.emplace(permutationFlags, std::move(permutationPipeline));
         }
 
-        // Resolve pipeline
+        // ---- Resolve pipeline ---------------------------------------------------------------------------------
         PipelineConfigInfo resolvePipelineConfig{};
         SumiPipeline::defaultPipelineConfigInfo(resolvePipelineConfig);
         SumiPipeline::enableAlphaBlending(resolvePipelineConfig);
