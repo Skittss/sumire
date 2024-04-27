@@ -65,6 +65,10 @@ namespace sumire {
         void endEarlyGraphicsRenderPass(VkCommandBuffer commandBuffer);
         VkRenderPass getEarlyGraphicsRenderPass() const { return earlyGraphicsRenderPass; }
 
+        // Early Compute
+        //  Compute that late graphics will utilize, that requires geometric information.
+        void endEarlyCompute(VkCommandBuffer commandBuffer);
+
         // Late Graphics
         //  The bulk of traditional graphics rendering (e.g. gbuffer resolve & forward+/OIT)
         void beginLateGraphicsRenderPass(VkCommandBuffer commandBuffer);
@@ -72,10 +76,12 @@ namespace sumire {
         void endLateGraphicsRenderPass(VkCommandBuffer commandBuffer);
         VkRenderPass getLateGraphicsRenderPass() const { return lateGraphicsRenderPass; }
 
-        // Post Renderpass
-        //  With subpasses responsible for HDR + Bloom, tonemapping and UI.
-        void beginPostCompute(VkCommandBuffer commandBuffer);
-        void endPostCompute(VkCommandBuffer commandBuffer);
+        // Post Compute
+        //  Mostly responsible for post processing 
+        //  - we can interleave this work with the next frame through a dedicated compute queue
+        void endLateCompute(VkCommandBuffer commandBuffer);
+
+        // Final swapchain composite
         void beginCompositeRenderPass(VkCommandBuffer commandBuffer);
         void endCompositeRenderPass(VkCommandBuffer commandbuffer);
         VkRenderPass getCompositionRenderPass() const { return compositionRenderPass; }
@@ -144,8 +150,9 @@ namespace sumire {
         std::vector<VkCommandBuffer> presentCommandBuffers;
 
         // Frame buffers
-        std::vector<VkFramebuffer> swapchainFramebuffers; // TODO: maybe move this to swapchain class.
-        std::vector<VkFramebuffer> framebuffers;
+        std::vector<VkFramebuffer> swapchainFramebuffers;
+        std::vector<VkFramebuffer> earlyGraphicsFramebuffers;
+        std::vector<VkFramebuffer> lateGraphicsFramebuffers;
 
         // Swap chain
         bool swapChainNeedsRecreate = false;

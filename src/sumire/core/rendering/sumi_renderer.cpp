@@ -666,8 +666,7 @@ namespace sumire {
     }
 
     void SumiRenderer::createFramebuffers() {
-
-        // Create Swapchain Fbs
+        // ---- Swapchain FBs ------------------------------------------------------------------------------------
         VkFramebufferCreateInfo swapchainFramebufferInfo{};
         swapchainFramebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         swapchainFramebufferInfo.renderPass = compositionRenderPass;
@@ -683,42 +682,75 @@ namespace sumire {
             swapchainFramebufferInfo.pAttachments = &swapchainImageView;
 
             VK_CHECK_SUCCESS(
-                vkCreateFramebuffer(sumiDevice.device(), &swapchainFramebufferInfo, nullptr, &swapchainFramebuffers[i]),
-                "[Sumire::SumiRenderer] Failed to create swapchain framebuffer (idx=" + std::to_string(i) + ") for main render pass."
+                vkCreateFramebuffer(
+                    sumiDevice.device(), &swapchainFramebufferInfo, nullptr, &swapchainFramebuffers[i]),
+                "[Sumire::SumiRenderer] Failed to create swapchain framebuffer (idx=" 
+                    + std::to_string(i) + ") for main render pass."
             );
         }
 
-        // Create frame pipeline Fbs
-        std::array<VkImageView, 6> attachments{};
+        // ---- Early graphics FBs -------------------------------------------------------------------------------
+        std::array<VkImageView, 6> earlyGraphicsAttachments{};
+        // Attachment 0 needs to be indexed from intermediate color attachments during creation loop
+        earlyGraphicsAttachments[1] = gbuffer->positionAttachment()->getImageView();
+        earlyGraphicsAttachments[2] = gbuffer->normalAttachment()->getImageView();
+        earlyGraphicsAttachments[3] = gbuffer->albedoAttachment()->getImageView();
+        earlyGraphicsAttachments[4] = gbuffer->aoMetalRoughEmissiveAttachment()->getImageView();
+        earlyGraphicsAttachments[5] = sumiSwapChain->getDepthAttachment()->getImageView();
+
+        VkFramebufferCreateInfo earlyGraphicsFramebufferInfo{};
+        earlyGraphicsFramebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        earlyGraphicsFramebufferInfo.renderPass = earlyGraphicsRenderPass;
+        earlyGraphicsFramebufferInfo.attachmentCount = static_cast<uint32_t>(earlyGraphicsAttachments.size());
+        earlyGraphicsFramebufferInfo.pAttachments = earlyGraphicsAttachments.data();
+        earlyGraphicsFramebufferInfo.width = sumiSwapChain->width();
+        earlyGraphicsFramebufferInfo.height = sumiSwapChain->height();
+        earlyGraphicsFramebufferInfo.layers = 1;
+
+        earlyGraphicsFramebuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+        for (uint32_t i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
+            earlyGraphicsAttachments[0] = intermediateColorAttachments[i]->getImageView();
+
+            VK_CHECK_SUCCESS(
+                vkCreateFramebuffer(
+                    sumiDevice.device(), &earlyGraphicsFramebufferInfo, nullptr, &earlyGraphicsFramebuffers[i]),
+                "[Sumire::SumiRenderer] Failed to create frame pipeline framebuffers (idx=" 
+                    + std::to_string(i) + ") for main render pass."
+            );
+        }
+
+        // ---- Late graphics FBs --------------------------------------------------------------------------------
+        std::array<VkImageView, 2> lateGraphicsAttachments{};
+        // Attachment 0 needs to be indexed from intermediate color attachments during creation loop
+        lateGraphicsAttachments[1] = sumiSwapChain->getDepthAttachment()->getImageView();
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = lateGraphicsRenderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(lateGraphicsAttachments.size());
+        framebufferInfo.pAttachments = lateGraphicsAttachments.data();
         framebufferInfo.width = sumiSwapChain->width();
         framebufferInfo.height = sumiSwapChain->height();
         framebufferInfo.layers = 1;
 
-        framebuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+        lateGraphicsFramebuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
         for (uint32_t i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
-            
-            attachments[0] = intermediateColorAttachments[i]->getImageView();
-            attachments[1] = gbuffer->positionAttachment()->getImageView();
-            attachments[2] = gbuffer->normalAttachment()->getImageView();
-            attachments[3] = gbuffer->albedoAttachment()->getImageView();
-            attachments[4] = gbuffer->aoMetalRoughEmissiveAttachment()->getImageView();
-            attachments[5] = sumiSwapChain->getDepthAttachment()->getImageView();
+            lateGraphicsAttachments[0] = intermediateColorAttachments[i]->getImageView();
 
             VK_CHECK_SUCCESS(
-                vkCreateFramebuffer(sumiDevice.device(), &framebufferInfo, nullptr, &framebuffers[i]),
-                "[Sumire::SumiRenderer] Failed to create frame pipeline framebuffers (idx=" + std::to_string(i) + ") for main render pass."
+                vkCreateFramebuffer(
+                    sumiDevice.device(), &framebufferInfo, nullptr, &lateGraphicsFramebuffers[i]),
+                "[Sumire::SumiRenderer] Failed to create frame pipeline framebuffers (idx=" 
+                    + std::to_string(i) + ") for main render pass."
             );
         }
     }
 
     void SumiRenderer::freeFramebuffers() {
-        for (auto fb : framebuffers) {
+        for (auto fb : earlyGraphicsFramebuffers) {
+            vkDestroyFramebuffer(sumiDevice.device(), fb, nullptr);
+        }
+        for (auto fb : lateGraphicsFramebuffers) {
             vkDestroyFramebuffer(sumiDevice.device(), fb, nullptr);
         }
         for (auto fb : swapchainFramebuffers) {
@@ -976,8 +1008,8 @@ namespace sumire {
 
 
     void SumiRenderer::beginEarlyGraphicsRenderPass(VkCommandBuffer commandBuffer) {
-        assert(isFrameStarted && "Failed to begin ealy graphics render pass: No frame in flight.");
-        currentLateGraphicsSubpass = 0;
+        assert(isFrameStarted && "Failed to begin early graphics render pass: No frame in flight.");
+        currentEarlyGraphicsSubpass = 0;
 
         // Begin renderpass for gbuffer fill
         std::array<VkClearValue, 6> attachmentClearValues{};
@@ -990,8 +1022,8 @@ namespace sumire {
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = lateGraphicsRenderPass;
-        renderPassInfo.framebuffer = framebuffers[currentFrameIdx];
+        renderPassInfo.renderPass = earlyGraphicsRenderPass;
+        renderPassInfo.framebuffer = earlyGraphicsFramebuffers[currentFrameIdx];
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = sumiSwapChain->getExtent();
         renderPassInfo.clearValueCount = static_cast<uint32_t>(attachmentClearValues.size());
@@ -1013,11 +1045,15 @@ namespace sumire {
 
     void SumiRenderer::endEarlyGraphicsRenderPass(VkCommandBuffer commandBuffer) {
         assert(isFrameStarted && "Failed to end early graphics render pass: No frame in flight.");
-        assert(commandBuffer == getCurrentCommandBuffers().lateGraphics
+        assert(commandBuffer == getCurrentCommandBuffers().earlyGraphics
             && "Failed to end early graphics render pass: Command buffer provided did not record this renderpass."
         );
 
         vkCmdEndRenderPass(commandBuffer);
+    }
+
+    void SumiRenderer::endEarlyCompute(VkCommandBuffer commandBuffer) {
+        // TODO: Any releasing of images which may need to happen to late graphics
     }
 
     void SumiRenderer::beginLateGraphicsRenderPass(VkCommandBuffer commandBuffer) {
@@ -1036,7 +1072,7 @@ namespace sumire {
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = lateGraphicsRenderPass;
-        renderPassInfo.framebuffer = framebuffers[currentFrameIdx];
+        renderPassInfo.framebuffer = lateGraphicsFramebuffers[currentFrameIdx];
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = sumiSwapChain->getExtent();
         renderPassInfo.clearValueCount = static_cast<uint32_t>(attachmentClearValues.size());
@@ -1084,9 +1120,9 @@ namespace sumire {
         vkCmdEndRenderPass(commandBuffer);
     }
 
-    void SumiRenderer::beginPostCompute(VkCommandBuffer commandBuffer) {
-        // Compute is used to maximize graphics queue throughput.
-        //   We can begin rendering the scene of a subsequent frame while we post-process the current frame.
+    void SumiRenderer::endLateCompute(VkCommandBuffer commandBuffer) {
+        // Late compute is used to maximize graphics queue throughput.
+        //   We can begin rendering a subsequent frame while we post-process the current frame.
         //   This has some concurrency implications - we may end up introducing compute pipeline bubbles
         //   from COMPUTE -> FRAGMENT barriers if we are not careful about how we submit work to VkQueues.
         //   TLDR; Separate queues in a ring-like fashion to ensure we can interleave compute & fragment work.
@@ -1094,14 +1130,6 @@ namespace sumire {
         //   https://github.com/KhronosGroup/Vulkan-Samples/tree/main/samples/performance/async_compute
         //   https://community.arm.com/arm-community-blogs/b/graphics-gaming-and-vr-blog/posts/using-compute-post-processing-in-vulkan-on-mali
 
-        // This function is (currently) a placeholder to standardize the SumiRenderer compute interface
-        //  with the renderpass interface.
-
-        // Note: We do not need to acquire the swapchain mirror attachment here as it is made available
-        //       by the final subpass dependency from the scene renderpass.
-    }
-
-    void SumiRenderer::endPostCompute(VkCommandBuffer commandBuffer) {
         SumiAttachment* currentSwapchainMirrorAttachment = intermediateColorAttachments[currentFrameIdx].get();
 
         // Release image due for swapchain (pending composite)

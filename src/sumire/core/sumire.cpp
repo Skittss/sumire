@@ -133,7 +133,7 @@ namespace sumire {
         DeferredMeshRenderSys deferredMeshRenderSystem{
             sumiDevice,
             sumiRenderer.getGbuffer(),
-            sumiRenderer.getLateGraphicsRenderPass(), 
+            sumiRenderer.getEarlyGraphicsRenderPass(), 
             sumiRenderer.gbufferFillSubpassIdx(),
             sumiRenderer.getLateGraphicsRenderPass(),
             sumiRenderer.gbufferResolveSubpassIdx(),
@@ -310,7 +310,7 @@ namespace sumire {
                 lightSSBO->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
                 lightSSBO->flush();
 
-                // Shadow mapping preparation on the CPU
+                // ---- Shadow mapping preparation on the CPU ----------------------------------------------------
                 //  TODO: Only re-prepare if lights / camera view have changed.
                 shadowMapper.prepare(
                     sortedLights,
@@ -319,7 +319,7 @@ namespace sumire {
                     cameraUbo.projectionMatrix
                 );
                 
-                // Pre-draw compute dispatches
+                // ---- Pre-draw compute dispatches --------------------------------------------------------------
                 // TODO: Compute based culling and skinning.
 
                 // Shadow mapping
@@ -328,28 +328,38 @@ namespace sumire {
                     camera.getNear(), camera.getFar()
                 );
 
-                // TODO: I'm leaning on a z-prepass here to compute tiled shadows asynchronously with the
-                //       Gbuffer fill pass. This lets us keep the tile-based subpasses for the gbuffer
-                //       fill/resolve.
                 //shadowMapper.findLightsAccurate(frameCommandBuffers.predrawCompute);
                 //shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.predrawCompute);
                 //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
 
-                // Main scene render pass
-                //frameInfo.commandBuffer = frameCommandBuffers.graphics;
+                // ---- Early Graphics ---------------------------------------------------------------------------
+                //   Fill gbuffer in place of a z-prepass
+
+                sumiRenderer.beginEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
+
+                deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.earlyGraphics, frameInfo);
+
+                sumiRenderer.endEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
+
+                // ---- Early Compute ----------------------------------------------------------------------------
+                //   Shadow mapping resolve which gbuffer resolve relies on
+
+                // ---- Late Graphics ----------------------------------------------------------------------------
+                //   Lighting resolve and forward subpass for world UI + OIT
+
+                //   Deferred fill subpass
                 sumiRenderer.beginLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
-                // Deferred fill subpass
-                deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
+                //deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
 
+                //   Deferred resolve subpass
                 sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
 
-                // Deferred resolve subpass
                 deferredMeshRenderSystem.resolveGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
 
+                //   Forward rendering subpass
                 sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
 
-                // Forward rendering subpass
                 pointLightSystem.render(frameCommandBuffers.lateGraphics, frameInfo);
                 
                 if (gui.showGrid && gui.gridOpacity > 0.0f) {
@@ -359,19 +369,17 @@ namespace sumire {
                 
                 sumiRenderer.endLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
-                // Async Compute for post effects
-                sumiRenderer.beginPostCompute(frameCommandBuffers.lateCompute);
-
+                // ---- Late Compute -----------------------------------------------------------------------------
+                //   Post effects which can be interleaved with generation of next frame via async compute queue
                 postProcessor.tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
 
-                sumiRenderer.endPostCompute(frameCommandBuffers.lateCompute);
+                sumiRenderer.endLateCompute(frameCommandBuffers.lateCompute);
 
-                // Final Composite
+                // ---- Final Composite --------------------------------------------------------------------------
+                //    Copy everything out to the swap chain image and render UI
                 sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
 
                 postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
-
-                // GUI should *ALWAYS* render last after post-processing.
 
                 gui.beginFrame();
                 gui.drawSceneViewer(
