@@ -1,3 +1,3 @@
 struct lightMask {
-	uint bits[33];
+    uint bits[33];
 };

@@ -15,43 +15,43 @@
 
 namespace sumire {
 
-	class Sumire {
-	public:
-		Sumire();
-		~Sumire() = default;
+    class Sumire {
+    public:
+        Sumire();
+        ~Sumire() = default;
 
-		Sumire(const Sumire&) = delete;
-		Sumire& operator=(const Sumire&) = delete;
+        Sumire(const Sumire&) = delete;
+        Sumire& operator=(const Sumire&) = delete;
 
-		uint32_t screenWidth = 0;
-		uint32_t screenHeight = 0;
+        uint32_t screenWidth = 0;
+        uint32_t screenHeight = 0;
 
-		void init();
-		void run();
+        void init();
+        void run();
 
-	private:
-		void loadObjects();
-		void loadLights(); 
+    private:
+        void loadObjects();
+        void loadLights(); 
 
-		SumiConfig sumiConfig{};
-		SumiWindow sumiWindow{ 
-			static_cast<int>(sumiConfig.configData.RESOLUTION.WIDTH),
-			static_cast<int>(sumiConfig.configData.RESOLUTION.HEIGHT),
-			"Sumire" 
-		};
-		SumiDevice sumiDevice{ sumiWindow, &sumiConfig };
-		SumiRenderer sumiRenderer{ sumiWindow, sumiDevice, sumiConfig };
+        SumiConfig sumiConfig{};
+        SumiWindow sumiWindow{ 
+            static_cast<int>(sumiConfig.configData.RESOLUTION.WIDTH),
+            static_cast<int>(sumiConfig.configData.RESOLUTION.HEIGHT),
+            "Sumire" 
+        };
+        SumiDevice sumiDevice{ sumiWindow, &sumiConfig };
+        SumiRenderer sumiRenderer{ sumiWindow, sumiDevice, sumiConfig };
 
-		// Global descriptors and buffers
-		std::unique_ptr<SumiDescriptorPool> globalDescriptorPool;
-		std::unique_ptr<SumiDescriptorSetLayout> globalDescriptorSetLayout;
-		std::vector<VkDescriptorSet> globalDescriptorSets{};
+        // Global descriptors and buffers
+        std::unique_ptr<SumiDescriptorPool> globalDescriptorPool;
+        std::unique_ptr<SumiDescriptorSetLayout> globalDescriptorSetLayout;
+        std::vector<VkDescriptorSet> globalDescriptorSets{};
 
-		std::vector<std::unique_ptr<SumiBuffer>> globalUniformBuffers;
-		std::vector<std::unique_ptr<SumiBuffer>> cameraUniformBuffers;
-		std::unique_ptr<SumiBuffer> lightSSBO;
+        std::vector<std::unique_ptr<SumiBuffer>> globalUniformBuffers;
+        std::vector<std::unique_ptr<SumiBuffer>> cameraUniformBuffers;
+        std::unique_ptr<SumiBuffer> lightSSBO;
 
-		SumiObject::Map objects;
-		SumiLight::Map lights;
-	};
+        SumiObject::Map objects;
+        SumiLight::Map lights;
+    };
 }

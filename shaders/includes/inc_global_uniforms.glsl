@@ -1,3 +1,3 @@
 struct GlobalUniforms {
-	int nLights;
+    int nLights;
 };

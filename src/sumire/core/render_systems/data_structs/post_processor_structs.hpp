@@ -4,8 +4,8 @@
 
 namespace sumire::structs {
 
-	struct hdrImagePush {
-		glm::vec2 resolution;
-	};
+    struct hdrImagePush {
+        glm::vec2 resolution;
+    };
 
 }

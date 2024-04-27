@@ -5,20 +5,20 @@ layout (location = 0) out vec2 fragOffset;
 layout (location = 1) out int lightIdx;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	float nLights;
+    float nLights;
 } ubo;
 
 layout(set = 0, binding = 1) uniform Camera {
-	mat4 projectionMatrix;
-	mat4 viewMatrix;
-	mat4 projectionViewMatrix;
+    mat4 projectionMatrix;
+    mat4 viewMatrix;
+    mat4 projectionViewMatrix;
     vec3 cameraPosition;
 };
 
 #include "../includes/inc_light.glsl"
 
 layout(set = 0, binding = 2) buffer LightSSBO {
-	Light lights[];
+    Light lights[];
 };
 
 const vec2 OFFSETS[6] = vec2[](
@@ -34,11 +34,11 @@ const float LIGHT_RADIUS_SCALE = 0.05;
 
 void main() {
     fragOffset = OFFSETS[gl_VertexIndex];
-	lightIdx = gl_InstanceIndex;
-	Light light = lights[lightIdx];
-	
+    lightIdx = gl_InstanceIndex;
+    Light light = lights[lightIdx];
+    
     vec4 lightPosCamera = viewMatrix * vec4(light.translation, 1.0);
-	float billboardSize = max(0.01, min(0.07, 0.005 * light.range));
+    float billboardSize = max(0.01, min(0.07, 0.005 * light.range));
     vec3 vertexPosCamera = lightPosCamera.xyz + billboardSize * vec3(fragOffset, 0.0); // billboard orthogonal to view
 
     gl_Position = projectionMatrix * vec4(vertexPosCamera, 1.0);

@@ -34,434 +34,434 @@
 
 namespace sumire {
 
-	struct GlobalUBO {
-		int nLights = 0;
-	};
-
-	struct CameraUBO {
-		glm::mat4 projectionMatrix{1.0f};
-		glm::mat4 viewMatrix{1.0f};
-		glm::mat4 projectionViewMatrix{1.0f};
-		glm::vec3 cameraPosition{0.0f};
-	};
-
-	Sumire::Sumire() {
-		screenWidth = sumiConfig.configData.RESOLUTION.WIDTH;
-		screenHeight = sumiConfig.configData.RESOLUTION.HEIGHT;
-
-		init();
-
-		loadObjects();
-		loadLights();
-	}
-
-	void Sumire::init() {
-		// --------------------- GLOBAL DESCRIPTORS (SET 0)
-		// Uniform Buffers
-		globalUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		cameraUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
-
-			// Global uniforms
-			globalUniformBuffers[i] = std::make_unique<SumiBuffer>(
-				sumiDevice,
-				sizeof(GlobalUBO),
-				1,
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-			);
-			globalUniformBuffers[i]->map(); //enable writing to buffer memory
-
-			// Camera uniforms
-			cameraUniformBuffers[i] = std::make_unique<SumiBuffer>(
-				sumiDevice,
-				sizeof(CameraUBO),
-				1,
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-			);
-			cameraUniformBuffers[i]->map(); //enable writing to buffer memory
-		}
-
-		// Light SSBO
-		lightSSBO = std::make_unique<SumiBuffer>(
-			sumiDevice,
-			sumiConfig.configData.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
-			1,
-			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-		);
-		lightSSBO->map();
-
-		globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
-			.setMaxSets((3 * SumiSwapChain::MAX_FRAMES_IN_FLIGHT))
-			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // global
-			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // camera
-			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // Light SSBO
-			.build();
-
-		globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-			.addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-			.addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-			.build();
-
-		// Write Descriptor Sets
-		globalDescriptorSets = std::vector<VkDescriptorSet>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-		for (int i = 0; i < globalDescriptorSets.size(); i++) {
-			auto globalBufferInfo = globalUniformBuffers[i]->descriptorInfo();
-			auto cameraBufferInfo = cameraUniformBuffers[i]->descriptorInfo();
-			auto lightSSBOinfo = lightSSBO->descriptorInfo(); // shared across swapchain images
-			SumiDescriptorWriter(*globalDescriptorSetLayout, *globalDescriptorPool)
-				.writeBuffer(0, &globalBufferInfo)
-				.writeBuffer(1, &cameraBufferInfo)
-				.writeBuffer(2, &lightSSBOinfo)
-				.build(globalDescriptorSets[i]);
-		}
-	}
-
-	void Sumire::run() {
-
-		// Render Systems
-		MeshRenderSys meshRenderSystem{
-			sumiDevice,
-			sumiRenderer.getLateGraphicsRenderPass(), 
-			sumiRenderer.forwardRenderSubpassIdx(),
-			globalDescriptorSetLayout->getDescriptorSetLayout()
-		};
-
-		DeferredMeshRenderSys deferredMeshRenderSystem{
-			sumiDevice,
-			sumiRenderer.getGbuffer(),
-			sumiRenderer.getLateGraphicsRenderPass(), 
-			sumiRenderer.gbufferFillSubpassIdx(),
-			sumiRenderer.getLateGraphicsRenderPass(),
-			sumiRenderer.gbufferResolveSubpassIdx(),
-			globalDescriptorSetLayout->getDescriptorSetLayout()
-		};
-
-		HighQualityShadowMapper shadowMapper{
-			sumiDevice,
-			screenWidth, screenHeight
-		};
-
-		PostProcessor postProcessor{
-			sumiDevice,
-			sumiRenderer.getIntermediateColorAttachments(),
-			sumiRenderer.getCompositionRenderPass()
-		};
-
-		PointLightRenderSys pointLightSystem{
-			sumiDevice, 
-			sumiRenderer.getLateGraphicsRenderPass(), 
-			sumiRenderer.forwardRenderSubpassIdx(),
-			globalDescriptorSetLayout->getDescriptorSetLayout()
-		};
-
-		GridRendersys gridRenderSystem{
-			sumiDevice, 
-			sumiRenderer.getLateGraphicsRenderPass(),
-			sumiRenderer.forwardRenderSubpassIdx(),
-			globalDescriptorSetLayout->getDescriptorSetLayout()
-		};
-
-		sumiWindow.setMousePollMode(SumiWindow::MousePollMode::MANUAL);
-
-		// Camera Control
-		SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
-		camera.transform.setTranslation(glm::vec3{0.0f, 1.0f, 3.0f});
-		SumiKBMcontroller cameraController{
-			sumiWindow,
-			SumiKBMcontroller::ControllerType::FPS
-		};
-
-		// GUI
-		SumiImgui gui{
-			sumiDevice,
-			sumiConfig,
-			sumiRenderer,
-			sumiRenderer.getCompositionRenderPass(),
-			sumiRenderer.compositionSubpassIdx(),
-			sumiDevice.presentQueue()
-		};
-
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		float cumulativeFrameTime = 0.0f;
-
-		// Poll Mouse pos once directly before starting loop to prevent an incorrect
-		//  Mouse update on start.
-		sumiWindow.pollMousePos();
-
-		// Draw loop
-		while (!sumiWindow.shouldClose()) {
-			sumiWindow.pollMousePos(); // if manual polling mouse pos
-			// sumiWindow.clearMouseDelta(); // if using event-based polling
-			sumiWindow.clearKeypressEvents();
-			glfwPollEvents();
-
-			// TODO:
-			//  Prevent inputs from passthrough to application when ImGui wants to consume them...
-			//  i.e. check io.WantCaptureMouse, etc.
-
-			auto newTime = std::chrono::high_resolution_clock::now();
-			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
-			currentTime = newTime;
-
-			const float MAX_FRAME_TIME = 0.2f; // 5fps
-			frameTime = glm::min(frameTime, MAX_FRAME_TIME);
-
-			cumulativeFrameTime += frameTime;
-
-			// Handle input.
-			// TODO: move components to member variables and call this from a function
-			auto guiIO = gui.getIO();
-
-			if (sumiWindow.isCursorHidden()) gui.ignoreMouse();
-			else gui.enableMouse();
-
-			if (!(guiIO.WantCaptureKeyboard && guiIO.WantTextInput)) {
-
-				glm::vec2 mouseDelta = (!sumiWindow.isCursorHidden() && guiIO.WantCaptureMouse)
-					? glm::tvec2<double>{0.0f}
-					: sumiWindow.mouseDelta;
-
-				cameraController.move(
-					frameTime, 
-					sumiWindow.keypressEvents,
-					mouseDelta,
-					camera.getOrthonormalBasis(),
-					camera.transform
-				);
-			}
-
-			camera.setViewYXZ(camera.transform.getTranslation(), camera.transform.getRotation());
-
-			if (sumiRenderer.wasSwapChainRecreated()) {
-				// Update main application viewport size tracking vars
-				VkExtent2D newExtent = sumiRenderer.getWindow().getExtent();
-				screenWidth = newExtent.width;
-				screenHeight = newExtent.height;
-
-				float aspect = sumiRenderer.getAspect();
-				camera.setAspect(aspect, true);
-				postProcessor.updateDescriptors(sumiRenderer.getIntermediateColorAttachments());
-				shadowMapper.updateScreenBounds(screenWidth, screenHeight);
-				sumiRenderer.resetScRecreatedFlag();
-			}
-
-			if (sumiRenderer.wasGbufferRecreated()) {
-				deferredMeshRenderSystem.updateResolveDescriptors(sumiRenderer.getGbuffer());
-				sumiRenderer.resetGbufferRecreatedFlag();
-			}
-
-			// Set up FrameInfo for GUI, and add remaining props later;
-			FrameInfo frameInfo{
-				-1,        // frameIdx
-				frameTime,
-				cumulativeFrameTime,
-				camera,
-				nullptr,   // globalDescriptorSet
-				objects,
-				lights
-			};
-
-			SumiRenderer::FrameCommandBuffers frameCommandBuffers = sumiRenderer.beginFrame();
-
-			// If all cmd buffers are null, then the frame was not started.
-			if (frameCommandBuffers.validFrame()) {
-
-				int frameIdx = sumiRenderer.getFrameIdx();
-
-				// Fill in rest of frame-specific frameinfo props
-				frameInfo.frameIdx = frameIdx;
-				//frameInfo.commandBuffer = frameCommandBuffers.graphics;
-				frameInfo.globalDescriptorSet = globalDescriptorSets[frameIdx];
-
-				// Populate uniform buffers with data
-				CameraUBO cameraUbo{};
-				cameraUbo.projectionMatrix     = camera.getProjectionMatrix();
-				cameraUbo.viewMatrix           = camera.getViewMatrix();
-				cameraUbo.projectionViewMatrix = cameraUbo.projectionMatrix * cameraUbo.viewMatrix;
-				cameraUbo.cameraPosition = camera.transform.getTranslation();
-				cameraUniformBuffers[frameIdx]->writeToBuffer(&cameraUbo);
-				cameraUniformBuffers[frameIdx]->flush();
-
-				const int nLights = static_cast<int>(lights.size());
-				GlobalUBO globalUbo{};
-				globalUbo.nLights = nLights;
-				globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
-				globalUniformBuffers[frameIdx]->flush();
-
-				// Prepare Lights
-				//   Sort lights by view space depth for shadow mapping pass
-				auto sortedLights = HighQualityShadowMapper::sortLightsByViewSpaceDepth(
-					lights, 
-					cameraUbo.viewMatrix, 
-					camera.getNear()
-				);
-
-				//   Write lights SSBO
-				//   TODO: This will be very slow when the number of lights increases.
-				//          We should only write to the buffer when absolutely necessary, i.e. on light change.
-				auto lightData = std::vector<SumiLight::LightShaderData>{};
-				for (auto& viewSpaceLight : sortedLights) {
-					lightData.push_back(viewSpaceLight.lightPtr->getShaderData());
-				}
-				lightSSBO->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
-				lightSSBO->flush();
-
-				// Shadow mapping preparation on the CPU
-				//  TODO: Only re-prepare if lights / camera view have changed.
-				shadowMapper.prepare(
-					sortedLights,
-					camera.getNear(), camera.getFar(),
-					cameraUbo.viewMatrix,
-					cameraUbo.projectionMatrix
-				);
-				
-				// Pre-draw compute dispatches
-				// TODO: Compute based culling and skinning.
-
-				// Shadow mapping
-				shadowMapper.findLightsApproximate(
-					frameCommandBuffers.predrawCompute, 
-					camera.getNear(), camera.getFar()
-				);
-
-				// TODO: I'm leaning on a z-prepass here to compute tiled shadows asynchronously with the
-				//       Gbuffer fill pass. This lets us keep the tile-based subpasses for the gbuffer
-				//       fill/resolve.
-				//shadowMapper.findLightsAccurate(frameCommandBuffers.predrawCompute);
-				//shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.predrawCompute);
-				//shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
-
-				// Main scene render pass
-				//frameInfo.commandBuffer = frameCommandBuffers.graphics;
-				sumiRenderer.beginLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
-
-				// Deferred fill subpass
-				deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
-
-				sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
-
-				// Deferred resolve subpass
-				deferredMeshRenderSystem.resolveGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
-
-				sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
-
-				// Forward rendering subpass
-				pointLightSystem.render(frameCommandBuffers.lateGraphics, frameInfo);
-				
-				if (gui.showGrid && gui.gridOpacity > 0.0f) {
-					auto gridUbo = gui.getGridUboData();
-					gridRenderSystem.render(frameCommandBuffers.lateGraphics, frameInfo, gridUbo);
-				}
-				
-				sumiRenderer.endLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
-
-				// Async Compute for post effects
-				sumiRenderer.beginPostCompute(frameCommandBuffers.lateCompute);
-
-				postProcessor.tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
-
-				sumiRenderer.endPostCompute(frameCommandBuffers.lateCompute);
-
-				// Final Composite
-				sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
-
-				postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
-
-				// GUI should *ALWAYS* render last after post-processing.
-
-				gui.beginFrame();
-				gui.drawSceneViewer(
-					frameInfo,
-					cameraController,
-					shadowMapper.getZbin(),
-					shadowMapper.getLightMask()
-				);
-				gui.endFrame();
-
-				gui.renderToCmdBuffer(frameCommandBuffers.present);
-
-				sumiRenderer.endCompositeRenderPass(frameCommandBuffers.present);
-
-				sumiRenderer.endFrame();
-			}
-		}
-
-		// Prevent cleanup from happening while GPU resources are in use on close.
-		//  TODO: can this error?
-		vkDeviceWaitIdle(sumiDevice.device());
-	}
-
-	void Sumire::loadObjects() {
-		// TODO: Load objects in asynchronously
-		// std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/obj/clorinde.obj"));
-		//std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/NormalTangentMirrorTest.glb"));
-		std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
-		auto obj1 = SumiObject::createObject();
-		obj1.model = modelObj1;
-		obj1.transform.setTranslation(glm::vec3{-8.0f, 0.0f, 0.0f});
-		obj1.transform.setScale(glm::vec3{1.0f});
-		objects.emplace(obj1.getId(), std::move(obj1));
-
-		std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/MetalRoughSpheres.glb"));
-		auto glb1 = SumiObject::createObject();
-		glb1.model = modelGlb1;
-		glb1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
-		glb1.transform.setScale(glm::vec3{0.2f});
-		objects.emplace(glb1.getId(), std::move(glb1));
-
-		// std::shared_ptr<SumiModel> modelGlb2 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/doomslayer.glb"));
-		// auto glb2 = SumiObject::createObject();
-		// glb2.model = modelGlb2;
-		// glb2.transform.setTranslation(glm::vec3{0.0f, 0.0f, 0.0f});
-		// glb2.transform.setScale(glm::vec3{1.0f});
-		// objects.emplace(glb2.getId(), std::move(glb2));
-
-		std::shared_ptr<SumiModel> modelGlb3 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/2b.glb"));
-		auto glb3 = SumiObject::createObject();
-		glb3.model = modelGlb3;
-		glb3.transform.setTranslation(glm::vec3{0.0f, 0.0f, 0.0f});
-		glb3.transform.setScale(glm::vec3{1.0f});
-		objects.emplace(glb3.getId(), std::move(glb3));
-	}
-
-	void Sumire::loadLights() {
-		constexpr float radial_n_lights = 40.0;
-		for (float i = 0; i < radial_n_lights; i++) {
-			float rads = i * glm::two_pi<float>() / radial_n_lights;
-			auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});
-			float hue = i * 360.0f / radial_n_lights;
-			light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
-			lights.emplace(light.getId(), std::move(light));
-		}
-
-		// zBin Light Tests
-		//auto light1 = SumiLight::createPointLight({ 0.0f, 1.0f, 0.0f });
-		//light1.range = 1.0f;
-		//lights.emplace(light1.getId(), std::move(light1));
-
-		//auto light2 = SumiLight::createPointLight({ -1.0f, 1.0f, -5.5f });
-		//light2.range = 2.0f;
-		//lights.emplace(light2.getId(), std::move(light2));
-
-		//auto light3 = SumiLight::createPointLight({ 1.0f, 1.0f, -5.0f });
-		//light3.range = 1.0f;
-		//lights.emplace(light3.getId(), std::move(light3));
-
-		//auto light4 = SumiLight::createPointLight({ -2.0f, 1.0f, -10.0f });
-		//light4.range = 1.0f;
-		//lights.emplace(light4.getId(), std::move(light4));
-
-		//auto light5 = SumiLight::createPointLight({ 0.5f, 1.0f, -11.0f });
-		//light5.range = 1.0f;
-		//lights.emplace(light5.getId(), std::move(light5));
-
-		//auto light6 = SumiLight::createPointLight({ 0.5f, 1.0f, -100.0f });
-		//light6.range = 1.0f;
-		//lights.emplace(light6.getId(), std::move(light6));
-
-	}
+    struct GlobalUBO {
+        int nLights = 0;
+    };
+
+    struct CameraUBO {
+        glm::mat4 projectionMatrix{1.0f};
+        glm::mat4 viewMatrix{1.0f};
+        glm::mat4 projectionViewMatrix{1.0f};
+        glm::vec3 cameraPosition{0.0f};
+    };
+
+    Sumire::Sumire() {
+        screenWidth = sumiConfig.configData.RESOLUTION.WIDTH;
+        screenHeight = sumiConfig.configData.RESOLUTION.HEIGHT;
+
+        init();
+
+        loadObjects();
+        loadLights();
+    }
+
+    void Sumire::init() {
+        // --------------------- GLOBAL DESCRIPTORS (SET 0)
+        // Uniform Buffers
+        globalUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+        cameraUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+        for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
+
+            // Global uniforms
+            globalUniformBuffers[i] = std::make_unique<SumiBuffer>(
+                sumiDevice,
+                sizeof(GlobalUBO),
+                1,
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            );
+            globalUniformBuffers[i]->map(); //enable writing to buffer memory
+
+            // Camera uniforms
+            cameraUniformBuffers[i] = std::make_unique<SumiBuffer>(
+                sumiDevice,
+                sizeof(CameraUBO),
+                1,
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            );
+            cameraUniformBuffers[i]->map(); //enable writing to buffer memory
+        }
+
+        // Light SSBO
+        lightSSBO = std::make_unique<SumiBuffer>(
+            sumiDevice,
+            sumiConfig.configData.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
+            1,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+        );
+        lightSSBO->map();
+
+        globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
+            .setMaxSets((3 * SumiSwapChain::MAX_FRAMES_IN_FLIGHT))
+            .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // global
+            .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // camera
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // Light SSBO
+            .build();
+
+        globalDescriptorSetLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+            .addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+            .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+            .build();
+
+        // Write Descriptor Sets
+        globalDescriptorSets = std::vector<VkDescriptorSet>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+        for (int i = 0; i < globalDescriptorSets.size(); i++) {
+            auto globalBufferInfo = globalUniformBuffers[i]->descriptorInfo();
+            auto cameraBufferInfo = cameraUniformBuffers[i]->descriptorInfo();
+            auto lightSSBOinfo = lightSSBO->descriptorInfo(); // shared across swapchain images
+            SumiDescriptorWriter(*globalDescriptorSetLayout, *globalDescriptorPool)
+                .writeBuffer(0, &globalBufferInfo)
+                .writeBuffer(1, &cameraBufferInfo)
+                .writeBuffer(2, &lightSSBOinfo)
+                .build(globalDescriptorSets[i]);
+        }
+    }
+
+    void Sumire::run() {
+
+        // Render Systems
+        MeshRenderSys meshRenderSystem{
+            sumiDevice,
+            sumiRenderer.getLateGraphicsRenderPass(), 
+            sumiRenderer.forwardRenderSubpassIdx(),
+            globalDescriptorSetLayout->getDescriptorSetLayout()
+        };
+
+        DeferredMeshRenderSys deferredMeshRenderSystem{
+            sumiDevice,
+            sumiRenderer.getGbuffer(),
+            sumiRenderer.getLateGraphicsRenderPass(), 
+            sumiRenderer.gbufferFillSubpassIdx(),
+            sumiRenderer.getLateGraphicsRenderPass(),
+            sumiRenderer.gbufferResolveSubpassIdx(),
+            globalDescriptorSetLayout->getDescriptorSetLayout()
+        };
+
+        HighQualityShadowMapper shadowMapper{
+            sumiDevice,
+            screenWidth, screenHeight
+        };
+
+        PostProcessor postProcessor{
+            sumiDevice,
+            sumiRenderer.getIntermediateColorAttachments(),
+            sumiRenderer.getCompositionRenderPass()
+        };
+
+        PointLightRenderSys pointLightSystem{
+            sumiDevice, 
+            sumiRenderer.getLateGraphicsRenderPass(), 
+            sumiRenderer.forwardRenderSubpassIdx(),
+            globalDescriptorSetLayout->getDescriptorSetLayout()
+        };
+
+        GridRendersys gridRenderSystem{
+            sumiDevice, 
+            sumiRenderer.getLateGraphicsRenderPass(),
+            sumiRenderer.forwardRenderSubpassIdx(),
+            globalDescriptorSetLayout->getDescriptorSetLayout()
+        };
+
+        sumiWindow.setMousePollMode(SumiWindow::MousePollMode::MANUAL);
+
+        // Camera Control
+        SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
+        camera.transform.setTranslation(glm::vec3{0.0f, 1.0f, 3.0f});
+        SumiKBMcontroller cameraController{
+            sumiWindow,
+            SumiKBMcontroller::ControllerType::FPS
+        };
+
+        // GUI
+        SumiImgui gui{
+            sumiDevice,
+            sumiConfig,
+            sumiRenderer,
+            sumiRenderer.getCompositionRenderPass(),
+            sumiRenderer.compositionSubpassIdx(),
+            sumiDevice.presentQueue()
+        };
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float cumulativeFrameTime = 0.0f;
+
+        // Poll Mouse pos once directly before starting loop to prevent an incorrect
+        //  Mouse update on start.
+        sumiWindow.pollMousePos();
+
+        // Draw loop
+        while (!sumiWindow.shouldClose()) {
+            sumiWindow.pollMousePos(); // if manual polling mouse pos
+            // sumiWindow.clearMouseDelta(); // if using event-based polling
+            sumiWindow.clearKeypressEvents();
+            glfwPollEvents();
+
+            // TODO:
+            //  Prevent inputs from passthrough to application when ImGui wants to consume them...
+            //  i.e. check io.WantCaptureMouse, etc.
+
+            auto newTime = std::chrono::high_resolution_clock::now();
+            float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+            currentTime = newTime;
+
+            const float MAX_FRAME_TIME = 0.2f; // 5fps
+            frameTime = glm::min(frameTime, MAX_FRAME_TIME);
+
+            cumulativeFrameTime += frameTime;
+
+            // Handle input.
+            // TODO: move components to member variables and call this from a function
+            auto guiIO = gui.getIO();
+
+            if (sumiWindow.isCursorHidden()) gui.ignoreMouse();
+            else gui.enableMouse();
+
+            if (!(guiIO.WantCaptureKeyboard && guiIO.WantTextInput)) {
+
+                glm::vec2 mouseDelta = (!sumiWindow.isCursorHidden() && guiIO.WantCaptureMouse)
+                    ? glm::tvec2<double>{0.0f}
+                    : sumiWindow.mouseDelta;
+
+                cameraController.move(
+                    frameTime, 
+                    sumiWindow.keypressEvents,
+                    mouseDelta,
+                    camera.getOrthonormalBasis(),
+                    camera.transform
+                );
+            }
+
+            camera.setViewYXZ(camera.transform.getTranslation(), camera.transform.getRotation());
+
+            if (sumiRenderer.wasSwapChainRecreated()) {
+                // Update main application viewport size tracking vars
+                VkExtent2D newExtent = sumiRenderer.getWindow().getExtent();
+                screenWidth = newExtent.width;
+                screenHeight = newExtent.height;
+
+                float aspect = sumiRenderer.getAspect();
+                camera.setAspect(aspect, true);
+                postProcessor.updateDescriptors(sumiRenderer.getIntermediateColorAttachments());
+                shadowMapper.updateScreenBounds(screenWidth, screenHeight);
+                sumiRenderer.resetScRecreatedFlag();
+            }
+
+            if (sumiRenderer.wasGbufferRecreated()) {
+                deferredMeshRenderSystem.updateResolveDescriptors(sumiRenderer.getGbuffer());
+                sumiRenderer.resetGbufferRecreatedFlag();
+            }
+
+            // Set up FrameInfo for GUI, and add remaining props later;
+            FrameInfo frameInfo{
+                -1,        // frameIdx
+                frameTime,
+                cumulativeFrameTime,
+                camera,
+                nullptr,   // globalDescriptorSet
+                objects,
+                lights
+            };
+
+            SumiRenderer::FrameCommandBuffers frameCommandBuffers = sumiRenderer.beginFrame();
+
+            // If all cmd buffers are null, then the frame was not started.
+            if (frameCommandBuffers.validFrame()) {
+
+                int frameIdx = sumiRenderer.getFrameIdx();
+
+                // Fill in rest of frame-specific frameinfo props
+                frameInfo.frameIdx = frameIdx;
+                //frameInfo.commandBuffer = frameCommandBuffers.graphics;
+                frameInfo.globalDescriptorSet = globalDescriptorSets[frameIdx];
+
+                // Populate uniform buffers with data
+                CameraUBO cameraUbo{};
+                cameraUbo.projectionMatrix     = camera.getProjectionMatrix();
+                cameraUbo.viewMatrix           = camera.getViewMatrix();
+                cameraUbo.projectionViewMatrix = cameraUbo.projectionMatrix * cameraUbo.viewMatrix;
+                cameraUbo.cameraPosition = camera.transform.getTranslation();
+                cameraUniformBuffers[frameIdx]->writeToBuffer(&cameraUbo);
+                cameraUniformBuffers[frameIdx]->flush();
+
+                const int nLights = static_cast<int>(lights.size());
+                GlobalUBO globalUbo{};
+                globalUbo.nLights = nLights;
+                globalUniformBuffers[frameIdx]->writeToBuffer(&globalUbo);
+                globalUniformBuffers[frameIdx]->flush();
+
+                // Prepare Lights
+                //   Sort lights by view space depth for shadow mapping pass
+                auto sortedLights = HighQualityShadowMapper::sortLightsByViewSpaceDepth(
+                    lights, 
+                    cameraUbo.viewMatrix, 
+                    camera.getNear()
+                );
+
+                //   Write lights SSBO
+                //   TODO: This will be very slow when the number of lights increases.
+                //          We should only write to the buffer when absolutely necessary, i.e. on light change.
+                auto lightData = std::vector<SumiLight::LightShaderData>{};
+                for (auto& viewSpaceLight : sortedLights) {
+                    lightData.push_back(viewSpaceLight.lightPtr->getShaderData());
+                }
+                lightSSBO->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
+                lightSSBO->flush();
+
+                // Shadow mapping preparation on the CPU
+                //  TODO: Only re-prepare if lights / camera view have changed.
+                shadowMapper.prepare(
+                    sortedLights,
+                    camera.getNear(), camera.getFar(),
+                    cameraUbo.viewMatrix,
+                    cameraUbo.projectionMatrix
+                );
+                
+                // Pre-draw compute dispatches
+                // TODO: Compute based culling and skinning.
+
+                // Shadow mapping
+                shadowMapper.findLightsApproximate(
+                    frameCommandBuffers.predrawCompute, 
+                    camera.getNear(), camera.getFar()
+                );
+
+                // TODO: I'm leaning on a z-prepass here to compute tiled shadows asynchronously with the
+                //       Gbuffer fill pass. This lets us keep the tile-based subpasses for the gbuffer
+                //       fill/resolve.
+                //shadowMapper.findLightsAccurate(frameCommandBuffers.predrawCompute);
+                //shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.predrawCompute);
+                //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
+
+                // Main scene render pass
+                //frameInfo.commandBuffer = frameCommandBuffers.graphics;
+                sumiRenderer.beginLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
+
+                // Deferred fill subpass
+                deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
+
+                sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
+
+                // Deferred resolve subpass
+                deferredMeshRenderSystem.resolveGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
+
+                sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
+
+                // Forward rendering subpass
+                pointLightSystem.render(frameCommandBuffers.lateGraphics, frameInfo);
+                
+                if (gui.showGrid && gui.gridOpacity > 0.0f) {
+                    auto gridUbo = gui.getGridUboData();
+                    gridRenderSystem.render(frameCommandBuffers.lateGraphics, frameInfo, gridUbo);
+                }
+                
+                sumiRenderer.endLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
+
+                // Async Compute for post effects
+                sumiRenderer.beginPostCompute(frameCommandBuffers.lateCompute);
+
+                postProcessor.tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
+
+                sumiRenderer.endPostCompute(frameCommandBuffers.lateCompute);
+
+                // Final Composite
+                sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
+
+                postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
+
+                // GUI should *ALWAYS* render last after post-processing.
+
+                gui.beginFrame();
+                gui.drawSceneViewer(
+                    frameInfo,
+                    cameraController,
+                    shadowMapper.getZbin(),
+                    shadowMapper.getLightMask()
+                );
+                gui.endFrame();
+
+                gui.renderToCmdBuffer(frameCommandBuffers.present);
+
+                sumiRenderer.endCompositeRenderPass(frameCommandBuffers.present);
+
+                sumiRenderer.endFrame();
+            }
+        }
+
+        // Prevent cleanup from happening while GPU resources are in use on close.
+        //  TODO: can this error?
+        vkDeviceWaitIdle(sumiDevice.device());
+    }
+
+    void Sumire::loadObjects() {
+        // TODO: Load objects in asynchronously
+        // std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/obj/clorinde.obj"));
+        //std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/NormalTangentMirrorTest.glb"));
+        std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
+        auto obj1 = SumiObject::createObject();
+        obj1.model = modelObj1;
+        obj1.transform.setTranslation(glm::vec3{-8.0f, 0.0f, 0.0f});
+        obj1.transform.setScale(glm::vec3{1.0f});
+        objects.emplace(obj1.getId(), std::move(obj1));
+
+        std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/MetalRoughSpheres.glb"));
+        auto glb1 = SumiObject::createObject();
+        glb1.model = modelGlb1;
+        glb1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
+        glb1.transform.setScale(glm::vec3{0.2f});
+        objects.emplace(glb1.getId(), std::move(glb1));
+
+        // std::shared_ptr<SumiModel> modelGlb2 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/doomslayer.glb"));
+        // auto glb2 = SumiObject::createObject();
+        // glb2.model = modelGlb2;
+        // glb2.transform.setTranslation(glm::vec3{0.0f, 0.0f, 0.0f});
+        // glb2.transform.setScale(glm::vec3{1.0f});
+        // objects.emplace(glb2.getId(), std::move(glb2));
+
+        std::shared_ptr<SumiModel> modelGlb3 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/2b.glb"));
+        auto glb3 = SumiObject::createObject();
+        glb3.model = modelGlb3;
+        glb3.transform.setTranslation(glm::vec3{0.0f, 0.0f, 0.0f});
+        glb3.transform.setScale(glm::vec3{1.0f});
+        objects.emplace(glb3.getId(), std::move(glb3));
+    }
+
+    void Sumire::loadLights() {
+        constexpr float radial_n_lights = 40.0;
+        for (float i = 0; i < radial_n_lights; i++) {
+            float rads = i * glm::two_pi<float>() / radial_n_lights;
+            auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});
+            float hue = i * 360.0f / radial_n_lights;
+            light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
+            lights.emplace(light.getId(), std::move(light));
+        }
+
+        // zBin Light Tests
+        //auto light1 = SumiLight::createPointLight({ 0.0f, 1.0f, 0.0f });
+        //light1.range = 1.0f;
+        //lights.emplace(light1.getId(), std::move(light1));
+
+        //auto light2 = SumiLight::createPointLight({ -1.0f, 1.0f, -5.5f });
+        //light2.range = 2.0f;
+        //lights.emplace(light2.getId(), std::move(light2));
+
+        //auto light3 = SumiLight::createPointLight({ 1.0f, 1.0f, -5.0f });
+        //light3.range = 1.0f;
+        //lights.emplace(light3.getId(), std::move(light3));
+
+        //auto light4 = SumiLight::createPointLight({ -2.0f, 1.0f, -10.0f });
+        //light4.range = 1.0f;
+        //lights.emplace(light4.getId(), std::move(light4));
+
+        //auto light5 = SumiLight::createPointLight({ 0.5f, 1.0f, -11.0f });
+        //light5.range = 1.0f;
+        //lights.emplace(light5.getId(), std::move(light5));
+
+        //auto light6 = SumiLight::createPointLight({ 0.5f, 1.0f, -100.0f });
+        //light6.range = 1.0f;
+        //lights.emplace(light6.getId(), std::move(light6));
+
+    }
 }

@@ -29,125 +29,125 @@
 
 namespace sumire {
 
-	class SumiModel {
+    class SumiModel {
 
-	public:
+    public:
 
-		// Data loader struct for SumiModel constructor.
-		struct Data {
-			// Scene tree
-			std::vector<Node*> nodes{};
-			std::vector<std::unique_ptr<Node>> flatNodes{};
+        // Data loader struct for SumiModel constructor.
+        struct Data {
+            // Scene tree
+            std::vector<Node*> nodes{};
+            std::vector<std::unique_ptr<Node>> flatNodes{};
 
-			// Temporary holders for Mesh data (Uploaded to GPU on model init).
-			std::vector<Vertex> vertices{};
-			std::vector<uint32_t> indices{};
-			uint32_t meshCount;
-			
-			// Mesh Skinning Data
-			std::vector<std::unique_ptr<Skin>> skins;
+            // Temporary holders for Mesh data (Uploaded to GPU on model init).
+            std::vector<Vertex> vertices{};
+            std::vector<uint32_t> indices{};
+            uint32_t meshCount;
+            
+            // Mesh Skinning Data
+            std::vector<std::unique_ptr<Skin>> skins;
 
-			// Animations
-			std::vector<std::unique_ptr<Animation>> animations;
+            // Animations
+            std::vector<std::unique_ptr<Animation>> animations;
 
-			// Temporary holders for textures (not stored as member variables).
-			//  for if access is required in initialization
-			std::vector<VkSamplerCreateInfo> samplers;
-			std::vector<std::shared_ptr<SumiTexture>> textures;
+            // Temporary holders for textures (not stored as member variables).
+            //  for if access is required in initialization
+            std::vector<VkSamplerCreateInfo> samplers;
+            std::vector<std::shared_ptr<SumiTexture>> textures;
 
-			// Materials
-			std::vector<std::unique_ptr<SumiMaterial>> materials;
-			
-			~Data() {
-				flatNodes.clear();
-				nodes.clear();
-				skins.clear();
-				animations.clear();
-				textures.clear();
-				materials.clear();
-			}
-		};
+            // Materials
+            std::vector<std::unique_ptr<SumiMaterial>> materials;
+            
+            ~Data() {
+                flatNodes.clear();
+                nodes.clear();
+                skins.clear();
+                animations.clear();
+                textures.clear();
+                materials.clear();
+            }
+        };
 
-		SumiModel(SumiDevice &device, SumiModel::Data &data);
-		~SumiModel();
+        SumiModel(SumiDevice &device, SumiModel::Data &data);
+        ~SumiModel();
 
-		SumiModel(const SumiModel&) = delete;
-		SumiModel& operator=(const SumiModel&) = delete;
+        SumiModel(const SumiModel&) = delete;
+        SumiModel& operator=(const SumiModel&) = delete;
 
-		static std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorLayout(SumiDevice &device);
-		static std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout(SumiDevice &device);
-		static std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout(SumiDevice &device);
+        static std::unique_ptr<SumiDescriptorSetLayout> meshNodeDescriptorLayout(SumiDevice &device);
+        static std::unique_ptr<SumiDescriptorSetLayout> matTextureDescriptorLayout(SumiDevice &device);
+        static std::unique_ptr<SumiDescriptorSetLayout> matStorageDescriptorLayout(SumiDevice &device);
 
-		uint32_t getAnimationCount() { return static_cast<uint32_t>(animations.size()); }
-		bool hasIndices() { return useIndexBuffer; }
+        uint32_t getAnimationCount() { return static_cast<uint32_t>(animations.size()); }
+        bool hasIndices() { return useIndexBuffer; }
 
-		void bind(VkCommandBuffer commandbuffer);
-		void draw(
-			VkCommandBuffer commandbuffer, 
-			VkPipelineLayout pipelineLayout,
-			const std::unordered_map<
-				SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>> &pipelines
-		);
+        void bind(VkCommandBuffer commandbuffer);
+        void draw(
+            VkCommandBuffer commandbuffer, 
+            VkPipelineLayout pipelineLayout,
+            const std::unordered_map<
+                SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>> &pipelines
+        );
 
-		void updateAnimations(const std::vector<uint32_t> indices, float time, bool loop = true);
-		void updateAnimation(uint32_t animIdx, float time, bool loop = true);
-		void updateNodes();
+        void updateAnimations(const std::vector<uint32_t> indices, float time, bool loop = true);
+        void updateAnimation(uint32_t animIdx, float time, bool loop = true);
+        void updateNodes();
 
-		std::string displayName{"Unnamed"};
+        std::string displayName{"Unnamed"};
 
-	private:
-		void drawNode(
-			Node *node, 
-			VkCommandBuffer commandBuffer, 
-			VkPipelineLayout pipelineLayout,
-			const std::unordered_map<
-				SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>
-			> &pipelines
-		);
+    private:
+        void drawNode(
+            Node *node, 
+            VkCommandBuffer commandBuffer, 
+            VkPipelineLayout pipelineLayout,
+            const std::unordered_map<
+                SumiPipelineStateFlags, std::unique_ptr<SumiPipeline>
+            > &pipelines
+        );
 
-		// Resource Initializers
-		void createVertexBuffers(const std::vector<Vertex> &vertices);
-		void createIndexBuffer(const std::vector<uint32_t> &indices);
-		void createDefaultTextures();
-		void initDescriptors();
-		void createMaterialStorageBuffer();
+        // Resource Initializers
+        void createVertexBuffers(const std::vector<Vertex> &vertices);
+        void createIndexBuffer(const std::vector<uint32_t> &indices);
+        void createDefaultTextures();
+        void initDescriptors();
+        void createMaterialStorageBuffer();
 
-		SumiDevice &sumiDevice;
+        SumiDevice &sumiDevice;
 
-		//SumiModel::Data modelData;
+        //SumiModel::Data modelData;
 
-		// Model data
-		std::vector<Node*> nodes{};
-		std::vector<std::unique_ptr<Node>> flatNodes{};
+        // Model data
+        std::vector<Node*> nodes{};
+        std::vector<std::unique_ptr<Node>> flatNodes{};
 
-		uint32_t meshCount;
+        uint32_t meshCount;
 
-		std::vector<std::unique_ptr<Skin>> skins;
-		std::vector<std::unique_ptr<Animation>> animations;
+        std::vector<std::unique_ptr<Skin>> skins;
+        std::vector<std::unique_ptr<Animation>> animations;
 
-		std::vector<std::unique_ptr<SumiMaterial>> materials;
+        std::vector<std::unique_ptr<SumiMaterial>> materials;
 
-		// Vertex Buffer params
-		std::unique_ptr<SumiBuffer> vertexBuffer;
-		uint32_t vertexCount;
+        // Vertex Buffer params
+        std::unique_ptr<SumiBuffer> vertexBuffer;
+        uint32_t vertexCount;
 
-		// Index Buffer params
-		bool useIndexBuffer = true;
-		std::unique_ptr<SumiBuffer> indexBuffer;
-		uint32_t indexCount;
+        // Index Buffer params
+        bool useIndexBuffer = true;
+        std::unique_ptr<SumiBuffer> indexBuffer;
+        uint32_t indexCount;
 
-		// Descriptors
-		std::unique_ptr<SumiDescriptorPool> meshNodeDescriptorPool;
-		std::unique_ptr<SumiDescriptorPool> materialDescriptorPool;
-		VkDescriptorSet materialStorageDescriptorSet = VK_NULL_HANDLE;
-		// Texture Descriptor sets are stored in material textures,
-		//	 and mesh node descriptor sets are stored in SumiModel::Mesh
+        // Descriptors
+        std::unique_ptr<SumiDescriptorPool> meshNodeDescriptorPool;
+        std::unique_ptr<SumiDescriptorPool> materialDescriptorPool;
+        VkDescriptorSet materialStorageDescriptorSet = VK_NULL_HANDLE;
+        // Texture Descriptor sets are stored in material textures,
+        //	 and mesh node descriptor sets are stored in SumiModel::Mesh
 
-		// Buffers
-		std::unique_ptr<SumiBuffer> materialStorageBuffer; // for static materials
+        // Buffers
+        std::unique_ptr<SumiBuffer> materialStorageBuffer; // for static materials
 
-		// Default Textures & Materials
-		// TODO: These could be cached
-		std::shared_ptr<SumiTexture> emptyTexture;
-	};
+        // Default Textures & Materials
+        // TODO: These could be cached
+        std::shared_ptr<SumiTexture> emptyTexture;
+    };
 }

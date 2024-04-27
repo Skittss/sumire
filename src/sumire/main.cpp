@@ -5,15 +5,15 @@
 #include <stdexcept>
 
 int main() {
-	sumire::Sumire sumi{};
+    sumire::Sumire sumi{};
 
-	try {
-		sumi.run();
-	}
-	catch (const std::exception& e) {
-		std::cerr << e.what() << std::endl;
-		return EXIT_FAILURE;
-	}
+    try {
+        sumi.run();
+    }
+    catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
 
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }

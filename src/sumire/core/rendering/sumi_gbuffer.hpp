@@ -18,7 +18,7 @@ namespace sumire {
             ~SumiGbuffer();
 
             SumiGbuffer(const SumiGbuffer&) = delete;
-		    SumiGbuffer& operator=(const SumiGbuffer&) = delete;
+            SumiGbuffer& operator=(const SumiGbuffer&) = delete;
 
             SumiAttachment* positionAttachment() const { return position.get(); }
             SumiAttachment* normalAttachment() const { return normal.get(); }

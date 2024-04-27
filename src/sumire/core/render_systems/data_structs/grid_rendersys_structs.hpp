@@ -5,12 +5,12 @@
 namespace sumire::structs {
 
     struct GridVertPushConstantData {
-		glm::mat4 modelMatrix;
-	};
+        glm::mat4 modelMatrix;
+    };
 
-	struct GridFragPushConstantData {
-		alignas(16) glm::vec3 cameraPos;
-		float majorLineThickness;
-	};
+    struct GridFragPushConstantData {
+        alignas(16) glm::vec3 cameraPos;
+        float majorLineThickness;
+    };
 
 }

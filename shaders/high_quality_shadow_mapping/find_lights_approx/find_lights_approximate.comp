@@ -4,107 +4,107 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(push_constant) uniform Push {
-	uvec2 tileResolution;
-	uint numZbinSlices;
-	float cameraNear;
-	float cameraFar;
+    uvec2 tileResolution;
+    uint numZbinSlices;
+    float cameraNear;
+    float cameraFar;
 } push;
 
 #include "../includes/inc_zbin.glsl"
 
 layout(set = 0, binding = 0) buffer ZbinBuffer {
-	zBin zBins[];
+    zBin zBins[];
 };
 
 #include "../includes/inc_light_mask.glsl"
 
 layout(set = 0, binding = 1) buffer LightMaskBuffer {
-	lightMask lightMasks[];
+    lightMask lightMasks[];
 };
 
 uint getTileIdx(in uvec2 tileCoord) {
-	return tileCoord.x + tileCoord.y * push.tileResolution.x;
+    return tileCoord.x + tileCoord.y * push.tileResolution.x;
 }
 
 vec2 getTileNearFarDepth(in uvec2 tileCoord) {
-	// Fetch from HZB. 
-	// Resolution is 1/8th of full res so each pixel corresponds to a shadow tile.
+    // Fetch from HZB. 
+    // Resolution is 1/8th of full res so each pixel corresponds to a shadow tile.
 
-	// TODO: query from HZB input texture(s)
-	return  vec2(0.0, 0.0);
+    // TODO: query from HZB input texture(s)
+    return  vec2(0.0, 0.0);
 }
 
 ivec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
-	// Exponential view space mapping to mirror calculation of zBin.
-	// Slice calculation from Tiago Sous' DOOM 2016 Siggraph presentation.
-	//   Interactive graph: https://www.desmos.com/calculator/bf0g6n0hqp.
-	
-	const float logFarNear = log(push.cameraFar / push.cameraNear);
-	const float nSlices = float(push.numZbinSlices);
-	const float sliceFrac1 = nSlices / logFarNear;
-	const float sliceFrac2 = sliceFrac1 * log(push.cameraNear);
+    // Exponential view space mapping to mirror calculation of zBin.
+    // Slice calculation from Tiago Sous' DOOM 2016 Siggraph presentation.
+    //   Interactive graph: https://www.desmos.com/calculator/bf0g6n0hqp.
+    
+    const float logFarNear = log(push.cameraFar / push.cameraNear);
+    const float nSlices = float(push.numZbinSlices);
+    const float sliceFrac1 = nSlices / logFarNear;
+    const float sliceFrac2 = sliceFrac1 * log(push.cameraNear);
 
-	const ivec2 minMaxIdx = ivec2(
-		floor(log(minMaxDepth.x) * sliceFrac1 - sliceFrac2),
-		floor(log(minMaxDepth.y) * sliceFrac1 - sliceFrac2)
-	);
+    const ivec2 minMaxIdx = ivec2(
+        floor(log(minMaxDepth.x) * sliceFrac1 - sliceFrac2),
+        floor(log(minMaxDepth.y) * sliceFrac1 - sliceFrac2)
+    );
 
-	return minMaxIdx;
+    return minMaxIdx;
 }
 
 uint getTileLightGroupMask(in uvec2 tileCoord) {
-	// Light mask tiles are 32x32 whereas tiles are 8x8
-	uint lightMaskIdx = (tileCoord.x + tileCoord.y * push.tileResolution.x) / 4;
+    // Light mask tiles are 32x32 whereas tiles are 8x8
+    uint lightMaskIdx = (tileCoord.x + tileCoord.y * push.tileResolution.x) / 4;
 
-	// Get first 32 bits of the light mask reserved for groups
-	return lightMasks[lightMaskIdx].bits[0];
+    // Get first 32 bits of the light mask reserved for groups
+    return lightMasks[lightMaskIdx].bits[0];
 }
 
 uint getTileLightMask(in uint lightGroupBit) {
-	return 0;
+    return 0;
 }
 
 void main() {
-	// Two main objectives here:
-	//   - Find potentially valid lights per shadow tile
-	//   - Reserve memory for storage of light lists built in the following phases
+    // Two main objectives here:
+    //   - Find potentially valid lights per shadow tile
+    //   - Reserve memory for storage of light lists built in the following phases
 
-	// We only evaluate 1 shadow tile per thread instead of per-pixel
+    // We only evaluate 1 shadow tile per thread instead of per-pixel
 
-	uvec2 inTileCoord = ivec2(gl_GlobalInvocationID.xy);
-	bool isValidTile = all(lessThan(inTileCoord, push.tileResolution));
+    uvec2 inTileCoord = ivec2(gl_GlobalInvocationID.xy);
+    bool isValidTile = all(lessThan(inTileCoord, push.tileResolution));
 
-	if (isValidTile) {
-		const uint tileIdx         = getTileIdx(inTileCoord);
-		const vec2 tileMinMaxDepth = getTileNearFarDepth(inTileCoord);
-		const ivec2 zBinMinMaxIdx  = getZbinMinMaxIdx(tileMinMaxDepth);
-		//const zBin bin = zBins[zBinMinMaxIdx];
+    if (isValidTile) {
+        const uint tileIdx         = getTileIdx(inTileCoord);
+        const vec2 tileMinMaxDepth = getTileNearFarDepth(inTileCoord);
+        const ivec2 zBinMinMaxIdx  = getZbinMinMaxIdx(tileMinMaxDepth);
+        //const zBin bin = zBins[zBinMinMaxIdx];
 
-		uint lightGroupMask = getTileLightGroupMask(inTileCoord);
+        uint lightGroupMask = getTileLightGroupMask(inTileCoord);
 
-		
-		uint tileLightCount = 0;
+        
+        uint tileLightCount = 0;
 
-		// Process Light Groups (of 32)
-		while (lightGroupMask != 0) {
-			uint validLightMask = 0;
-			uint lightGroupBit  = findLSB(lightGroupMask);
-			uint lightMask      = getTileLightMask(lightGroupBit);
+        // Process Light Groups (of 32)
+        while (lightGroupMask != 0) {
+            uint validLightMask = 0;
+            uint lightGroupBit  = findLSB(lightGroupMask);
+            uint lightMask      = getTileLightMask(lightGroupBit);
 
-			// Process lights within set light groups
-			while (lightMask != 0) {
-				uint lightBit   = findLSB(lightMask);
-				uint lightIdx   = lightGroupBit * 32 + lightBit;
+            // Process lights within set light groups
+            while (lightMask != 0) {
+                uint lightBit   = findLSB(lightMask);
+                uint lightIdx   = lightGroupBit * 32 + lightBit;
 
-				lightMask      ^= 1u << lightBit; // Unset bit of processed light
-			}
+                lightMask      ^= 1u << lightBit; // Unset bit of processed light
+            }
 
-			lightGroupMask     ^= 1u << lightGroupBit; // Unset bit of processed group
-		}
-	
-		// First subgroup stores the LightGroup mask entry for the TileGroup, 
-		//if (subgroupElect()) {
-		//	
-		//}
-	}
+            lightGroupMask     ^= 1u << lightGroupBit; // Unset bit of processed group
+        }
+    
+        // First subgroup stores the LightGroup mask entry for the TileGroup, 
+        //if (subgroupElect()) {
+        //	
+        //}
+    }
 }

@@ -6,37 +6,37 @@
 
 namespace sumire {
 
-	class SumiComputePipeline {
-	public:
-		SumiComputePipeline() = default;
-		SumiComputePipeline(
-			SumiDevice& device,
-			const std::string& compShaderPath,
-			VkPipelineLayout pipelineLayout
-		);
-		~SumiComputePipeline();
+    class SumiComputePipeline {
+    public:
+        SumiComputePipeline() = default;
+        SumiComputePipeline(
+            SumiDevice& device,
+            const std::string& compShaderPath,
+            VkPipelineLayout pipelineLayout
+        );
+        ~SumiComputePipeline();
 
-		SumiComputePipeline(const SumiComputePipeline&) = delete;
-		SumiComputePipeline& operator=(const SumiComputePipeline&) = delete;
+        SumiComputePipeline(const SumiComputePipeline&) = delete;
+        SumiComputePipeline& operator=(const SumiComputePipeline&) = delete;
 
-		void bind(VkCommandBuffer commandBuffer);
+        void bind(VkCommandBuffer commandBuffer);
 
-	private:
+    private:
 
-		void createComputePipeline(
-			const std::string& compFilepath, VkPipelineLayout pipelineLayout);
+        void createComputePipeline(
+            const std::string& compFilepath, VkPipelineLayout pipelineLayout);
 
-		static std::vector<char> readFile(const std::string& filepath);
-		void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
+        static std::vector<char> readFile(const std::string& filepath);
+        void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 
-		std::string compFilePath = "Undefined";
+        std::string compFilePath = "Undefined";
 
-		SumiDevice& sumiDevice;
-		VkPipeline computePipeline;
-		VkShaderModule compShaderModule;
+        SumiDevice& sumiDevice;
+        VkPipeline computePipeline;
+        VkShaderModule compShaderModule;
 
-		static SumiComputePipeline* boundPipeline;
+        static SumiComputePipeline* boundPipeline;
 
-	};
+    };
 
 }

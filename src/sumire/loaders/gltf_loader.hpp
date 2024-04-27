@@ -16,7 +16,7 @@ namespace sumire::loaders {
 
         private:
 
-		    static void loadModel(
+            static void loadModel(
                 SumiDevice &device, const std::string &filepath, SumiModel::Data &data, bool genTangents);
 
             // TODO: For full GLTF support (including extensions), the loader should really load an entire scene

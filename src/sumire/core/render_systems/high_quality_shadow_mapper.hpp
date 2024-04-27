@@ -26,93 +26,93 @@
 
 namespace sumire {
 
-	class HighQualityShadowMapper {
-	public:
-		HighQualityShadowMapper(
-			SumiDevice& device,
-			uint32_t screenWidth, 
-			uint32_t screenHeight);
-		~HighQualityShadowMapper();
+    class HighQualityShadowMapper {
+    public:
+        HighQualityShadowMapper(
+            SumiDevice& device,
+            uint32_t screenWidth, 
+            uint32_t screenHeight);
+        ~HighQualityShadowMapper();
 
-		static constexpr uint32_t NUM_SLICES = 1024u;
+        static constexpr uint32_t NUM_SLICES = 1024u;
 
-		static std::vector<structs::viewSpaceLight> sortLightsByViewSpaceDepth(
-			SumiLight::Map& lights,
-			glm::mat4 view,
-			float near
-		);
+        static std::vector<structs::viewSpaceLight> sortLightsByViewSpaceDepth(
+            SumiLight::Map& lights,
+            glm::mat4 view,
+            float near
+        );
 
-		void updateScreenBounds(uint32_t width, uint32_t height);
+        void updateScreenBounds(uint32_t width, uint32_t height);
 
-		// Phase 1
-		void prepare(
-			const std::vector<structs::viewSpaceLight>& lights,
-			float near, float far,
-			const glm::mat4& view,
-			const glm::mat4& projection
-		);
-		// Phase 2
-		void findLightsApproximate(
-			VkCommandBuffer commandBuffer,
-			float near, float far
-		);
-		// Phase 3
-		void findLightsAccurate(VkCommandBuffer commandBuffer);
-		// Phase 4
-		void generateDeferredShadowMaps(VkCommandBuffer commandBuffer);
-		// Phase 5
-		void compositeHighQualityShadows(VkCommandBuffer commandBuffer);
+        // Phase 1
+        void prepare(
+            const std::vector<structs::viewSpaceLight>& lights,
+            float near, float far,
+            const glm::mat4& view,
+            const glm::mat4& projection
+        );
+        // Phase 2
+        void findLightsApproximate(
+            VkCommandBuffer commandBuffer,
+            float near, float far
+        );
+        // Phase 3
+        void findLightsAccurate(VkCommandBuffer commandBuffer);
+        // Phase 4
+        void generateDeferredShadowMaps(VkCommandBuffer commandBuffer);
+        // Phase 5
+        void compositeHighQualityShadows(VkCommandBuffer commandBuffer);
 
 
-		const structs::zBin& getZbin() { return zBin; }
-		structs::lightMask* getLightMask() { return lightMask.get(); }
+        const structs::zBin& getZbin() { return zBin; }
+        structs::lightMask* getLightMask() { return lightMask.get(); }
 
-	private:
-		// CPU (Phase 1)
-		void initPreparePhase();
+    private:
+        // CPU (Phase 1)
+        void initPreparePhase();
 
-		void createZbinBuffer();
-		void generateZbin(
-			const std::vector<structs::viewSpaceLight>& lights,
-			float near, float far,
-			const glm::mat4& view
-		);
-		void writeZbinBuffer();
+        void createZbinBuffer();
+        void generateZbin(
+            const std::vector<structs::viewSpaceLight>& lights,
+            float near, float far,
+            const glm::mat4& view
+        );
+        void writeZbinBuffer();
 
-		void createLightMaskBuffer();
-		void generateLightMask(
-			const std::vector<structs::viewSpaceLight>& lights,
-			const glm::mat4& projection
-		);
-		void writeLightMaskBuffer();
+        void createLightMaskBuffer();
+        void generateLightMask(
+            const std::vector<structs::viewSpaceLight>& lights,
+            const glm::mat4& projection
+        );
+        void writeLightMaskBuffer();
 
-		// GPU (Phases 2+)
-		void initDescriptorLayouts();
+        // GPU (Phases 2+)
+        void initDescriptorLayouts();
 
-		// Phase 2
-		void initLightsApproxPhase();
-		//void createLightsApproxUniformBuffer();
-		void initLightsApproxDescriptorSet();
-		void updateLightsApproxDescriptorSet();
-		void initLightsApproxPipeline();
+        // Phase 2
+        void initLightsApproxPhase();
+        //void createLightsApproxUniformBuffer();
+        void initLightsApproxDescriptorSet();
+        void updateLightsApproxDescriptorSet();
+        void initLightsApproxPipeline();
 
-		SumiDevice& sumiDevice;
-		uint32_t screenWidth;
-		uint32_t screenHeight;
+        SumiDevice& sumiDevice;
+        uint32_t screenWidth;
+        uint32_t screenHeight;
 
-		structs::zBin zBin;
-		std::unique_ptr<SumiBuffer> zBinBuffer;
+        structs::zBin zBin;
+        std::unique_ptr<SumiBuffer> zBinBuffer;
 
-		std::unique_ptr<structs::lightMask> lightMask;
-		std::unique_ptr<SumiBuffer> lightMaskBuffer;
-		std::unique_ptr<SumiBuffer> findLightsApproxUniformBuffer;
+        std::unique_ptr<structs::lightMask> lightMask;
+        std::unique_ptr<SumiBuffer> lightMaskBuffer;
+        std::unique_ptr<SumiBuffer> findLightsApproxUniformBuffer;
 
-		std::unique_ptr<SumiDescriptorPool> descriptorPool;
-		std::unique_ptr<SumiDescriptorSetLayout> lightsApproxDescriptorLayout;
-		VkDescriptorSet lightsApproxDescriptorSet = VK_NULL_HANDLE;
+        std::unique_ptr<SumiDescriptorPool> descriptorPool;
+        std::unique_ptr<SumiDescriptorSetLayout> lightsApproxDescriptorLayout;
+        VkDescriptorSet lightsApproxDescriptorSet = VK_NULL_HANDLE;
 
-		VkPipelineLayout findLightsApproxPipelineLayout = VK_NULL_HANDLE;
-		std::unique_ptr<SumiComputePipeline> findLightsApproxPipeline;
-	};
+        VkPipelineLayout findLightsApproxPipelineLayout = VK_NULL_HANDLE;
+        std::unique_ptr<SumiComputePipeline> findLightsApproxPipeline;
+    };
 
 }

@@ -12,18 +12,18 @@ layout (location = 6) in vec2 inUv1;
 layout (location = 0) out vec4 outCol;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-	int nLights;
+    int nLights;
 } ubo;
 
 layout(set = 0, binding = 1) uniform Camera {
-	mat4 projectionMatrix;
-	mat4 viewMatrix;
-	mat4 projectionViewMatrix;
-	vec3 cameraPosition;
+    mat4 projectionMatrix;
+    mat4 viewMatrix;
+    mat4 projectionViewMatrix;
+    vec3 cameraPosition;
 };
 
 layout(push_constant) uniform Push {
-	layout(offset = 128) int materialIdx;
+    layout(offset = 128) int materialIdx;
 };
 
 // Material Textures
@@ -38,20 +38,20 @@ layout(set = 1, binding = 4) uniform sampler2D emissiveMap;
 #include "../includes/inc_material.glsl"
 
 layout(set = 3, binding = 0) buffer SSBO {
-	Material materials[];
+    Material materials[];
 };
 
 void main() {
-	// Index mesh's material from storage buffer
-	Material mat = materials[materialIdx];
+    // Index mesh's material from storage buffer
+    Material mat = materials[materialIdx];
 
-	vec2 inUvs[2] = {inUv0, inUv1};
+    vec2 inUvs[2] = {inUv0, inUv1};
 
-	// Use base colour factors if no albedo map is given
-	vec4 albedo = mat.baseColorTexCoord > -1 ? 
-		texture(albedoMap, inUvs[mat.baseColorTexCoord]) 
-		: vec4(1.0);
-	albedo *= mat.baseColorFactors;
+    // Use base colour factors if no albedo map is given
+    vec4 albedo = mat.baseColorTexCoord > -1 ? 
+        texture(albedoMap, inUvs[mat.baseColorTexCoord]) 
+        : vec4(1.0);
+    albedo *= mat.baseColorFactors;
 
-	outCol = vec4(albedo.rgb, 1.0);
+    outCol = vec4(albedo.rgb, 1.0);
 }

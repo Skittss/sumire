@@ -1,14 +1,14 @@
 #version 450
 
 layout (set = 0, binding = 0) buffer slotCounters {
-	int id;
+    int id;
 };
 
 uint allocateShadowSlotID(in uint inTileIdx, in uint inTileLightCount) {
-	return 0;
+    return 0;
 }
 
 void main() {
-	uint slotID;
+    uint slotID;
 
 }

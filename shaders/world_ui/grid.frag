@@ -6,9 +6,9 @@ layout(location = 1) in vec3 farPt;
 layout(location = 0) out vec4 col;
 
 layout(set = 0, binding = 1) uniform Camera {
-	mat4 projectionMatrix;
-	mat4 viewMatrix;
-	mat4 projectionViewMatrix;
+    mat4 projectionMatrix;
+    mat4 viewMatrix;
+    mat4 projectionViewMatrix;
     vec3 cameraPosition;
 };
 

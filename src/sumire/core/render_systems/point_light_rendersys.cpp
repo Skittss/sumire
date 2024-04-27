@@ -14,78 +14,78 @@
 
 namespace sumire {
 
-	PointLightRenderSys::PointLightRenderSys(
-		SumiDevice& device,
-		VkRenderPass renderPass,
-		uint32_t subpassIdx,
-		VkDescriptorSetLayout globalDescriptorSetLayout
-	) : sumiDevice{device} {
-			
-		createPipelineLayout(globalDescriptorSetLayout);
-		createPipeline(renderPass, subpassIdx);
-	}
+    PointLightRenderSys::PointLightRenderSys(
+        SumiDevice& device,
+        VkRenderPass renderPass,
+        uint32_t subpassIdx,
+        VkDescriptorSetLayout globalDescriptorSetLayout
+    ) : sumiDevice{device} {
+            
+        createPipelineLayout(globalDescriptorSetLayout);
+        createPipeline(renderPass, subpassIdx);
+    }
 
-	PointLightRenderSys::~PointLightRenderSys() {
-		// TODO: Destroy pipeline at this line??
-		vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
-	}
+    PointLightRenderSys::~PointLightRenderSys() {
+        // TODO: Destroy pipeline at this line??
+        vkDestroyPipelineLayout(sumiDevice.device(), pipelineLayout, nullptr);
+    }
 
-	void PointLightRenderSys::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
+    void PointLightRenderSys::createPipelineLayout(VkDescriptorSetLayout globalDescriptorSetLayout) {
 
-		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(structs::PointLightPushConstantData);
-		
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalDescriptorSetLayout};
+        VkPushConstantRange pushConstantRange{};
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = sizeof(structs::PointLightPushConstantData);
+        
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalDescriptorSetLayout};
 
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
-		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+        pipelineLayoutInfo.pushConstantRangeCount = 1;
+        pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-		VK_CHECK_SUCCESS(
-			vkCreatePipelineLayout(
-				sumiDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout),
-			"[Sumire::PointLightRenderSys] Failed to create point light rendering pipeline layout."
-		);
-	}
+        VK_CHECK_SUCCESS(
+            vkCreatePipelineLayout(
+                sumiDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout),
+            "[Sumire::PointLightRenderSys] Failed to create point light rendering pipeline layout."
+        );
+    }
 
-	void PointLightRenderSys::createPipeline(VkRenderPass renderPass, uint32_t subpassIdx) {
-		assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout.");
+    void PointLightRenderSys::createPipeline(VkRenderPass renderPass, uint32_t subpassIdx) {
+        assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout.");
 
-		PipelineConfigInfo pipelineConfig{};
-		SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
-		pipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE; // no culling
-		pipelineConfig.attributeDescriptions.clear(); // do not use vertex attributes or bindings
-		pipelineConfig.bindingDescriptions.clear();
-		pipelineConfig.renderPass = renderPass;
-		pipelineConfig.subpass = subpassIdx;
-		pipelineConfig.pipelineLayout = pipelineLayout;
-		sumiPipeline = std::make_unique<SumiPipeline>(
-			sumiDevice,
-			SUMIRE_ENGINE_PATH("shaders/world_ui/point_light.vert.spv"),
-			SUMIRE_ENGINE_PATH("shaders/world_ui/point_light.frag.spv"),
-			pipelineConfig);
-	}
+        PipelineConfigInfo pipelineConfig{};
+        SumiPipeline::defaultPipelineConfigInfo(pipelineConfig);
+        pipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE; // no culling
+        pipelineConfig.attributeDescriptions.clear(); // do not use vertex attributes or bindings
+        pipelineConfig.bindingDescriptions.clear();
+        pipelineConfig.renderPass = renderPass;
+        pipelineConfig.subpass = subpassIdx;
+        pipelineConfig.pipelineLayout = pipelineLayout;
+        sumiPipeline = std::make_unique<SumiPipeline>(
+            sumiDevice,
+            SUMIRE_ENGINE_PATH("shaders/world_ui/point_light.vert.spv"),
+            SUMIRE_ENGINE_PATH("shaders/world_ui/point_light.frag.spv"),
+            pipelineConfig);
+    }
 
-	void PointLightRenderSys::render(VkCommandBuffer commandBuffer, FrameInfo &frameInfo) {
-		sumiPipeline->bind(commandBuffer);
+    void PointLightRenderSys::render(VkCommandBuffer commandBuffer, FrameInfo &frameInfo) {
+        sumiPipeline->bind(commandBuffer);
 
-		vkCmdBindDescriptorSets(
-			commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			pipelineLayout,
-			0, 1,
-			&frameInfo.globalDescriptorSet,
-			0, nullptr
-		);
+        vkCmdBindDescriptorSets(
+            commandBuffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipelineLayout,
+            0, 1,
+            &frameInfo.globalDescriptorSet,
+            0, nullptr
+        );
 
-		uint32_t nLights = static_cast<uint32_t>(frameInfo.lights.size());
+        uint32_t nLights = static_cast<uint32_t>(frameInfo.lights.size());
 
-		vkCmdDraw(commandBuffer, 6, nLights, 0, 0);
+        vkCmdDraw(commandBuffer, 6, nLights, 0, 0);
 
-	}
+    }
 }
