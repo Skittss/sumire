@@ -333,7 +333,7 @@ namespace sumire {
                 //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
 
                 // ---- Early Graphics ---------------------------------------------------------------------------
-                //   Fill gbuffer in place of a z-prepass
+                // Fill gbuffer in place of a z-prepass
 
                 sumiRenderer.beginEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
 
@@ -342,19 +342,13 @@ namespace sumire {
                 sumiRenderer.endEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
 
                 // ---- Early Compute ----------------------------------------------------------------------------
-                //   Shadow mapping resolve which gbuffer resolve relies on
+                // Shadow mapping resolve which gbuffer resolve relies on
 
                 // ---- Late Graphics ----------------------------------------------------------------------------
-                //   Lighting resolve and forward subpass for world UI + OIT
-
-                //   Deferred fill subpass
+                // Lighting resolve and forward subpass for world UI + OIT
                 sumiRenderer.beginLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
-                //deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
-
                 //   Deferred resolve subpass
-                sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
-
                 deferredMeshRenderSystem.resolveGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
 
                 //   Forward rendering subpass
@@ -370,13 +364,13 @@ namespace sumire {
                 sumiRenderer.endLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
                 // ---- Late Compute -----------------------------------------------------------------------------
-                //   Post effects which can be interleaved with generation of next frame via async compute queue
+                // Post effects which can be interleaved with generation of next frame via async compute queue
                 postProcessor.tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
 
                 sumiRenderer.endLateCompute(frameCommandBuffers.lateCompute);
 
                 // ---- Final Composite --------------------------------------------------------------------------
-                //    Copy everything out to the swap chain image and render UI
+                // Copy everything out to the swap chain image and render UI
                 sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
 
                 postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
