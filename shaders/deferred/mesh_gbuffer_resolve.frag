@@ -1,11 +1,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-layout (input_attachment_index = 0, set = 1, binding = 0) uniform subpassInput gbufferPosition;
-layout (input_attachment_index = 1, set = 1, binding = 1) uniform subpassInput gbufferNormal;
-layout (input_attachment_index = 2, set = 1, binding = 2) uniform subpassInput gbufferAlbedo;
-layout (input_attachment_index = 3, set = 1, binding = 3) uniform subpassInput gbufferAoMetalRoughEmissive;
-
 layout (location = 0) in vec2 gbufferUV;
 
 layout (location = 0) out vec4 outCol;
@@ -27,22 +22,27 @@ layout(set = 0, binding = 2) buffer LightSSBO {
     Light lights[];
 };
 
+layout (set = 1, binding = 0) uniform sampler2D gbufferPosition;
+layout (set = 1, binding = 1) uniform sampler2D gbufferNormal;
+layout (set = 1, binding = 2) uniform sampler2D gbufferAlbedo;
+layout (set = 1, binding = 3) uniform sampler2D gbufferAoMetalRoughEmissive;
+
 #include "../includes/inc_pbr_brdf.glsl"
 
 void main() {
     // Raw buffer values
-    vec4 positionValues = subpassLoad(gbufferPosition);
-    vec4 normalValues =  subpassLoad(gbufferNormal);
-    vec4 albedo = subpassLoad(gbufferAlbedo);
-    vec4 aoMetalRoughEmissiveVales = subpassLoad(gbufferAoMetalRoughEmissive);
+    vec4 positionValues            = texture(gbufferPosition, gbufferUV);
+    vec4 normalValues              = texture(gbufferNormal, gbufferUV);
+    vec4 albedo                    = texture(gbufferAlbedo, gbufferUV);
+    vec4 aoMetalRoughEmissiveVales = texture(gbufferAoMetalRoughEmissive, gbufferUV);
 
     // Unpack
-    vec3 position = positionValues.rgb;
-    vec3 normal = normalValues.rgb;
-    float ao = aoMetalRoughEmissiveVales.r;
-    float metallic = aoMetalRoughEmissiveVales.g;
+    vec3 position   = positionValues.rgb;
+    vec3 normal     = normalValues.rgb;
+    float ao        = aoMetalRoughEmissiveVales.r;
+    float metallic  = aoMetalRoughEmissiveVales.g;
     float roughness = aoMetalRoughEmissiveVales.b;
-    vec3 emissive = vec3(positionValues.a, normalValues.a, aoMetalRoughEmissiveVales.a);
+    vec3 emissive   = vec3(positionValues.a, normalValues.a, aoMetalRoughEmissiveVales.a);
     
     // === PBR lighting ======================================================================
     //  Using Cook-Torrence BRDF: Lr = Le + (f_d + f_s) * Li * n dot wi
