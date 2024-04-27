@@ -169,6 +169,8 @@ namespace sumire {
         
         zBin.reset();
 
+        if (lights.size() == 0)  return;
+
         const float logFarNear = glm::log(far / near);
         const float sliceFrac1 = static_cast<float>(NUM_SLICES) / logFarNear;
         const float sliceFrac2 = static_cast<float>(NUM_SLICES) * glm::log(near) / logFarNear;
