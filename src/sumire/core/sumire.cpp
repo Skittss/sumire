@@ -125,7 +125,7 @@ namespace sumire {
 		// Render Systems
 		MeshRenderSys meshRenderSystem{
 			sumiDevice,
-			sumiRenderer.getRenderPass(), 
+			sumiRenderer.getLateGraphicsRenderPass(), 
 			sumiRenderer.forwardRenderSubpassIdx(),
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
@@ -133,9 +133,9 @@ namespace sumire {
 		DeferredMeshRenderSys deferredMeshRenderSystem{
 			sumiDevice,
 			sumiRenderer.getGbuffer(),
-			sumiRenderer.getRenderPass(), 
+			sumiRenderer.getLateGraphicsRenderPass(), 
 			sumiRenderer.gbufferFillSubpassIdx(),
-			sumiRenderer.getRenderPass(),
+			sumiRenderer.getLateGraphicsRenderPass(),
 			sumiRenderer.gbufferResolveSubpassIdx(),
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
@@ -153,14 +153,14 @@ namespace sumire {
 
 		PointLightRenderSys pointLightSystem{
 			sumiDevice, 
-			sumiRenderer.getRenderPass(), 
+			sumiRenderer.getLateGraphicsRenderPass(), 
 			sumiRenderer.forwardRenderSubpassIdx(),
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
 
 		GridRendersys gridRenderSystem{
 			sumiDevice, 
-			sumiRenderer.getRenderPass(),
+			sumiRenderer.getLateGraphicsRenderPass(),
 			sumiRenderer.forwardRenderSubpassIdx(),
 			globalDescriptorSetLayout->getDescriptorSetLayout()
 		};
@@ -337,34 +337,34 @@ namespace sumire {
 
 				// Main scene render pass
 				//frameInfo.commandBuffer = frameCommandBuffers.graphics;
-				sumiRenderer.beginRenderPass(frameCommandBuffers.graphics);
+				sumiRenderer.beginLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
 				// Deferred fill subpass
-				deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.graphics, frameInfo);
+				deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
 
-				sumiRenderer.nextSubpass(frameCommandBuffers.graphics);
+				sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
 
 				// Deferred resolve subpass
-				deferredMeshRenderSystem.resolveGbuffer(frameCommandBuffers.graphics, frameInfo);
+				deferredMeshRenderSystem.resolveGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
 
-				sumiRenderer.nextSubpass(frameCommandBuffers.graphics);
+				sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
 
 				// Forward rendering subpass
-				pointLightSystem.render(frameCommandBuffers.graphics, frameInfo);
+				pointLightSystem.render(frameCommandBuffers.lateGraphics, frameInfo);
 				
 				if (gui.showGrid && gui.gridOpacity > 0.0f) {
 					auto gridUbo = gui.getGridUboData();
-					gridRenderSystem.render(frameCommandBuffers.graphics, frameInfo, gridUbo);
+					gridRenderSystem.render(frameCommandBuffers.lateGraphics, frameInfo, gridUbo);
 				}
 				
-				sumiRenderer.endRenderPass(frameCommandBuffers.graphics);
+				sumiRenderer.endLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
 				// Async Compute for post effects
-				sumiRenderer.beginPostCompute(frameCommandBuffers.compute);
+				sumiRenderer.beginPostCompute(frameCommandBuffers.lateCompute);
 
-				postProcessor.tonemap(frameCommandBuffers.compute, frameInfo.frameIdx);
+				postProcessor.tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
 
-				sumiRenderer.endPostCompute(frameCommandBuffers.compute);
+				sumiRenderer.endPostCompute(frameCommandBuffers.lateCompute);
 
 				// Final Composite
 				sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);

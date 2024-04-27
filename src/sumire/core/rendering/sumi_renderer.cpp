@@ -14,7 +14,8 @@ namespace sumire {
 
 		recreateSwapChain();
 		recreateGbuffer();
-		createRenderPass();
+		createEarlyGraphicsRenderPass();
+		createLateGraphicsRenderPass();
 		createCompositionRenderPass();
 		createFramebuffers();
 		createCommandBuffers();
@@ -26,7 +27,8 @@ namespace sumire {
 		freeCommandBuffers();
 		freeFramebuffers();
 
-		vkDestroyRenderPass(sumiDevice.device(), renderPass, nullptr);
+		vkDestroyRenderPass(sumiDevice.device(), earlyGraphicsRenderPass, nullptr);
+		vkDestroyRenderPass(sumiDevice.device(), lateGraphicsRenderPass, nullptr);
 		vkDestroyRenderPass(sumiDevice.device(), compositionRenderPass, nullptr);
 	}
 
@@ -122,38 +124,26 @@ namespace sumire {
 	}
 
 	void SumiRenderer::createCommandBuffers() {
-		// 1-to-1 relationship on command buffers -> frame buffers.
-
-		// Pre-draw compute command buffers
+		// Ring buffer the command buffers. I.e. 1-to-1 relationship on command buffers -> frame buffers.
+		// Setup alloc info and command buffer arrays
 		predrawComputeCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		earlyGraphicsCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		earlyComputeCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		lateGraphicsCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		lateComputeCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		presentCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
 
-		VkCommandBufferAllocateInfo predrawComputeAllocInfo{};
-		predrawComputeAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		predrawComputeAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		predrawComputeAllocInfo.commandPool = sumiDevice.getComputeCommandPool();
-		predrawComputeAllocInfo.commandBufferCount = static_cast<uint32_t>(predrawComputeCommandBuffers.size());
-
-		VK_CHECK_SUCCESS(
-			vkAllocateCommandBuffers(sumiDevice.device(), &predrawComputeAllocInfo, predrawComputeCommandBuffers.data()),
-			"[Sumire::SumiRenderer] Failed to allocate post command buffers."
-		);
-
-		// Graphics Command Buffers
-		graphicsCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		VkCommandBufferAllocateInfo computeAllocInfo{};
+		computeAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		computeAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		computeAllocInfo.commandPool = sumiDevice.getComputeCommandPool();
+		computeAllocInfo.commandBufferCount = static_cast<uint32_t>(lateComputeCommandBuffers.size());
 
 		VkCommandBufferAllocateInfo graphicsAllocInfo{};
 		graphicsAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		graphicsAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		graphicsAllocInfo.commandPool = sumiDevice.getGraphicsCommandPool();
-		graphicsAllocInfo.commandBufferCount = static_cast<uint32_t>(graphicsCommandBuffers.size());
-
-		VK_CHECK_SUCCESS(
-			vkAllocateCommandBuffers(sumiDevice.device(), &graphicsAllocInfo, graphicsCommandBuffers.data()),
-			"[Sumire::SumiRenderer] Failed to allocate graphics command buffers."
-		);
-
-		// Present Command Buffers
-		presentCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+		graphicsAllocInfo.commandBufferCount = static_cast<uint32_t>(lateGraphicsCommandBuffers.size());
 
 		VkCommandBufferAllocateInfo presentAllocInfo{};
 		presentAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -161,48 +151,101 @@ namespace sumire {
 		presentAllocInfo.commandPool = sumiDevice.getPresentCommandPool();
 		presentAllocInfo.commandBufferCount = static_cast<uint32_t>(presentCommandBuffers.size());
 
+		// Pre-draw compute
 		VK_CHECK_SUCCESS(
-			vkAllocateCommandBuffers(sumiDevice.device(), &presentAllocInfo, presentCommandBuffers.data()),
+			vkAllocateCommandBuffers(
+				sumiDevice.device(), &computeAllocInfo, predrawComputeCommandBuffers.data()),
+			"[Sumire::SumiRenderer] Failed to allocate predraw compute command buffers."
+		);
+
+		// Early Graphics
+		VK_CHECK_SUCCESS(
+			vkAllocateCommandBuffers(
+				sumiDevice.device(), &graphicsAllocInfo, earlyGraphicsCommandBuffers.data()),
+			"[Sumire::SumiRenderer] Failed to allocate early graphics command buffers."
+		);
+
+		// Early Compute
+		VK_CHECK_SUCCESS(
+			vkAllocateCommandBuffers(
+				sumiDevice.device(), &computeAllocInfo, earlyComputeCommandBuffers.data()),
+			"[Sumire::SumiRenderer] Failed to allocate early compute command buffers."
+		);
+
+		// Late Graphics
+		VK_CHECK_SUCCESS(
+			vkAllocateCommandBuffers(
+				sumiDevice.device(), &graphicsAllocInfo, lateGraphicsCommandBuffers.data()),
+			"[Sumire::SumiRenderer] Failed to allocate late graphics command buffers."
+		);
+
+		// Late Compute
+		VK_CHECK_SUCCESS(
+			vkAllocateCommandBuffers(
+				sumiDevice.device(), &computeAllocInfo, lateComputeCommandBuffers.data()),
+			"[Sumire::SumiRenderer] Failed to allocate late compute command buffers."
+		);
+
+		// Present
+		VK_CHECK_SUCCESS(
+			vkAllocateCommandBuffers(
+				sumiDevice.device(), &presentAllocInfo, presentCommandBuffers.data()),
 			"[Sumire::SumiRenderer] Failed to allocate present command buffers."
 		);
 
-		// Post compute command buffers
-		computeCommandBuffers.resize(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
-
-		VkCommandBufferAllocateInfo computeAllocInfo{};
-		computeAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		computeAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		computeAllocInfo.commandPool = sumiDevice.getComputeCommandPool();
-		computeAllocInfo.commandBufferCount = static_cast<uint32_t>(computeCommandBuffers.size());
-
-		VK_CHECK_SUCCESS(
-			vkAllocateCommandBuffers(sumiDevice.device(), &computeAllocInfo, computeCommandBuffers.data()),
-			"[Sumire::SumiRenderer] Failed to allocate post command buffers."
-		);
 	}
 
 	void SumiRenderer::freeCommandBuffers() {
-		VkCommandPool predrawComputeCommandPool = sumiDevice.getComputeCommandPool();
 		VkCommandPool graphicsCommandPool = sumiDevice.getGraphicsCommandPool();
-		VkCommandPool presentCommandPool = sumiDevice.getPresentCommandPool();
 		VkCommandPool computeCommandPool = sumiDevice.getComputeCommandPool();
+		VkCommandPool presentCommandPool = sumiDevice.getPresentCommandPool();
 
+		// Predraw Compute
 		vkFreeCommandBuffers(
 			sumiDevice.device(),
-			predrawComputeCommandPool,
+			computeCommandPool,
 			static_cast<uint32_t>(predrawComputeCommandBuffers.size()),
 			predrawComputeCommandBuffers.data()
 		);
 		predrawComputeCommandBuffers.clear();
 
+		// Early Graphics
 		vkFreeCommandBuffers(
 			sumiDevice.device(),
 			graphicsCommandPool,
-			static_cast<uint32_t>(graphicsCommandBuffers.size()),
-			graphicsCommandBuffers.data()
+			static_cast<uint32_t>(earlyGraphicsCommandBuffers.size()),
+			earlyGraphicsCommandBuffers.data()
 		);
-		graphicsCommandBuffers.clear();
+		earlyGraphicsCommandBuffers.clear();
 
+		// Early Compute
+		vkFreeCommandBuffers(
+			sumiDevice.device(),
+			computeCommandPool,
+			static_cast<uint32_t>(earlyComputeCommandBuffers.size()),
+			earlyComputeCommandBuffers.data()
+		);
+		earlyComputeCommandBuffers.clear();
+
+		// Late Graphics
+		vkFreeCommandBuffers(
+			sumiDevice.device(),
+			graphicsCommandPool,
+			static_cast<uint32_t>(lateGraphicsCommandBuffers.size()),
+			lateGraphicsCommandBuffers.data()
+		);
+		lateGraphicsCommandBuffers.clear();
+
+		// Late Compute
+		vkFreeCommandBuffers(
+			sumiDevice.device(),
+			computeCommandPool,
+			static_cast<uint32_t>(lateComputeCommandBuffers.size()),
+			lateComputeCommandBuffers.data()
+		);
+		lateComputeCommandBuffers.clear();
+
+		// Present
 		vkFreeCommandBuffers(
 			sumiDevice.device(),
 			presentCommandPool,
@@ -211,13 +254,6 @@ namespace sumire {
 		);
 		presentCommandBuffers.clear();
 
-		vkFreeCommandBuffers(
-			sumiDevice.device(),
-			computeCommandPool,
-			static_cast<uint32_t>(computeCommandBuffers.size()),
-			computeCommandBuffers.data()
-		);
-		computeCommandBuffers.clear();
 	}
 
 	void SumiRenderer::createSyncObjects() {
@@ -269,11 +305,137 @@ namespace sumire {
 	VkFormat SumiRenderer::getIntermediateColorAttachmentFormat() const {
 		return VK_FORMAT_R16G16B16A16_UNORM;
 	}
-	
-	void SumiRenderer::createRenderPass() {
-		// Create the renderpass used to render a frame.
-		// This currently involves 3 subpasses:
+
+	void SumiRenderer::createEarlyGraphicsRenderPass() {
+		// This currently involves 1 subpass:
 		//    - Gbuffer fill
+		//    - TODO: Heirarchical Z-buffer generation here? 
+
+		std::array<VkAttachmentDescription, 6> attachmentDescriptions{};
+
+		// 0: Swap Chain Color (Intermediate targets)
+		attachmentDescriptions[0].format = getIntermediateColorAttachmentFormat();
+		attachmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		// 1: Gbuffer Position
+		attachmentDescriptions[1].format = gbuffer->positionAttachment()->getFormat();
+		attachmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		// 2: Gbuffer Normal
+		attachmentDescriptions[2].format = gbuffer->normalAttachment()->getFormat();
+		attachmentDescriptions[2].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachmentDescriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentDescriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentDescriptions[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentDescriptions[2].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		// 3: Gbuffer Albedo
+		attachmentDescriptions[3].format = gbuffer->albedoAttachment()->getFormat();
+		attachmentDescriptions[3].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachmentDescriptions[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentDescriptions[3].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentDescriptions[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentDescriptions[3].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		// 4: Gbuffer AoMetalRoughEmissive (PBR)
+		attachmentDescriptions[4].format = gbuffer->aoMetalRoughEmissiveAttachment()->getFormat();
+		attachmentDescriptions[4].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachmentDescriptions[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentDescriptions[4].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentDescriptions[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentDescriptions[4].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		// 5: Shared Depth
+		attachmentDescriptions[5].format = sumiSwapChain->findDepthFormat();
+		attachmentDescriptions[5].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachmentDescriptions[5].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentDescriptions[5].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[5].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentDescriptions[5].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescriptions[5].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentDescriptions[5].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		std::array<VkSubpassDescription, 1> subpassDescriptions{};
+		std::array<VkSubpassDependency, 3> subpassDependencies{};
+
+		// 0 - Gbuffer Fill ------------------------------------------------------------------
+		// Use 5 color attachments (gbuffer + swap chain image) 
+		//   so that unlit meshes can be rendered straight to the swap chain, bypassing the lighting resolve.
+		std::array<VkAttachmentReference, 5> gbufferFillColorRefs{};
+		gbufferFillColorRefs[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+		gbufferFillColorRefs[1] = { 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+		gbufferFillColorRefs[2] = { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+		gbufferFillColorRefs[3] = { 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+		gbufferFillColorRefs[4] = { 4, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+		VkAttachmentReference gbufferFillDepthRef = { 5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+		subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpassDescriptions[0].colorAttachmentCount = static_cast<uint32_t>(gbufferFillColorRefs.size());
+		subpassDescriptions[0].pColorAttachments = gbufferFillColorRefs.data();
+		subpassDescriptions[0].pDepthStencilAttachment = &gbufferFillDepthRef;
+
+		// --- Dependencies
+		// ----- EXT -> 0 - Make sure all previous renderpass depth/color writes are finished before we begin here.
+		subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+		subpassDependencies[0].dstSubpass = 0;
+		subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		subpassDependencies[0].srcAccessMask = 0x0;
+		subpassDependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		subpassDependencies[0].dependencyFlags = 0x0;
+
+		subpassDependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
+		subpassDependencies[1].dstSubpass = 0;
+		subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependencies[1].srcAccessMask = 0;
+		subpassDependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		subpassDependencies[1].dependencyFlags = 0x0;
+
+		// ----- 0 -> EXT 
+		subpassDependencies[2].srcSubpass = 0;
+		subpassDependencies[2].dstSubpass = VK_SUBPASS_EXTERNAL;
+		subpassDependencies[2].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependencies[2].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		subpassDependencies[2].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+		subpassDependencies[2].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		subpassDependencies[2].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+		VkRenderPassCreateInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentDescriptions.size());
+		renderPassInfo.pAttachments = attachmentDescriptions.data();
+		renderPassInfo.subpassCount = static_cast<uint32_t>(subpassDescriptions.size());
+		renderPassInfo.pSubpasses = subpassDescriptions.data();
+		renderPassInfo.dependencyCount = static_cast<uint32_t>(subpassDependencies.size());
+		renderPassInfo.pDependencies = subpassDependencies.data();
+
+		VK_CHECK_SUCCESS(
+			vkCreateRenderPass(sumiDevice.device(), &renderPassInfo, nullptr, &earlyGraphicsRenderPass),
+			"[Sumire::SumiRenderer] Failed to create early graphics render pass."
+		);
+	}
+	
+	void SumiRenderer::createLateGraphicsRenderPass() {
+		// This currently involves 2 subpasses:
 		//    - Gbuffer resolve
 		//    - Forward render to swapchain (for transparency, etc.)
 
@@ -288,7 +450,7 @@ namespace sumire {
 		attachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		attachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		attachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL; //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL; //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		// 1: Gbuffer Position
 		attachmentDescriptions[1].format = gbuffer->positionAttachment()->getFormat();
@@ -441,8 +603,8 @@ namespace sumire {
 		renderPassInfo.pDependencies = subpassDependencies.data();
 
 		VK_CHECK_SUCCESS(
-			vkCreateRenderPass(sumiDevice.device(), &renderPassInfo, nullptr, &renderPass),
-			"[Sumire::SumiRenderer] Failed to create scene render pass."
+			vkCreateRenderPass(sumiDevice.device(), &renderPassInfo, nullptr, &lateGraphicsRenderPass),
+			"[Sumire::SumiRenderer] Failed to create late graphics render pass."
 		);
 	}
 
@@ -523,7 +685,7 @@ namespace sumire {
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = renderPass;
+		framebufferInfo.renderPass = lateGraphicsRenderPass;
 		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		framebufferInfo.pAttachments = attachments.data();
 		framebufferInfo.width = sumiSwapChain->width();
@@ -561,8 +723,10 @@ namespace sumire {
 
 		FrameCommandBuffers frameCommandBuffers{};
 		frameCommandBuffers.predrawCompute = predrawComputeCommandBuffers[currentFrameIdx];
-		frameCommandBuffers.graphics = graphicsCommandBuffers[currentFrameIdx];
-		frameCommandBuffers.compute = computeCommandBuffers[currentFrameIdx];
+		frameCommandBuffers.earlyGraphics = earlyGraphicsCommandBuffers[currentFrameIdx];
+		frameCommandBuffers.earlyCompute = earlyComputeCommandBuffers[currentFrameIdx];
+		frameCommandBuffers.lateGraphics = lateGraphicsCommandBuffers[currentFrameIdx];
+		frameCommandBuffers.lateCompute = lateComputeCommandBuffers[currentFrameIdx];
 		frameCommandBuffers.present = presentCommandBuffers[currentFrameIdx];
 
 		return frameCommandBuffers;
@@ -601,12 +765,20 @@ namespace sumire {
 			"[Sumire::SumiRenderer] Failed to begin recording of pre-draw compute command buffer."
 		);
 		VK_CHECK_SUCCESS(
-			vkBeginCommandBuffer(frameCommandBuffers.graphics, &beginInfo),
-			"[Sumire::SumiRenderer] Failed to begin recording of graphics command buffer."
+			vkBeginCommandBuffer(frameCommandBuffers.earlyGraphics, &beginInfo),
+			"[Sumire::SumiRenderer] Failed to begin recording of early graphics command buffer."
 		);
 		VK_CHECK_SUCCESS(
-			vkBeginCommandBuffer(frameCommandBuffers.compute, &beginInfo),
-			"[Sumire::SumiRenderer] Failed to begin recording of compute command buffer."
+			vkBeginCommandBuffer(frameCommandBuffers.earlyGraphics, &beginInfo),
+			"[Sumire::SumiRenderer] Failed to begin recording of early compute command buffer."
+		);
+		VK_CHECK_SUCCESS(
+			vkBeginCommandBuffer(frameCommandBuffers.lateGraphics, &beginInfo),
+			"[Sumire::SumiRenderer] Failed to begin recording of late graphics command buffer."
+		);
+		VK_CHECK_SUCCESS(
+			vkBeginCommandBuffer(frameCommandBuffers.lateCompute, &beginInfo),
+			"[Sumire::SumiRenderer] Failed to begin recording of late compute command buffer."
 		);
 		VK_CHECK_SUCCESS(
 			vkBeginCommandBuffer(frameCommandBuffers.present, &beginInfo),
@@ -628,12 +800,20 @@ namespace sumire {
 			"[Sumire::SumiRenderer] Failed to end recording of pre-draw compute command buffer."
 		);
 		VK_CHECK_SUCCESS(
-			vkEndCommandBuffer(frameCommandBuffers.graphics),
-			"[Sumire::SumiRenderer] Failed to end recording of graphics command buffer."
+			vkEndCommandBuffer(frameCommandBuffers.earlyGraphics),
+			"[Sumire::SumiRenderer] Failed to end recording of early graphics command buffer."
 		);
 		VK_CHECK_SUCCESS(
-			vkEndCommandBuffer(frameCommandBuffers.compute),
-			"[Sumire::SumiRenderer] Failed to end recording of compute command buffer."
+			vkEndCommandBuffer(frameCommandBuffers.earlyCompute),
+			"[Sumire::SumiRenderer] Failed to end recording of early compute command buffer."
+		);
+		VK_CHECK_SUCCESS(
+			vkEndCommandBuffer(frameCommandBuffers.lateGraphics),
+			"[Sumire::SumiRenderer] Failed to end recording of late graphics command buffer."
+		);
+		VK_CHECK_SUCCESS(
+			vkEndCommandBuffer(frameCommandBuffers.lateCompute),
+			"[Sumire::SumiRenderer] Failed to end recording of late compute command buffer."
 		);
 		VK_CHECK_SUCCESS(
 			vkEndCommandBuffer(frameCommandBuffers.present),
@@ -643,9 +823,10 @@ namespace sumire {
 		// Semaphores for this frame
 		VkSemaphore frameAvailable = sumiSwapChain->getImageAvailableSemaphore(currentFrameIdx);
 		VkSemaphore renderFinished = sumiSwapChain->getRenderFinishedSemaphore(currentFrameIdx);
+
 		VkSemaphore preComputeFinished = predrawComputeFinishedSemaphores[currentFrameIdx];
-		VkSemaphore graphicsFinished = graphicsFinishedSemaphores[currentFrameIdx];
-		VkSemaphore postComputeFinished = postComputeFinishedSemaphores[currentFrameIdx];
+		VkSemaphore lateGraphicsFinished = graphicsFinishedSemaphores[currentFrameIdx];
+		VkSemaphore lateComputeFinished = postComputeFinishedSemaphores[currentFrameIdx];
 
 		// If this frame is in flight, we must wait for it to finish before submitting more work,
 		//  else we will end up with a work backlog / compute multiple batches once the semaphore signals
@@ -689,33 +870,33 @@ namespace sumire {
 		VkSubmitInfo graphicsSubmitInfo{};
 		graphicsSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		graphicsSubmitInfo.commandBufferCount = 1;
-		graphicsSubmitInfo.pCommandBuffers = &frameCommandBuffers.graphics;
+		graphicsSubmitInfo.pCommandBuffers = &frameCommandBuffers.lateGraphics;
 		graphicsSubmitInfo.waitSemaphoreCount = 1;
 		graphicsSubmitInfo.pWaitSemaphores = &preComputeFinished;
 		graphicsSubmitInfo.pWaitDstStageMask = &graphicsWaitStageFlag;
 		graphicsSubmitInfo.signalSemaphoreCount = 1;
-		graphicsSubmitInfo.pSignalSemaphores = &graphicsFinished;
+		graphicsSubmitInfo.pSignalSemaphores = &lateGraphicsFinished;
 
 		VK_CHECK_SUCCESS(
 			vkQueueSubmit(sumiDevice.graphicsQueue(), 1, &graphicsSubmitInfo, nullptr),
-			"[Sumire::SumiRenderer] Could not submit graphics command buffer."
+			"[Sumire::SumiRenderer] Could not submit late graphics command buffer."
 		);
 
 		// Submit post compute work
-		VkPipelineStageFlags postComputeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-		VkSubmitInfo postComputeSubmitInfo{};
-		postComputeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		postComputeSubmitInfo.commandBufferCount = 1;
-		postComputeSubmitInfo.pCommandBuffers = &frameCommandBuffers.compute;
-		postComputeSubmitInfo.waitSemaphoreCount = 1;
-		postComputeSubmitInfo.pWaitSemaphores = &graphicsFinished;
-		postComputeSubmitInfo.pWaitDstStageMask = &postComputeWaitStageFlag;
-		postComputeSubmitInfo.signalSemaphoreCount = 1;
-		postComputeSubmitInfo.pSignalSemaphores = &postComputeFinished;
+		VkPipelineStageFlags lateComputeWaitStageFlag = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		VkSubmitInfo lateComputeSubmitInfo{};
+		lateComputeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		lateComputeSubmitInfo.commandBufferCount = 1;
+		lateComputeSubmitInfo.pCommandBuffers = &frameCommandBuffers.lateCompute;
+		lateComputeSubmitInfo.waitSemaphoreCount = 1;
+		lateComputeSubmitInfo.pWaitSemaphores = &lateGraphicsFinished;
+		lateComputeSubmitInfo.pWaitDstStageMask = &lateComputeWaitStageFlag;
+		lateComputeSubmitInfo.signalSemaphoreCount = 1;
+		lateComputeSubmitInfo.pSignalSemaphores = &lateComputeFinished;
 
 		VK_CHECK_SUCCESS(
-			vkQueueSubmit(sumiDevice.computeQueue(), 1, &postComputeSubmitInfo, nullptr),
-			"[Sumire::SumiRenderer] Could not submit post compute command buffer."
+			vkQueueSubmit(sumiDevice.computeQueue(), 1, &lateComputeSubmitInfo, nullptr),
+			"[Sumire::SumiRenderer] Could not submit late compute command buffer."
 		);
 
 		// Submit present composite work
@@ -725,7 +906,7 @@ namespace sumire {
 		compositeSubmitInfo.commandBufferCount = 1;
 		compositeSubmitInfo.pCommandBuffers = &frameCommandBuffers.present;
 		compositeSubmitInfo.waitSemaphoreCount = 1;
-		compositeSubmitInfo.pWaitSemaphores = &postComputeFinished;
+		compositeSubmitInfo.pWaitSemaphores = &lateComputeFinished;
 		compositeSubmitInfo.pWaitDstStageMask = &compositeWaitStageFlag;
 		compositeSubmitInfo.signalSemaphoreCount = 1;
 		compositeSubmitInfo.pSignalSemaphores = &renderFinished;
@@ -752,9 +933,55 @@ namespace sumire {
         currentFrameIdx = (currentFrameIdx + 1) % SumiSwapChain::MAX_FRAMES_IN_FLIGHT;
     }
 
-	void SumiRenderer::beginRenderPass(VkCommandBuffer commandBuffer) {
-		assert(isFrameStarted && "Failed to begin scene render pass - no frame in flight.");
-		currentSubpass = 0;
+
+	void SumiRenderer::beginEarlyGraphicsRenderPass(VkCommandBuffer commandBuffer) {
+		assert(isFrameStarted && "Failed to begin ealy graphics render pass: No frame in flight.");
+		currentLateGraphicsSubpass = 0;
+
+		// Begin renderpass for gbuffer fill
+		std::array<VkClearValue, 6> attachmentClearValues{};
+		attachmentClearValues[0].color = { { 0.01f, 0.01f, 0.01f, 1.0f } };
+		attachmentClearValues[1].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		attachmentClearValues[2].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		attachmentClearValues[3].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		attachmentClearValues[4].color = { { 1.0f, 0.0f, 0.0f, 0.0f } }; // AO, Metallic, Roughness, Emissive
+		attachmentClearValues[5].depthStencil = { 1.0f, 0 };
+
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = lateGraphicsRenderPass;
+		renderPassInfo.framebuffer = framebuffers[currentFrameIdx];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = sumiSwapChain->getExtent();
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(attachmentClearValues.size());
+		renderPassInfo.pClearValues = attachmentClearValues.data();
+
+		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = static_cast<float>(sumiSwapChain->height());
+		viewport.width = static_cast<float>(sumiSwapChain->width());
+		viewport.height = -static_cast<float>(sumiSwapChain->height());
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		VkRect2D scissor{ {0, 0}, sumiSwapChain->getExtent() };
+		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+	}
+
+	void SumiRenderer::endEarlyGraphicsRenderPass(VkCommandBuffer commandBuffer) {
+		assert(isFrameStarted && "Failed to end early graphics render pass: No frame in flight.");
+		assert(commandBuffer == getCurrentCommandBuffers().lateGraphics
+			&& "Failed to end early graphics render pass: Command buffer provided did not record this renderpass."
+		);
+
+		vkCmdEndRenderPass(commandBuffer);
+	}
+
+	void SumiRenderer::beginLateGraphicsRenderPass(VkCommandBuffer commandBuffer) {
+		assert(isFrameStarted && "Failed to begin late graphics render pass: No frame in flight.");
+		currentLateGraphicsSubpass = 0;
 
 		// Begin renderpass for gbuffer fill
         std::array<VkClearValue, 6> attachmentClearValues{};
@@ -767,7 +994,7 @@ namespace sumire {
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = renderPass;
+        renderPassInfo.renderPass = lateGraphicsRenderPass;
         renderPassInfo.framebuffer = framebuffers[currentFrameIdx];
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = sumiSwapChain->getExtent();
@@ -788,23 +1015,26 @@ namespace sumire {
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	}
 
-	void SumiRenderer::nextSubpass(VkCommandBuffer commandBuffer) {
-		currentSubpass++;
+	void SumiRenderer::nextLateGraphicsSubpass(VkCommandBuffer commandBuffer) {
+		assert(isFrameStarted && "Failed to advance late graphics subpass: No frame in flight.");
+		assert(commandBuffer == getCurrentCommandBuffers().lateGraphics
+			&& "Failed to advance late graphics subpass: Command buffer provided did not record this renderpass."
+		);
 
-		if (currentSubpass > 3) {
+		currentLateGraphicsSubpass++;
+
+		if (currentLateGraphicsSubpass > 3) {
 			throw std::runtime_error(
-				"[Sumire::SumiRenderer] Could not advance to next scene subpass - subpass index out of range.");
+				"[Sumire::SumiRenderer] Could not advance to next late graphics subpass - subpass index out of range.");
 		}
-
-		// TODO: Potentially change renderpass info 
 
 		vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 	}
 
-	void SumiRenderer::endRenderPass(VkCommandBuffer commandBuffer) {
-        assert(isFrameStarted && "Failed to end scene render pass - no frame in flight.");
-        assert(commandBuffer == getCurrentCommandBuffers().graphics
-			&& "Failed to end scene render pass: Command buffer provided did not record this renderpass."
+	void SumiRenderer::endLateGraphicsRenderPass(VkCommandBuffer commandBuffer) {
+        assert(isFrameStarted && "Failed to end late graphics render pass: No frame in flight.");
+        assert(commandBuffer == getCurrentCommandBuffers().lateGraphics
+			&& "Failed to end late graphics render pass: Command buffer provided did not record this renderpass."
         );
 
 		// Note: We do not need to release the swapchain mirror to the compute queue
@@ -857,7 +1087,7 @@ namespace sumire {
 	void SumiRenderer::beginCompositeRenderPass(VkCommandBuffer commandBuffer) {
 		assert(isFrameStarted && "Failed to begin composite render pass - no frame in flight.");
 
-		currentSubpass = 0;
+		currentLateGraphicsSubpass = 0;
 
 		// Acquire image from compute
 		SumiAttachment* currentSwapchainMirrorAttachment = intermediateColorAttachments[currentFrameIdx].get();

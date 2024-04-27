@@ -12,26 +12,36 @@
 
 namespace sumire {
 
-	class SumiRenderer {
-	public:
-		SumiRenderer(SumiWindow& window, SumiDevice& device, SumiConfig& config);
-		~SumiRenderer();
+    class SumiRenderer {
+    public:
+        SumiRenderer(SumiWindow& window, SumiDevice& device, SumiConfig& config);
+        ~SumiRenderer();
 
-		SumiRenderer(const SumiRenderer&) = delete;
-		SumiRenderer& operator=(const SumiRenderer&) = delete;
+        SumiRenderer(const SumiRenderer&) = delete;
+        SumiRenderer& operator=(const SumiRenderer&) = delete;
 
         SumiWindow& getWindow() const { return sumiWindow; }
         SumiDevice& getDevice() const { return sumiDevice; }
         SumiSwapChain* getSwapChain() const { return sumiSwapChain.get(); }
 
         struct FrameCommandBuffers {
+            // Command buffers are submitted in the following order
             VkCommandBuffer predrawCompute = VK_NULL_HANDLE;
-            VkCommandBuffer graphics = VK_NULL_HANDLE;
-            VkCommandBuffer compute = VK_NULL_HANDLE;
-            VkCommandBuffer present = VK_NULL_HANDLE;
+            VkCommandBuffer earlyGraphics  = VK_NULL_HANDLE;
+            VkCommandBuffer earlyCompute   = VK_NULL_HANDLE;
+            VkCommandBuffer lateGraphics   = VK_NULL_HANDLE;
+            VkCommandBuffer lateCompute    = VK_NULL_HANDLE;
+            VkCommandBuffer present        = VK_NULL_HANDLE;
 
             bool validFrame() const {
-                return (predrawCompute && graphics && compute && present);
+                return (
+                    predrawCompute && 
+                    earlyGraphics  &&
+                    earlyCompute   &&
+                    lateGraphics   && 
+                    lateCompute    && 
+                    present
+                );
             }
         };
 
@@ -40,7 +50,7 @@ namespace sumire {
         FrameCommandBuffers getCurrentCommandBuffers() const;
 
         int getFrameIdx() const {
-            assert(isFrameStarted && "Failed to get frame index (frame not in flight).");
+            assert(isFrameStarted && "Failed to get frame index: Frame not in flight.");
             return currentFrameIdx;
         }
 
@@ -48,12 +58,19 @@ namespace sumire {
         FrameCommandBuffers beginFrame();
         void endFrame();
 
-        // Scene Renderpass
-        //  The bulk of traditional graphics rendering (e.g. gbuffer fill & resolve)
-        void beginRenderPass(VkCommandBuffer commandBuffer);
-        void nextSubpass(VkCommandBuffer commandBuffer);
-        void endRenderPass(VkCommandBuffer commandBuffer);
-        VkRenderPass getRenderPass() const { return renderPass; }
+        // Early Graphics
+        //  Important computations which the rest of compute and graphics may rely on
+        //  (e.g. z-prepass or gbuffer fill)
+        void beginEarlyGraphicsRenderPass(VkCommandBuffer commandBuffer);
+        void endEarlyGraphicsRenderPass(VkCommandBuffer commandBuffer);
+        VkRenderPass getEarlyGraphicsRenderPass() const { return earlyGraphicsRenderPass; }
+
+        // Late Graphics
+        //  The bulk of traditional graphics rendering (e.g. gbuffer resolve & forward+/OIT)
+        void beginLateGraphicsRenderPass(VkCommandBuffer commandBuffer);
+        void nextLateGraphicsSubpass(VkCommandBuffer commandBuffer);
+        void endLateGraphicsRenderPass(VkCommandBuffer commandBuffer);
+        VkRenderPass getLateGraphicsRenderPass() const { return lateGraphicsRenderPass; }
 
         // Post Renderpass
         //  With subpasses responsible for HDR + Bloom, tonemapping and UI.
@@ -80,14 +97,15 @@ namespace sumire {
         bool wasSwapChainRecreated() const { return scRecreatedFlag; }
         void resetScRecreatedFlag() { scRecreatedFlag = false; }
 
-	private:
-		void createCommandBuffers();
-		void freeCommandBuffers();
+    private:
+        void createCommandBuffers();
+        void freeCommandBuffers();
         void recreateRenderObjects();
         void recreateSwapChain();
         void recreateGbuffer();
 
-        void createRenderPass();
+        void createEarlyGraphicsRenderPass();
+        void createLateGraphicsRenderPass();
         void createCompositionRenderPass();
         void createFramebuffers();
         void freeFramebuffers();
@@ -98,25 +116,29 @@ namespace sumire {
         bool scRecreatedFlag = false;
         bool gbufferRecreatedFlag = false;
 
-		SumiWindow& sumiWindow;
-		SumiDevice& sumiDevice;
+        SumiWindow& sumiWindow;
+        SumiDevice& sumiDevice;
         SumiConfig& sumiConfig;
 
         std::vector<VkSemaphore> predrawComputeFinishedSemaphores;
         std::vector<VkSemaphore> graphicsFinishedSemaphores;
         std::vector<VkSemaphore> postComputeFinishedSemaphores;
 
-        // Graphics render pass
-        uint32_t currentSubpass = 0;
-        VkRenderPass renderPass = VK_NULL_HANDLE;
+        // Graphics render passes
+        uint32_t currentEarlyGraphicsSubpass = 0;
+        VkRenderPass earlyGraphicsRenderPass = VK_NULL_HANDLE;
+        uint32_t currentLateGraphicsSubpass = 0;
+        VkRenderPass lateGraphicsRenderPass = VK_NULL_HANDLE;
 
         // Post render pass
         VkRenderPass compositionRenderPass = VK_NULL_HANDLE;
 
         // Command buffers
         std::vector<VkCommandBuffer> predrawComputeCommandBuffers;
-		std::vector<VkCommandBuffer> graphicsCommandBuffers;
-        std::vector<VkCommandBuffer> computeCommandBuffers;
+        std::vector<VkCommandBuffer> earlyGraphicsCommandBuffers;
+        std::vector<VkCommandBuffer> earlyComputeCommandBuffers;
+        std::vector<VkCommandBuffer> lateGraphicsCommandBuffers;
+        std::vector<VkCommandBuffer> lateComputeCommandBuffers;
         std::vector<VkCommandBuffer> presentCommandBuffers;
 
         // Frame buffers
@@ -126,7 +148,7 @@ namespace sumire {
         // Swap chain
         bool swapChainNeedsRecreate = false;
         bool swapChainUseVsync;
-		std::unique_ptr<SumiSwapChain> sumiSwapChain;
+        std::unique_ptr<SumiSwapChain> sumiSwapChain;
 
         // Offscreen Deferred Rendering Targets
         std::unique_ptr<SumiGbuffer> gbuffer;
@@ -137,5 +159,5 @@ namespace sumire {
         uint32_t currentImageIdx = 0; // for return value of vkAcquireNextImageKHR
         uint32_t currentFrameIdx = 0;
         bool isFrameStarted = false;
-	};
+    };
 }
