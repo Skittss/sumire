@@ -82,7 +82,7 @@ namespace sumire {
 
     void SumiDevice::writeDeviceInfoToConfig(SumiConfig* config) {
         if (config != nullptr) {
-            config->configData.GRAPHICS_DEVICE = {
+            config->runtimeData.GRAPHICS_DEVICE = {
                 physicalDeviceDetails.idx,
                 physicalDeviceDetails.name.c_str()
             };
@@ -163,8 +163,8 @@ namespace sumire {
                 suitableDeviceCount++;
 
                 if (config != nullptr && 
-                    config->configData.GRAPHICS_DEVICE.IDX  == i &&
-                    config->configData.GRAPHICS_DEVICE.NAME == deviceProperties.deviceName
+                    config->runtimeData.GRAPHICS_DEVICE.IDX  == i &&
+                    config->runtimeData.GRAPHICS_DEVICE.NAME == deviceProperties.deviceName
                 ) {
                     foundConfigSpecifiedGpu = true;
                 }
@@ -185,14 +185,14 @@ namespace sumire {
 
         if (!foundConfigSpecifiedGpu && config != nullptr) {
             std::cout << "[Sumire::SumiDevice] WARNING: Could not find gpu specified by config: ["
-                << config->configData.GRAPHICS_DEVICE.IDX << ", " << config->configData.GRAPHICS_DEVICE.NAME
+                << config->runtimeData.GRAPHICS_DEVICE.IDX << ", " << config->runtimeData.GRAPHICS_DEVICE.NAME
                 << "]. The device is missing or is not supported." << std::endl;
         }
 
         uint32_t chosenDeviceIdx = 0;
         if (foundConfigSpecifiedGpu && config != nullptr) {
             std::cout << "[Sumire::SumiDevice] Using device specified by config." << std::endl;
-            chosenDeviceIdx = config->configData.GRAPHICS_DEVICE.IDX;
+            chosenDeviceIdx = config->runtimeData.GRAPHICS_DEVICE.IDX;
         }
         else {
             std::vector<PhysicalDeviceDetails> sortedPhysicalDeviceList = physicalDeviceList;

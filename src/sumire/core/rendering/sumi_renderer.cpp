@@ -10,7 +10,7 @@ namespace sumire {
     SumiRenderer::SumiRenderer(
         SumiWindow &window, SumiDevice &device, SumiConfig &config
     ) : sumiWindow{ window }, sumiDevice{ device }, sumiConfig{ config } {
-        swapChainUseVsync = config.configData.VSYNC;
+        swapChainUseVsync = config.runtimeData.VSYNC;
 
         recreateSwapChain();
         recreateGbuffer();

@@ -20,6 +20,9 @@
 // GUI layer
 #include <sumire/gui/sumi_imgui.hpp>
 
+// Profiling
+#include <sumire/core/profiling/gpu_profiler.hpp>
+
 // glm
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -46,8 +49,8 @@ namespace sumire {
     };
 
     Sumire::Sumire() {
-        screenWidth = sumiConfig.configData.RESOLUTION.WIDTH;
-        screenHeight = sumiConfig.configData.RESOLUTION.HEIGHT;
+        screenWidth = sumiConfig.runtimeData.RESOLUTION.WIDTH;
+        screenHeight = sumiConfig.runtimeData.RESOLUTION.HEIGHT;
 
         init();
 
@@ -86,7 +89,7 @@ namespace sumire {
         // Light SSBO
         lightSSBO = std::make_unique<SumiBuffer>(
             sumiDevice,
-            sumiConfig.configData.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
+            sumiConfig.runtimeData.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
             1,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -184,6 +187,19 @@ namespace sumire {
             sumiRenderer.compositionSubpassIdx(),
             sumiDevice.presentQueue()
         };
+        
+        // Profiling, if enabled
+        if (sumiConfig.runtimeData.PROFILING) {
+            GpuProfiler gpuProfiler = GpuProfiler::Builder(sumiDevice)
+                .addBlock("GPU_Frametime")
+                .addBlock("PredrawCompute")
+                .addBlock("EarlyGraphics")
+                .addBlock("EarlyCompute")
+                .addBlock("LateGraphics")
+                .addBlock("LateCompute")
+                .addBlock("Composite")
+                .build();
+        }
 
         auto currentTime = std::chrono::high_resolution_clock::now();
         float cumulativeFrameTime = 0.0f;
@@ -384,7 +400,7 @@ namespace sumire {
                 );
                 gui.endFrame();
 
-                gui.renderToCmdBuffer(frameCommandBuffers.present);
+                gui.render(frameCommandBuffers.present);
 
                 sumiRenderer.endCompositeRenderPass(frameCommandBuffers.present);
 
