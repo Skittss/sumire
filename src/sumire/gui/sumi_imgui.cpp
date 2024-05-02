@@ -113,7 +113,7 @@ namespace sumire {
         ImGui::Render();
     }
 
-    void SumiImgui::renderToCmdBuffer(VkCommandBuffer &buffer) {
+    void SumiImgui::render(VkCommandBuffer &buffer) {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer);
     }
     
@@ -131,10 +131,13 @@ namespace sumire {
         ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
 
         ImGui::Spacing();
-        drawDebugSection(zBin, lightMask);
+        drawConfigSection(cameraController);
 
         ImGui::Spacing();
-        drawConfigSection(cameraController);
+        drawProfilingSection();
+
+        ImGui::Spacing();
+        drawDebugSection(zBin, lightMask);
 
         ImGui::Spacing();
         drawSceneSection(frameInfo);
@@ -172,8 +175,8 @@ namespace sumire {
             ImGui::Combo("Device", &deviceListIdx, deviceNames.data(), deviceNames.size());
 
             uint32_t selectedDeviceIdx = static_cast<uint32_t>(deviceListIdx);
-            if (selectedDeviceIdx != sumiConfig.configData.GRAPHICS_DEVICE.IDX) {
-                sumiConfig.configData.GRAPHICS_DEVICE = {
+            if (selectedDeviceIdx != sumiConfig.runtimeData.GRAPHICS_DEVICE.IDX) {
+                sumiConfig.runtimeData.GRAPHICS_DEVICE = {
                     selectedDeviceIdx,
                     deviceList[selectedDeviceIdx].name.c_str(),
                 };
@@ -187,18 +190,18 @@ namespace sumire {
             }
 
             // --------- Vsync -----------------------------------------------------------------------
-            static int vsyncIdx = sumiConfig.configData.VSYNC ? 0 : 1;
+            static int vsyncIdx = sumiConfig.runtimeData.VSYNC ? 0 : 1;
             ImGui::Combo("Vsync", &vsyncIdx, "On\0Off\0\0");
             bool vsync = vsyncIdx == 0 ? true : false;
-            if (vsync != sumiConfig.configData.VSYNC) {
-                sumiConfig.configData.VSYNC = vsync;
+            if (vsync != sumiConfig.runtimeData.VSYNC) {
+                sumiConfig.runtimeData.VSYNC = vsync;
                 sumiConfig.writeConfig();
 
                 // Update swapchain present mode
-                bool test1 = sumiConfig.configData.VSYNC;
+                bool test1 = sumiConfig.runtimeData.VSYNC;
                 bool test2 = sumiRenderer.getSwapChain()->isVsyncEnabled();
-                if (sumiConfig.configData.VSYNC != sumiRenderer.getSwapChain()->isVsyncEnabled()) {
-                    sumiRenderer.changeSwapChainPresentMode(sumiConfig.configData.VSYNC);
+                if (sumiConfig.runtimeData.VSYNC != sumiRenderer.getSwapChain()->isVsyncEnabled()) {
+                    sumiRenderer.changeSwapChainPresentMode(sumiConfig.runtimeData.VSYNC);
                 }
             }
 
@@ -537,25 +540,36 @@ namespace sumire {
         ImGui::Spacing();
     }
 
+    void SumiImgui::drawProfilingSection() {
+        if (ImGui::CollapsingHeader("Profiling")) {
+            static bool profilingEnabled = sumiConfig.runtimeData.PROFILING;
+            ImGui::Checkbox("Enable profiling", &profilingEnabled);
+
+            if (profilingEnabled != sumiConfig.runtimeData.PROFILING) {
+                sumiConfig.runtimeData.PROFILING = profilingEnabled;
+                sumiConfig.writeConfig();
+            }
+
+            if (profilingEnabled != sumiConfig.startupData.PROFILING) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                ImGui::Text("A restart is required to change profiling settings.");
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::Spacing();
+        }
+    }
+
     void SumiImgui::drawDebugSection(
         const structs::zBin& zBin,
         structs::lightMask* lightMask
     ) {
-        if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
-            drawFrameTimingSubsection();
+        if (ImGui::CollapsingHeader("Debug")) {
             drawHighQualityShadowMappingSection(zBin, lightMask);
 
             ImGui::Spacing();
         }
 
-    }
-
-    void SumiImgui::drawFrameTimingSubsection() {
-        if (ImGui::TreeNode("Frame Timings")) {
-            ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
-
-            ImGui::TreePop();
-        }
     }
 
     void SumiImgui::drawHighQualityShadowMappingSection(

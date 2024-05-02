@@ -18,14 +18,11 @@
 
 namespace sumire {
 
-    struct SceneViewUIdata {
-        // TODO: pointerized objects are probably better for supporting optional data
-        // General
+    struct SceneViewerDrawData {
         FrameInfo& frameInfo;
-        // Inputs
         SumiKBMcontroller& cameraController;
-        // Debug
         const structs::zBin& zBinData;
+        const structs::lightMask* lightMask;
     };
 
     class SumiImgui {
@@ -45,7 +42,7 @@ namespace sumire {
 
             void beginFrame();
             void endFrame();
-            void renderToCmdBuffer(VkCommandBuffer &buffer);
+            void render(VkCommandBuffer &buffer);
 
             void drawSceneViewer(
                 FrameInfo &frameInfo, 
@@ -80,9 +77,9 @@ namespace sumire {
             void drawSceneSection(FrameInfo &frameInfo);
             void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 
+            void drawProfilingSection();
             void drawDebugSection(
                 const structs::zBin& zBin, structs::lightMask* lightMask);
-            void drawFrameTimingSubsection();
 
             void drawHighQualityShadowMappingSection(
                 const structs::zBin& zBin, structs::lightMask* lightMask);
