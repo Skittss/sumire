@@ -10,12 +10,12 @@
 #include <vector>
 
 #define FIELD_PARSE_WARNING_STR(field_name)										\
-        "[Sumire::SumiConfig] WARNING: Failed to parse value of config field "	\
-        field_name " - using default value."	
+        "[Sumire::SumiConfig] WARNING: Failed to parse value of config field \""	\
+        field_name "\" - using default value."	
 
 #define OBJECT_PARSE_WARNING_STR(obj_name)										\
-        "[Sumire::SumiConfig] WARNING: Failed to parse value of config object "	\
-        obj_name " - using default value."	
+        "[Sumire::SumiConfig] WARNING: Failed to parse value of config object \""	\
+        obj_name "\" - using default value."	
 
 namespace sumire {
 
@@ -97,6 +97,14 @@ namespace sumire {
             std::cout << OBJECT_PARSE_WARNING_STR("resolution") << std::endl;
         }
 
+        // profiling
+        if (config.HasMember("profiling") && config["profiling"].IsBool()) {
+            configData.VSYNC = config["profiling"].GetBool();
+        }
+        else {
+            std::cout << FIELD_PARSE_WARNING_STR("profiling") << std::endl;
+        }
+
         // vsync
         if (config.HasMember("vsync") && config["vsync"].IsBool()) {
             configData.VSYNC = config["vsync"].GetBool();
@@ -140,6 +148,9 @@ namespace sumire {
         writer.Key("height");
         writer.Uint(configData.RESOLUTION.HEIGHT);
         writer.EndObject();
+
+        writer.Key("profiling");
+        writer.Bool(configData.PROFILING);
 
         writer.Key("vsync");
         writer.Bool(configData.VSYNC);
