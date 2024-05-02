@@ -8,6 +8,8 @@ namespace sumire {
     GpuProfiler::Builder& GpuProfiler::Builder::addBlock(std::string name) {
         profilingBlocks.emplace(name, ProfilingBlock{ currentBlockIdx } );
         currentBlockIdx += 2u;
+
+        return *this;
     };
 
     GpuProfiler GpuProfiler::Builder::build() const {
