@@ -19,8 +19,8 @@
 
 namespace sumire {
 
-    SumiConfig::SumiConfig() {
-        readConfig();
+    SumiConfig::SumiConfig() : startupData{ loadConfigData() } {
+        runtimeData = startupData;
     }
 
     SumiConfig::~SumiConfig() {
@@ -28,15 +28,22 @@ namespace sumire {
     }
 
     void SumiConfig::readConfig() {
+        runtimeData = loadConfigData();
+    }
 
+    void SumiConfig::writeConfig() const {
+        writeConfigData(runtimeData);
+    }
+
+    SumiConfigData SumiConfig::loadConfigData() {
         const std::string config_pth_string{ CONFIG_PATH };
 
         bool configExists = checkConfigFileExists();
         if (!configExists) {
-            createDefaultConfig();
+            SumiConfigData defaultData = createDefaultConfig();
             std::cout << "[Sumire::SumiConfig] No existing config found at" + config_pth_string +
                 ". A default config was created." << std::endl;
-            return;
+            return defaultData;
         }
 
         std::string json = readConfigFile();
@@ -47,8 +54,8 @@ namespace sumire {
         if (!config.IsObject() || config.HasParseError()) {
             throw std::runtime_error("[Sumire::SumiConfig] Failed to parse config. Fix or delete the config at " + config_pth_string);
         }
-        
-        configData = SumiConfigData{};
+
+        SumiConfigData data = SumiConfigData{};
 
         // graphics_device
         if (config.HasMember("graphics_device") && config["graphics_device"].IsObject()) {
@@ -56,7 +63,7 @@ namespace sumire {
 
             // graphics_device.idx
             if (graphicsDevice.HasMember("idx") && graphicsDevice["idx"].IsUint()) {
-                configData.GRAPHICS_DEVICE.IDX = graphicsDevice["idx"].GetUint();
+                data.GRAPHICS_DEVICE.IDX = graphicsDevice["idx"].GetUint();
             }
             else {
                 std::cout << FIELD_PARSE_WARNING_STR("graphics_device.idx") << std::endl;
@@ -64,7 +71,7 @@ namespace sumire {
 
             // graphics_device.name
             if (graphicsDevice.HasMember("name") && graphicsDevice["name"].IsString()) {
-                configData.GRAPHICS_DEVICE.NAME = graphicsDevice["name"].GetString();
+                data.GRAPHICS_DEVICE.NAME = graphicsDevice["name"].GetString();
             }
             else {
                 std::cout << FIELD_PARSE_WARNING_STR("graphics_device.name") << std::endl;
@@ -80,26 +87,28 @@ namespace sumire {
 
             // resolution.width
             if (resolution.HasMember("width") && resolution["width"].IsUint()) {
-                configData.RESOLUTION.WIDTH = resolution["width"].GetUint();
-            } else {
+                data.RESOLUTION.WIDTH = resolution["width"].GetUint();
+            }
+            else {
                 std::cout << FIELD_PARSE_WARNING_STR("resolution.width") << std::endl;
             }
 
             // resolution.height
             if (resolution.HasMember("height") && resolution["height"].IsUint()) {
-                configData.RESOLUTION.HEIGHT = resolution["height"].GetUint();
+                data.RESOLUTION.HEIGHT = resolution["height"].GetUint();
             }
             else {
                 std::cout << FIELD_PARSE_WARNING_STR("resolution.height") << std::endl;
             }
 
-        } else {
+        }
+        else {
             std::cout << OBJECT_PARSE_WARNING_STR("resolution") << std::endl;
         }
 
         // profiling
         if (config.HasMember("profiling") && config["profiling"].IsBool()) {
-            configData.VSYNC = config["profiling"].GetBool();
+            data.PROFILING = config["profiling"].GetBool();
         }
         else {
             std::cout << FIELD_PARSE_WARNING_STR("profiling") << std::endl;
@@ -107,7 +116,7 @@ namespace sumire {
 
         // vsync
         if (config.HasMember("vsync") && config["vsync"].IsBool()) {
-            configData.VSYNC = config["vsync"].GetBool();
+            data.VSYNC = config["vsync"].GetBool();
         }
         else {
             std::cout << FIELD_PARSE_WARNING_STR("vsync") << std::endl;
@@ -115,19 +124,21 @@ namespace sumire {
 
         // max_n_lights
         if (config.HasMember("max_n_lights") && config["max_n_lights"].IsUint()) {
-            configData.MAX_N_LIGHTS = config["max_n_lights"].GetUint();
-        } 
+            data.MAX_N_LIGHTS = config["max_n_lights"].GetUint();
+        }
         else {
             std::cout << FIELD_PARSE_WARNING_STR("max_n_lights") << std::endl;
         }
 
         // Update config to fix any errors
-        writeConfig();
+        writeConfigData(data);
 
         std::cout << "[Sumire::SumiConfig] Read config from " + config_pth_string << std::endl;
+
+        return data;
     }
 
-    void SumiConfig::writeConfig() const {
+    void SumiConfig::writeConfigData(const SumiConfigData& data) const {
         rapidjson::StringBuffer s;
         rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
@@ -136,36 +147,38 @@ namespace sumire {
         writer.Key("graphics_device");
         writer.StartObject();
         writer.Key("idx");
-        writer.Uint(configData.GRAPHICS_DEVICE.IDX);
+        writer.Uint(data.GRAPHICS_DEVICE.IDX);
         writer.Key("name");
-        writer.String(configData.GRAPHICS_DEVICE.NAME.c_str());
+        writer.String(data.GRAPHICS_DEVICE.NAME.c_str());
         writer.EndObject();
 
         writer.Key("resolution");
         writer.StartObject();
         writer.Key("width");
-        writer.Uint(configData.RESOLUTION.WIDTH);
+        writer.Uint(data.RESOLUTION.WIDTH);
         writer.Key("height");
-        writer.Uint(configData.RESOLUTION.HEIGHT);
+        writer.Uint(data.RESOLUTION.HEIGHT);
         writer.EndObject();
 
         writer.Key("profiling");
-        writer.Bool(configData.PROFILING);
+        writer.Bool(data.PROFILING);
 
         writer.Key("vsync");
-        writer.Bool(configData.VSYNC);
+        writer.Bool(data.VSYNC);
 
         writer.Key("max_n_lights");
-        writer.Uint(configData.MAX_N_LIGHTS);
+        writer.Uint(data.MAX_N_LIGHTS);
 
         writer.EndObject();
 
         writeConfigFile(s.GetString());
     }
 
-    void SumiConfig::createDefaultConfig() {
-        configData = SumiConfigData{};
-        writeConfig();
+    SumiConfigData SumiConfig::createDefaultConfig() {
+        SumiConfigData data = SumiConfigData{};
+        writeConfigData(data);
+
+        return data;
     }
 
     bool SumiConfig::checkConfigFileExists() const {

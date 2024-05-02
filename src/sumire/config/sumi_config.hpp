@@ -15,15 +15,16 @@ namespace sumire {
         void readConfig();
         void writeConfig() const;
 
-        // TODO: It would be a good idea to make this struct const so it does not 
-        //        change at runtime for important constants.
-        //       Instead write config changes to a separate object and write that one.
-        SumiConfigData configData{};
+        const SumiConfigData startupData;
+        SumiConfigData runtimeData{};
 
     private:
         static constexpr char* CONFIG_PATH = SUMIRE_ENGINE_PATH("config/config.json");
 
-        void createDefaultConfig();
+        SumiConfigData loadConfigData();
+        void writeConfigData(const SumiConfigData& data) const;
+
+        SumiConfigData createDefaultConfig();
         bool checkConfigFileExists() const;
         std::string readConfigFile() const;
         void writeConfigFile(const char* json) const;
