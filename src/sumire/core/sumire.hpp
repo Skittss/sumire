@@ -10,6 +10,15 @@
 #include <sumire/core/rendering/sumi_light.hpp>
 #include <sumire/core/rendering/sumi_renderer.hpp>
 
+// Render systems
+#include <sumire/core/render_systems/mesh_rendersys.hpp>
+#include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
+#include <sumire/core/render_systems/hzb_generator.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapper.hpp>
+#include <sumire/core/render_systems/post_processor.hpp>
+#include <sumire/core/render_systems/point_light_rendersys.hpp>
+#include <sumire/core/render_systems/grid_rendersys.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -30,6 +39,8 @@ namespace sumire {
         void run();
 
     private:
+        void initDescriptors();
+        void initRenderSystems();
         void loadObjects();
         void loadLights(); 
 
@@ -41,6 +52,15 @@ namespace sumire {
         };
         SumiDevice sumiDevice{ sumiWindow, &sumiConfig };
         SumiRenderer sumiRenderer{ sumiWindow, sumiDevice, sumiConfig };
+        
+        // Render systems used
+        std::unique_ptr<MeshRenderSys>           meshRenderSystem;
+        std::unique_ptr<DeferredMeshRenderSys>   deferredMeshRenderSystem;
+        std::unique_ptr<HzbGenerator>            hzbGenerator;
+        std::unique_ptr<HighQualityShadowMapper> shadowMapper;
+        std::unique_ptr<PostProcessor>           postProcessor;
+        std::unique_ptr<PointLightRenderSys>     pointLightSystem;
+        std::unique_ptr<GridRendersys>           gridRenderSystem;
 
         // Global descriptors and buffers
         std::unique_ptr<SumiDescriptorPool> globalDescriptorPool;

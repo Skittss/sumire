@@ -2,14 +2,6 @@
 #include <sumire/core/graphics_pipeline/sumi_buffer.hpp>
 #include <sumire/util/sumire_engine_path.hpp>
 
-// Render systems
-#include <sumire/core/render_systems/mesh_rendersys.hpp>
-#include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
-#include <sumire/core/render_systems/high_quality_shadow_mapper.hpp>
-#include <sumire/core/render_systems/post_processor.hpp>
-#include <sumire/core/render_systems/point_light_rendersys.hpp>
-#include <sumire/core/render_systems/grid_rendersys.hpp>
-
 // Asset loaders
 #include <sumire/loaders/gltf_loader.hpp>
 #include <sumire/loaders/obj_loader.hpp>
@@ -60,6 +52,11 @@ namespace sumire {
     }
 
     void Sumire::init() {
+        initDescriptors();
+        initRenderSystems();
+    }
+
+    void Sumire::initDescriptors() {
         // --------------------- GLOBAL DESCRIPTORS (SET 0)
         // Uniform Buffers
         globalUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -124,63 +121,70 @@ namespace sumire {
         }
     }
 
-    void Sumire::run() {
+    void Sumire::initRenderSystems() {
 
-        // Render Systems
-        MeshRenderSys meshRenderSystem{
+        meshRenderSystem = std::make_unique<MeshRenderSys>(
             sumiDevice,
-            sumiRenderer.getLateGraphicsRenderPass(), 
+            sumiRenderer.getLateGraphicsRenderPass(),
             sumiRenderer.forwardRenderSubpassIdx(),
             globalDescriptorSetLayout->getDescriptorSetLayout()
-        };
+        );
 
-        DeferredMeshRenderSys deferredMeshRenderSystem{
+        deferredMeshRenderSystem = std::make_unique<DeferredMeshRenderSys>(
             sumiDevice,
             sumiRenderer.getGbuffer(),
-            sumiRenderer.getEarlyGraphicsRenderPass(), 
+            sumiRenderer.getEarlyGraphicsRenderPass(),
             sumiRenderer.gbufferFillSubpassIdx(),
             sumiRenderer.getLateGraphicsRenderPass(),
             sumiRenderer.gbufferResolveSubpassIdx(),
             globalDescriptorSetLayout->getDescriptorSetLayout()
-        };
+        );
 
-        HighQualityShadowMapper shadowMapper{
+        //hzbGenerator = std::make_unique<HzbGenerator>(
+        //    sumiDevice,
+        //    sumiRenderer.
+        //);
+
+        shadowMapper = std::make_unique<HighQualityShadowMapper>(
             sumiDevice,
             screenWidth, screenHeight
-        };
+        );
 
-        PostProcessor postProcessor{
+        postProcessor = std::make_unique<PostProcessor>(
             sumiDevice,
             sumiRenderer.getIntermediateColorAttachments(),
             sumiRenderer.getCompositionRenderPass()
-        };
+        );
 
-        PointLightRenderSys pointLightSystem{
-            sumiDevice, 
-            sumiRenderer.getLateGraphicsRenderPass(), 
-            sumiRenderer.forwardRenderSubpassIdx(),
-            globalDescriptorSetLayout->getDescriptorSetLayout()
-        };
-
-        GridRendersys gridRenderSystem{
-            sumiDevice, 
+        pointLightSystem = std::make_unique<PointLightRenderSys>(
+            sumiDevice,
             sumiRenderer.getLateGraphicsRenderPass(),
             sumiRenderer.forwardRenderSubpassIdx(),
             globalDescriptorSetLayout->getDescriptorSetLayout()
-        };
+        );
+
+        gridRenderSystem = std::make_unique<GridRendersys>(
+            sumiDevice,
+            sumiRenderer.getLateGraphicsRenderPass(),
+            sumiRenderer.forwardRenderSubpassIdx(),
+            globalDescriptorSetLayout->getDescriptorSetLayout()
+        );
+    }
+
+    void Sumire::run() {
 
         sumiWindow.setMousePollMode(SumiWindow::MousePollMode::MANUAL);
 
         // Camera Control
-        SumiCamera camera{glm::radians(50.0f), sumiRenderer.getAspect()};
-        camera.transform.setTranslation(glm::vec3{0.0f, 1.0f, 3.0f});
+        SumiCamera camera{ glm::radians(50.0f), sumiRenderer.getAspect() };
+        camera.transform.setTranslation(glm::vec3{ 0.0f, 1.0f, 3.0f });
         SumiKBMcontroller cameraController{
             sumiWindow,
             SumiKBMcontroller::ControllerType::FPS
         };
 
         // GUI
-        SumiImgui gui{
+        SumiImgui gui = SumiImgui{
             sumiDevice,
             sumiConfig,
             sumiRenderer,
@@ -188,7 +192,7 @@ namespace sumire {
             sumiRenderer.compositionSubpassIdx(),
             sumiDevice.presentQueue()
         };
-        
+
         // Profiling, if enabled
         std::unique_ptr<GpuProfiler> gpuProfiler = nullptr;
         if (sumiConfig.startupData.PROFILING) {
@@ -223,10 +227,6 @@ namespace sumire {
             sumiWindow.clearKeypressEvents();
             glfwPollEvents();
 
-            // TODO:
-            //  Prevent inputs from passthrough to application when ImGui wants to consume them...
-            //  i.e. check io.WantCaptureMouse, etc.
-
             auto newTime = std::chrono::high_resolution_clock::now();
             float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
             currentTime = newTime;
@@ -237,8 +237,7 @@ namespace sumire {
             cumulativeFrameTime += frameTime;
 
             // Handle input.
-            // TODO: move components to member variables and call this from a function
-            auto guiIO = gui.getIO();
+            ImGuiIO& guiIO = gui.getIO();
 
             if (sumiWindow.isCursorHidden()) gui.ignoreMouse();
             else gui.enableMouse();
@@ -268,13 +267,13 @@ namespace sumire {
 
                 float aspect = sumiRenderer.getAspect();
                 camera.setAspect(aspect, true);
-                postProcessor.updateDescriptors(sumiRenderer.getIntermediateColorAttachments());
-                shadowMapper.updateScreenBounds(screenWidth, screenHeight);
+                postProcessor->updateDescriptors(sumiRenderer.getIntermediateColorAttachments());
+                shadowMapper->updateScreenBounds(screenWidth, screenHeight);
                 sumiRenderer.resetScRecreatedFlag();
             }
 
             if (sumiRenderer.wasGbufferRecreated()) {
-                deferredMeshRenderSystem.updateResolveDescriptors(sumiRenderer.getGbuffer());
+                deferredMeshRenderSystem->updateResolveDescriptors(sumiRenderer.getGbuffer());
                 sumiRenderer.resetGbufferRecreatedFlag();
             }
 
@@ -336,7 +335,7 @@ namespace sumire {
 
                 // ---- Shadow mapping preparation on the CPU ----------------------------------------------------
                 //  TODO: Only re-prepare if lights / camera view have changed.
-                shadowMapper.prepare(
+                shadowMapper->prepare(
                     sortedLights,
                     camera.getNear(), camera.getFar(),
                     cameraUbo.viewMatrix,
@@ -350,7 +349,7 @@ namespace sumire {
                 if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.predrawCompute, "0: PredrawCompute");
 
                 // Shadow mapping
-                shadowMapper.findLightsApproximate(
+                shadowMapper->findLightsApproximate(
                     frameCommandBuffers.predrawCompute, 
                     camera.getNear(), camera.getFar()
                 );
@@ -367,7 +366,7 @@ namespace sumire {
                 if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.earlyGraphics, "1: EarlyGraphics");
                 sumiRenderer.beginEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
 
-                deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.earlyGraphics, frameInfo);
+                deferredMeshRenderSystem->fillGbuffer(frameCommandBuffers.earlyGraphics, frameInfo);
 
                 sumiRenderer.endEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
                 if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.earlyGraphics, "1: EarlyGraphics");
@@ -376,6 +375,9 @@ namespace sumire {
                 // Shadow mapping resolve which gbuffer resolve relies on
 
                 if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
+                //   Generate HZB
+
+
                 if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
 
                 // ---- Late Graphics ----------------------------------------------------------------------------
@@ -384,16 +386,16 @@ namespace sumire {
                 sumiRenderer.beginLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
                 //   Deferred resolve subpass
-                deferredMeshRenderSystem.resolveGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
+                deferredMeshRenderSystem->resolveGbuffer(frameCommandBuffers.lateGraphics, frameInfo);
 
                 //   Forward rendering subpass
                 sumiRenderer.nextLateGraphicsSubpass(frameCommandBuffers.lateGraphics);
 
-                pointLightSystem.render(frameCommandBuffers.lateGraphics, frameInfo);
+                pointLightSystem->render(frameCommandBuffers.lateGraphics, frameInfo);
                 
                 if (gui.showGrid && gui.gridOpacity > 0.0f) {
                     auto gridUbo = gui.getGridUboData();
-                    gridRenderSystem.render(frameCommandBuffers.lateGraphics, frameInfo, gridUbo);
+                    gridRenderSystem->render(frameCommandBuffers.lateGraphics, frameInfo, gridUbo);
                 }
                 
                 sumiRenderer.endLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
@@ -403,7 +405,7 @@ namespace sumire {
                 // Post effects which can be interleaved with generation of next frame via async compute queue
                 if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.lateCompute, "4: LateCompute");
 
-                postProcessor.tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
+                postProcessor->tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
 
                 sumiRenderer.endLateCompute(frameCommandBuffers.lateCompute);
                 if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.lateCompute, "4: LateCompute");
@@ -413,14 +415,14 @@ namespace sumire {
                 if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.present, "5: Composite");
                 sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
 
-                postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
+                postProcessor->compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
 
                 gui.beginFrame();
                 gui.drawSceneViewer(
                     frameInfo,
                     cameraController,
-                    shadowMapper.getZbin(),
-                    shadowMapper.getLightMask(),
+                    shadowMapper->getZbin(),
+                    shadowMapper->getLightMask(),
                     gpuProfiler.get()
                 );
                 gui.endFrame();
