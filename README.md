@@ -60,7 +60,6 @@ via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
 
 ## Conventions
 - [X] Right handed and +y default camera from Vulkan -y canonical viewing volume.
-- [ ] Config for GPU device selection (in the case of more than 1 gpu)
 
 ## Frame Pipeline
 The current frame pipeline works as follows:
@@ -78,7 +77,7 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
     - Do not want the design to be purely IBL based, but having IBL for features such as environment probes would be a plus.
 - [X] Async compute utilisation as well as more robust queue family management.
     - [ ] Pipeline bind caching may have to be updated to accommodate more complex queue family ecosystem
-    - [ ] Compute -> Fragment interleaving needs profiling to ensure it's working correctly. (Cannot test on my Pascal GPU)
+    - [X] Compute -> Fragment interleaving needs profiling to ensure it's working correctly. (Cannot test on my Pascal GPU)
 - [X] Compute-based post-processing dispatch.
 - [ ] Pre-draw compute needs to be ring-buffered or better synchroinzed.
 - [ ] High quality deferred shadows (modification on cascaded shadow maps) via compute.
@@ -95,4 +94,4 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
 
 ## Application Config
 - [X] Persistent Physical Device (GPU) selection via config system (json)
-    - [ ] Config data should be constant and instead written to a mirror when it needs changing
+    - [X] Config data should be constant and instead written to a mirror when it needs changing
