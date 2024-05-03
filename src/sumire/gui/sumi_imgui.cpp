@@ -121,7 +121,8 @@ namespace sumire {
         FrameInfo &frameInfo, 
         SumiKBMcontroller &cameraController,
         const structs::zBin& zBin,
-        structs::lightMask* lightMask
+        structs::lightMask* lightMask,
+        GpuProfiler* profiler
     ) {
         //ImGui::ShowDemoWindow();
         
@@ -134,7 +135,7 @@ namespace sumire {
         drawConfigSection(cameraController);
 
         ImGui::Spacing();
-        drawProfilingSection();
+        drawProfilingSection(frameInfo, profiler);
 
         ImGui::Spacing();
         drawDebugSection(zBin, lightMask);
@@ -540,10 +541,28 @@ namespace sumire {
         ImGui::Spacing();
     }
 
-    void SumiImgui::drawProfilingSection() {
+    void SumiImgui::drawProfilingSection(FrameInfo& frameInfo, GpuProfiler* profiler) {
+        // TODO: It would be good to rolling average these values so they are more readable.
         if (ImGui::CollapsingHeader("Profiling")) {
+
+            // ---- CPU ------------------------------------------------------------------------------------------
+            ImGui::SeparatorText("CPU Profiling");
+
+            float fps = frameInfo.frameTime == 0.0f ? 0.0f : 1.0f / frameInfo.frameTime;
+
+            std::rotate(cpuLineGraphPoints.begin(), cpuLineGraphPoints.begin() + 1, cpuLineGraphPoints.end());
+            cpuLineGraphPoints.back() = fps;
+
+            ImGui::PlotLines("", cpuLineGraphPoints.data(), cpuLineGraphPoints.size(),
+                0, "FPS", 0.0f, 1000.0f, ImVec2(500.0f, 55.0f));
+
+            ImGui::Text("Frame time - %.5f ms (%.1f FPS)", frameInfo.frameTime * 1000.0, fps);
+            ImGui::Spacing();
+
+            // ---- GPU ------------------------------------------------------------------------------------------
+            ImGui::SeparatorText("GPU Profiling");
             static bool profilingEnabled = sumiConfig.runtimeData.PROFILING;
-            ImGui::Checkbox("Enable profiling", &profilingEnabled);
+            ImGui::Checkbox("Enable GPU profiling", &profilingEnabled);
 
             if (profilingEnabled != sumiConfig.runtimeData.PROFILING) {
                 sumiConfig.runtimeData.PROFILING = profilingEnabled;
@@ -554,6 +573,27 @@ namespace sumire {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
                 ImGui::Text("A restart is required to change profiling settings.");
                 ImGui::PopStyleColor();
+            }
+
+            ImGui::Spacing();
+            if (profiler) {
+                double total_ms = 0.0;
+                for (auto& kv : profiler->getNamedBlocks()) {
+                    ImGui::Text("%.5f ms - %s", kv.second.ms, kv.first.c_str());
+                    total_ms += kv.second.ms;
+                }
+                ImGui::Spacing();
+
+                std::rotate(gpuLineGraphPoints.begin(), gpuLineGraphPoints.begin() + 1, gpuLineGraphPoints.end());
+                gpuLineGraphPoints.back() = total_ms;
+
+                ImGui::PlotLines("", gpuLineGraphPoints.data(), gpuLineGraphPoints.size(),
+                    0, "Frame ms", 0.0f, 15.0f, ImVec2(500.0f, 55.0f));
+
+                ImGui::Text("Total - %.5f ms", total_ms);
+            }
+            else {
+                ImGui::Text("No profiler attached.");
             }
 
             ImGui::Spacing();

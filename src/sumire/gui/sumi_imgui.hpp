@@ -11,6 +11,7 @@
 #include <sumire/core/rendering/sumi_frame_info.hpp>
 #include <sumire/core/rendering/sumi_object.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>
+#include <sumire/core/profiling/gpu_profiler.hpp>
 
 #include <sumire/core/render_systems/data_structs/high_quality_shadow_mapper_structs.hpp>
 
@@ -48,7 +49,8 @@ namespace sumire {
                 FrameInfo &frameInfo, 
                 SumiKBMcontroller &cameraController,
                 const structs::zBin& zBin,
-                structs::lightMask* lightMask
+                structs::lightMask* lightMask,
+                GpuProfiler* profiler
             );
 
             ImGuiIO& getIO();
@@ -77,7 +79,7 @@ namespace sumire {
             void drawSceneSection(FrameInfo &frameInfo);
             void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 
-            void drawProfilingSection();
+            void drawProfilingSection(FrameInfo& frameInfo, GpuProfiler* profiler);
             void drawDebugSection(
                 const structs::zBin& zBin, structs::lightMask* lightMask);
 
@@ -93,6 +95,11 @@ namespace sumire {
 
             int resetProjParamsCounter{0};
             int resetOrthonormalBasisCounter{0};
+
+            static constexpr uint32_t PROFILING_MAX_LINE_PLOT_POINTS = 500u;
+
+            std::array<float, PROFILING_MAX_LINE_PLOT_POINTS> cpuLineGraphPoints{ 0.0 };
+            std::array<float, PROFILING_MAX_LINE_PLOT_POINTS> gpuLineGraphPoints{ 0.0 };
     };
 
 }
