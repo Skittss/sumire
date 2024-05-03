@@ -275,6 +275,9 @@ namespace sumire {
         // NOTE: If any extra features / extensions are added here, make sure to update
         //        the deviceExtensions list / supportedFeaturesAreSuitable function.
 
+        // Populate properties and limits
+        vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
         // Enable descriptor indexing features
         VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
         descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
