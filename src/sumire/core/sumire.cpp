@@ -34,6 +34,7 @@
 #include <array>
 #include <cassert>
 #include <chrono>
+#include <iostream>
 
 namespace sumire {
 
@@ -189,16 +190,23 @@ namespace sumire {
         };
         
         // Profiling, if enabled
-        if (sumiConfig.runtimeData.PROFILING) {
-            GpuProfiler gpuProfiler = GpuProfiler::Builder(sumiDevice)
-                .addBlock("GPU_Frametime")
-                .addBlock("PredrawCompute")
-                .addBlock("EarlyGraphics")
-                .addBlock("EarlyCompute")
-                .addBlock("LateGraphics")
-                .addBlock("LateCompute")
-                .addBlock("Composite")
-                .build();
+        std::unique_ptr<GpuProfiler> gpuProfiler = nullptr;
+        if (sumiConfig.startupData.PROFILING) {
+            if (!sumiDevice.properties.limits.timestampComputeAndGraphics) {
+                std::cout << "[Sumire::Sumire] WARNING: Physical device does not support profiling." << std::endl;
+            }
+            else {
+                // Note: any blocks we add here *must be written* with beginBlock() & endBlock() 
+                //       or else we will never have query results available.
+                gpuProfiler = GpuProfiler::Builder(sumiDevice)
+                    .addBlock("0: PredrawCompute")
+                    .addBlock("1: EarlyGraphics")
+                    .addBlock("2: EarlyCompute")
+                    .addBlock("3: LateGraphics")
+                    .addBlock("4: LateCompute")
+                    .addBlock("5: Composite")
+                    .build();
+            }
         }
 
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -335,8 +343,11 @@ namespace sumire {
                     cameraUbo.projectionMatrix
                 );
                 
+                if (gpuProfiler) gpuProfiler->beginFrame(frameCommandBuffers.predrawCompute);
+
                 // ---- Pre-draw compute dispatches --------------------------------------------------------------
                 // TODO: Compute based culling and skinning.
+                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.predrawCompute, "0: PredrawCompute");
 
                 // Shadow mapping
                 shadowMapper.findLightsApproximate(
@@ -348,20 +359,28 @@ namespace sumire {
                 //shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.predrawCompute);
                 //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
 
+                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.predrawCompute, "0: PredrawCompute");
+
                 // ---- Early Graphics ---------------------------------------------------------------------------
                 // Fill gbuffer in place of a z-prepass
 
+                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.earlyGraphics, "1: EarlyGraphics");
                 sumiRenderer.beginEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
 
                 deferredMeshRenderSystem.fillGbuffer(frameCommandBuffers.earlyGraphics, frameInfo);
 
                 sumiRenderer.endEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
+                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.earlyGraphics, "1: EarlyGraphics");
 
                 // ---- Early Compute ----------------------------------------------------------------------------
                 // Shadow mapping resolve which gbuffer resolve relies on
 
+                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
+                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
+
                 // ---- Late Graphics ----------------------------------------------------------------------------
                 // Lighting resolve and forward subpass for world UI + OIT
+                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.lateGraphics, "3: LateGraphics");
                 sumiRenderer.beginLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
                 //   Deferred resolve subpass
@@ -378,15 +397,20 @@ namespace sumire {
                 }
                 
                 sumiRenderer.endLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
+                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.lateGraphics, "3: LateGraphics");
 
                 // ---- Late Compute -----------------------------------------------------------------------------
                 // Post effects which can be interleaved with generation of next frame via async compute queue
+                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.lateCompute, "4: LateCompute");
+
                 postProcessor.tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
 
                 sumiRenderer.endLateCompute(frameCommandBuffers.lateCompute);
+                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.lateCompute, "4: LateCompute");
 
                 // ---- Final Composite --------------------------------------------------------------------------
                 // Copy everything out to the swap chain image and render UI
+                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.present, "5: Composite");
                 sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
 
                 postProcessor.compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
@@ -396,15 +420,18 @@ namespace sumire {
                     frameInfo,
                     cameraController,
                     shadowMapper.getZbin(),
-                    shadowMapper.getLightMask()
+                    shadowMapper.getLightMask(),
+                    gpuProfiler.get()
                 );
                 gui.endFrame();
 
                 gui.render(frameCommandBuffers.present);
 
                 sumiRenderer.endCompositeRenderPass(frameCommandBuffers.present);
+                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.present, "5: Composite");
 
                 sumiRenderer.endFrame();
+                if (gpuProfiler) gpuProfiler->endFrame();
             }
         }
 
