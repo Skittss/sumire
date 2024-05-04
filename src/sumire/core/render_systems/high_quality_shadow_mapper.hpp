@@ -21,6 +21,7 @@
 #include <sumire/core/graphics_pipeline/sumi_compute_pipeline.hpp>
 #include <sumire/core/rendering/sumi_light.hpp>
 #include <sumire/core/rendering/sumi_camera.hpp>
+#include <sumire/core/rendering/sumi_hzb.hpp>
 
 #include <memory>
 
@@ -31,7 +32,9 @@ namespace sumire {
         HighQualityShadowMapper(
             SumiDevice& device,
             uint32_t screenWidth, 
-            uint32_t screenHeight);
+            uint32_t screenHeight,
+            SumiHZB* hzb
+        );
         ~HighQualityShadowMapper();
 
         static constexpr uint32_t NUM_SLICES = 1024u;
@@ -42,7 +45,9 @@ namespace sumire {
             float near
         );
 
-        void updateScreenBounds(uint32_t width, uint32_t height);
+        void updateScreenBounds(
+            uint32_t width, uint32_t height, SumiHZB* hzb
+        );
 
         // Phase 1
         void prepare(
@@ -90,15 +95,19 @@ namespace sumire {
         void initDescriptorLayouts();
 
         // Phase 2
-        void initLightsApproxPhase();
+        void initLightsApproxPhase(SumiHZB* hzb);
+        //void createLightsApproxHZBsampler();
         //void createLightsApproxUniformBuffer();
-        void initLightsApproxDescriptorSet();
-        void updateLightsApproxDescriptorSet();
+        void initLightsApproxDescriptorSet(SumiHZB* hzb);
+        void updateLightsApproxDescriptorSet(SumiHZB* hzb);
         void initLightsApproxPipeline();
+        void cleanupLightsApproxPhase();
 
         SumiDevice& sumiDevice;
         uint32_t screenWidth;
         uint32_t screenHeight;
+
+        //VkSampler HZBsampler = VK_NULL_HANDLE;
 
         structs::zBin zBin;
         std::unique_ptr<SumiBuffer> zBinBuffer;

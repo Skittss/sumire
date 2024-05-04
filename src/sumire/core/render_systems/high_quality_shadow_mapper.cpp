@@ -17,7 +17,8 @@ namespace sumire {
     HighQualityShadowMapper::HighQualityShadowMapper(
         SumiDevice &device,
         const uint32_t screenWidth, 
-        const uint32_t screenHeight
+        const uint32_t screenHeight,
+        SumiHZB* hzb
     ) : sumiDevice{ device },
         screenWidth{ screenWidth }, 
         screenHeight{ screenHeight }, 
@@ -28,11 +29,11 @@ namespace sumire {
         initDescriptorLayouts();
 
         initPreparePhase();
-        initLightsApproxPhase();
+        initLightsApproxPhase(hzb);
     }
 
     HighQualityShadowMapper::~HighQualityShadowMapper() {
-        vkDestroyPipelineLayout(sumiDevice.device(), findLightsApproxPipelineLayout, nullptr);
+        cleanupLightsApproxPhase();
     }
 
     std::vector<structs::viewSpaceLight> HighQualityShadowMapper::sortLightsByViewSpaceDepth(
@@ -69,13 +70,15 @@ namespace sumire {
         return viewSpaceLights;
     }
 
-    void HighQualityShadowMapper::updateScreenBounds(uint32_t width, uint32_t height) {
+    void HighQualityShadowMapper::updateScreenBounds(
+        uint32_t width, uint32_t height, SumiHZB* hzb
+    ) {
         screenWidth = width;
         screenHeight = height;
 
         lightMask = std::make_unique<structs::lightMask>(screenWidth, screenHeight);
         createLightMaskBuffer();
-        updateLightsApproxDescriptorSet();
+        updateLightsApproxDescriptorSet(hzb);
     }
 
     void HighQualityShadowMapper::prepare(
@@ -337,19 +340,22 @@ namespace sumire {
 
     void HighQualityShadowMapper::initDescriptorLayouts() {
         descriptorPool = SumiDescriptorPool::Builder(sumiDevice)
-            .setMaxSets(2)
+            .setMaxSets(3)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1)
             .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2)
             .build();
 
         lightsApproxDescriptorLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-            .addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT)
             .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+            .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
             .build();
     }
 
-    void HighQualityShadowMapper::initLightsApproxPhase() {
+    void HighQualityShadowMapper::initLightsApproxPhase(SumiHZB* hzb) {
         //createLightsApproxUniformBuffer();
-        initLightsApproxDescriptorSet();
+        //createLightsApproxHZBsampler();
+        initLightsApproxDescriptorSet(hzb);
         initLightsApproxPipeline();
     }
 
@@ -364,28 +370,65 @@ namespace sumire {
     //	zBinBuffer->map();
     //}
 
-    void HighQualityShadowMapper::initLightsApproxDescriptorSet() {
+    //void HighQualityShadowMapper::createLightsApproxHZBsampler() {
+    //    VkSamplerCreateInfo samplerCreateInfo{};
+    //    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    //    samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+    //    samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+    //    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE; // Clamp to edge to not affect downsample min 
+    //    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    //    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    //    samplerCreateInfo.anisotropyEnable = VK_FALSE;
+    //    samplerCreateInfo.maxAnisotropy = 0.0f;
+    //    samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    //    samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+    //    samplerCreateInfo.compareEnable = VK_FALSE;
+    //    samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    //    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    //    samplerCreateInfo.mipLodBias = 0.0f;
+    //    samplerCreateInfo.minLod = 0.0f;
+    //    samplerCreateInfo.maxLod = 0.0f;
+
+    //    VK_CHECK_SUCCESS(
+    //        vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &HZBsampler),
+    //        "[Sumire::HighQualityShadowMapper] Failed to create HZB sampler."
+    //    );
+    //}
+
+    void HighQualityShadowMapper::initLightsApproxDescriptorSet(SumiHZB* hzb) {
         assert(zBinBuffer != nullptr && "Cannot instantiate descriptor set with null zbin buffer");
         assert(lightMaskBuffer != nullptr && "Cannot instantiate descriptor set with null light mask buffer");
 
         VkDescriptorBufferInfo zbinInfo = zBinBuffer->descriptorInfo();
         VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
 
+        VkDescriptorImageInfo hzbInfo{};
+        hzbInfo.sampler     = VK_NULL_HANDLE;
+        hzbInfo.imageView   = hzb->getBaseImageView();
+        hzbInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
         SumiDescriptorWriter(*lightsApproxDescriptorLayout, *descriptorPool)
-            .writeBuffer(0, &zbinInfo)
-            .writeBuffer(1, &lightMaskInfo)
+            .writeImage(0, &hzbInfo)
+            .writeBuffer(1, &zbinInfo)
+            .writeBuffer(2, &lightMaskInfo)
             .build(lightsApproxDescriptorSet);
     }
 
-    void HighQualityShadowMapper::updateLightsApproxDescriptorSet() {
+    void HighQualityShadowMapper::updateLightsApproxDescriptorSet(SumiHZB* hzb) {
         assert(lightMaskBuffer != nullptr && "Cannot update descriptor set with null light mask buffer");
 
         VkDescriptorBufferInfo zbinInfo = zBinBuffer->descriptorInfo();
         VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
 
+        VkDescriptorImageInfo hzbInfo{};
+        hzbInfo.sampler = VK_NULL_HANDLE;
+        hzbInfo.imageView = hzb->getBaseImageView();
+        hzbInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
         SumiDescriptorWriter(*lightsApproxDescriptorLayout, *descriptorPool)
-            .writeBuffer(0, &zbinInfo)
-            .writeBuffer(1, &lightMaskInfo)
+            .writeImage(0, &hzbInfo)
+            .writeBuffer(1, &zbinInfo)
+            .writeBuffer(2, &lightMaskInfo)
             .overwrite(lightsApproxDescriptorSet);
     }
 
@@ -419,5 +462,10 @@ namespace sumire {
                 "shaders/high_quality_shadow_mapping/find_lights_approx/find_lights_approximate.comp.spv"),
             findLightsApproxPipelineLayout
         );
+    }
+
+    void HighQualityShadowMapper::cleanupLightsApproxPhase() {
+        vkDestroyPipelineLayout(sumiDevice.device(), findLightsApproxPipelineLayout, nullptr);
+        //vkDestroySampler(sumiDevice.device(), , nullptr);
     }
 }
