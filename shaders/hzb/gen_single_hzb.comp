@@ -1,5 +1,39 @@
 #version 450
 
-void main() {
+layout(set = 0, binding = 0) uniform sampler2D depthBuffer;
+layout(set = 0, binding = 1) uniform writeonly restrict image2D hzbImage; //TODO: Need format?
 
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(push_constant) uniform Push {
+    vec2 zbufferResolution;
+};
+
+shared uint s_workgroupMinDepthAsUint;
+
+void main() {
+    if (gl_LocalInvocationIndex == 0) {
+        s_workgroupMinDepthAsUint = floatBitsToUint(1.0); 
+    }
+
+    memoryBarrierShared();
+    barrier();
+
+    // Four pixels about invocation idx
+    uvec2 baseTexelCoords = gl_GlobalInvocationID.xy;
+    vec4 gather_v1 = textureGather(depthBuffer, baseTexelCoords * zbufferResolution);
+
+    float minDepth = min(min(gather_v1.x, gather_v1.y), 
+                         min(gather_v1.z, gather_v1.w));
+
+    atomicMin(s_workgroupMinDepthAsUint, floatBitsToUint(minDepth));
+
+    memoryBarrierShared();
+    barrier();
+
+    // Write image once all depth comparisons are finished for the workgroup
+    if (gl_LocalInvocationIndex == 0) {
+        float workgroupMinDepth = uintBitsToFloat(s_workgroupMinDepthAsUint);
+        imageStore(hzbImage, ivec2(gl_GlobalInvocationID.xy), vec4(workgroupMinDepth));
+    }
 }
