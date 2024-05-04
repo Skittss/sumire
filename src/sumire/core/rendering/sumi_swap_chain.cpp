@@ -174,7 +174,7 @@ namespace sumire {
             device,
             swapChainExtent,
             depthFormat,
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
         );
     }
 
