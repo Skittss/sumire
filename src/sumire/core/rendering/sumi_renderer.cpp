@@ -35,6 +35,7 @@ namespace sumire {
     void SumiRenderer::recreateRenderObjects() {
         recreateSwapChain();
         recreateGbuffer();
+        recreateHZB();
 
         freeFramebuffers();
         createFramebuffers();
@@ -121,6 +122,27 @@ namespace sumire {
         );
 
         gbufferRecreatedFlag = true;
+    }
+
+    void SumiRenderer::recreateHZB() {
+        auto extent = sumiWindow.getExtent();
+        while (extent.width == 0 || extent.height == 0) {
+            extent = sumiWindow.getExtent();
+            glfwWaitEvents();
+        }
+
+        vkDeviceWaitIdle(sumiDevice.device());
+
+        hzb = std::make_unique<SumiHZB>(
+            sumiDevice,
+            sumiSwapChain->getDepthAttachment(),
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            SumiHZB::HeirarchyType::SINGLE_IMAGE,
+            0, 
+            3
+        );
+
+        hzbRecreatedFlag = true;
     }
 
     void SumiRenderer::createCommandBuffers() {

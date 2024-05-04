@@ -3,6 +3,7 @@
 #include <sumire/core/windowing/sumi_window.hpp>
 #include <sumire/core/rendering/sumi_swap_chain.hpp>
 #include <sumire/core/rendering/sumi_gbuffer.hpp>
+#include <sumire/core/rendering/sumi_hzb.hpp>
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 #include <sumire/core/graphics_pipeline/sumi_attachment.hpp>
 
@@ -97,6 +98,9 @@ namespace sumire {
         std::vector<SumiAttachment*> getIntermediateColorAttachments() const;
         VkFormat getIntermediateColorAttachmentFormat() const;
 
+        bool wasHzbRecreated() const { return hzbRecreatedFlag; }
+        void resetHzbRecreatedFlag() { hzbRecreatedFlag = false; }
+
         float getAspect() const { return sumiSwapChain->getAspectRatio(); }
         VkFormat getSwapChainColorFormat () const { return sumiSwapChain->getColorFormat(); }
         void changeSwapChainPresentMode(bool vsync);
@@ -109,6 +113,7 @@ namespace sumire {
         void recreateRenderObjects();
         void recreateSwapChain();
         void recreateGbuffer();
+        void recreateHZB();
 
         void createEarlyGraphicsRenderPass();
         void createLateGraphicsRenderPass();
@@ -121,6 +126,7 @@ namespace sumire {
 
         bool scRecreatedFlag = false;
         bool gbufferRecreatedFlag = false;
+        bool hzbRecreatedFlag = false;
 
         SumiWindow& sumiWindow;
         SumiDevice& sumiDevice;
@@ -162,6 +168,7 @@ namespace sumire {
 
         // Offscreen Deferred Rendering Targets
         std::unique_ptr<SumiGbuffer> gbuffer;
+        std::unique_ptr<SumiHZB> hzb;
 
         // Offscreen Intermediate Color Targets (Swap Chain Mirror)
         std::vector<std::unique_ptr<SumiAttachment>> intermediateColorAttachments;
