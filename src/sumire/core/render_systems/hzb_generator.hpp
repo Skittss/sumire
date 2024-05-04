@@ -12,17 +12,21 @@ namespace sumire {
 
     class HzbGenerator {
     public:
-        HzbGenerator(SumiDevice& device, SumiAttachment* zbuffer);
+        HzbGenerator(
+            SumiDevice& device, 
+            SumiAttachment* zbuffer,
+            SumiHZB* hzb
+        );
         ~HzbGenerator();
 
         void generateFullHzbMipChain(VkCommandBuffer commandBuffer);
-        void generateSingleHzbMip(VkCommandBuffer commandBuffer);
+        void generateShadowTileHzb(VkCommandBuffer commandBuffer);
 
-        void updateDescriptors(SumiAttachment* zbuffer);
+        void updateDescriptors(SumiAttachment* zbuffer, SumiHZB* hzb);
 
     private:
         void createZbufferSampler();
-        void initDescriptors(SumiAttachment* zbuffer);
+        void initDescriptors(SumiAttachment* zbuffer, SumiHZB* hzb);
         void createPipelineLayouts();
         void createPipelines();
 
@@ -30,6 +34,7 @@ namespace sumire {
 
         //std::unique_ptr<SumiHZB> hzb;
         VkExtent2D zbufferResolution;
+        VkExtent2D hzbResolution;
         VkSampler zbufferSampler = VK_NULL_HANDLE;
 
         std::unique_ptr<SumiDescriptorPool> descriptorPool;

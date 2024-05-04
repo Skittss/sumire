@@ -7,10 +7,11 @@ namespace sumire {
 
     HzbGenerator::HzbGenerator(
         SumiDevice& device,
-        SumiAttachment* zbuffer
+        SumiAttachment* zbuffer,
+        SumiHZB* hzb
     ) : sumiDevice{ device } {
         createZbufferSampler();
-        initDescriptors(zbuffer);
+        initDescriptors(zbuffer, hzb);
         createPipelineLayouts();
         createPipelines();
     }
@@ -20,12 +21,12 @@ namespace sumire {
         vkDestroySampler(sumiDevice.device(), zbufferSampler, nullptr);
     }
 
-    void HzbGenerator::generateSingleHzbMip(VkCommandBuffer commandBuffer) {
+    void HzbGenerator::generateShadowTileHzb(VkCommandBuffer commandBuffer) {
         computePipeline->bind(commandBuffer);
 
         structs::hzbPush push{};
-        push.resolution = glm::vec2(
-            zbufferResolution.width, zbufferResolution.height);
+        push.hzbResolution = glm::vec2(hzbResolution.width, hzbResolution.height);
+        push.zbufferResolution = glm::vec2(zbufferResolution.width, zbufferResolution.height);
 
         vkCmdPushConstants(
             commandBuffer,
@@ -49,10 +50,10 @@ namespace sumire {
             0, nullptr
         );
 
-        uint32_t groupSizeX = zbufferResolution.width  / 8;
-        uint32_t groupSizeY = zbufferResolution.height / 8;
+        uint32_t groupCountX = glm::ceil(zbufferResolution.width  / 8.0f);
+        uint32_t groupCountY = glm::ceil(zbufferResolution.height / 8.0f);
 
-        vkCmdDispatch(commandBuffer, groupSizeX, groupSizeY, 1);
+        vkCmdDispatch(commandBuffer, groupCountX, groupCountY, 1);
     }
 
     void HzbGenerator::createZbufferSampler() {
@@ -80,7 +81,7 @@ namespace sumire {
         );
     }
 
-    void HzbGenerator::initDescriptors(SumiAttachment* zbuffer) {
+    void HzbGenerator::initDescriptors(SumiAttachment* zbuffer, SumiHZB* hzb) {
         assert(zbuffer && "zbuffer not provided.");
         assert(zbufferSampler && "zbuffer sampler not initialized.");
 
@@ -96,30 +97,44 @@ namespace sumire {
             .build();
 
         zbufferResolution = zbuffer->getExtent();
+        hzbResolution = hzb->getBaseExtent();
+
+        VkDescriptorImageInfo zbufferImageDescriptor{};
+        zbufferImageDescriptor.sampler = zbufferSampler;
+        zbufferImageDescriptor.imageView = zbuffer->getImageView();
+        zbufferImageDescriptor.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
         VkDescriptorImageInfo hzbImageStoreDescriptor{};
-        hzbImageStoreDescriptor.sampler = zbufferSampler;
-        hzbImageStoreDescriptor.imageView = zbuffer->getImageView();
-        hzbImageStoreDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        hzbImageStoreDescriptor.sampler = VK_NULL_HANDLE;
+        hzbImageStoreDescriptor.imageView = hzb->getBaseImageView();
+        hzbImageStoreDescriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         
         SumiDescriptorWriter(*descriptorSetLayout, *descriptorPool)
-            .writeImage(0, &hzbImageStoreDescriptor)
+            .writeImage(0, &zbufferImageDescriptor)
+            .writeImage(1, &hzbImageStoreDescriptor)
             .build(descriptorSet);
     }
 
-    void HzbGenerator::updateDescriptors(SumiAttachment* zbuffer) {
+    void HzbGenerator::updateDescriptors(SumiAttachment* zbuffer, SumiHZB* hzb) {
         assert(zbuffer && "zbuffer not provided.");
         assert(zbufferSampler && "zbuffer sampler not initialized.");
 
         zbufferResolution = zbuffer->getExtent();
+        hzbResolution = hzb->getBaseExtent();
+
+        VkDescriptorImageInfo zbufferImageDescriptor{};
+        zbufferImageDescriptor.sampler = zbufferSampler;
+        zbufferImageDescriptor.imageView = zbuffer->getImageView();
+        zbufferImageDescriptor.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
         VkDescriptorImageInfo hzbImageStoreDescriptor{};
-        hzbImageStoreDescriptor.sampler = zbufferSampler;
-        hzbImageStoreDescriptor.imageView = zbuffer->getImageView();
-        hzbImageStoreDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        hzbImageStoreDescriptor.sampler = VK_NULL_HANDLE;
+        hzbImageStoreDescriptor.imageView = hzb->getBaseImageView();
+        hzbImageStoreDescriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
         SumiDescriptorWriter(*descriptorSetLayout, *descriptorPool)
-            .writeImage(0, &hzbImageStoreDescriptor)
+            .writeImage(0, &zbufferImageDescriptor)
+            .writeImage(1, &hzbImageStoreDescriptor)
             .overwrite(descriptorSet);
     }
 
@@ -158,7 +173,7 @@ namespace sumire {
 
         computePipeline = std::make_unique<SumiComputePipeline>(
             sumiDevice,
-            SUMIRE_ENGINE_PATH("shaders/hzb/gen_single_hzb.comp.spv"),
+            SUMIRE_ENGINE_PATH("shaders/hzb/gen_shadow_tile_hzb.comp.spv"),
             computePipelineLayout
         );
     }
