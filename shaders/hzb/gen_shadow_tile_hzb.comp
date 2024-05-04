@@ -24,11 +24,6 @@ void main() {
     barrier();
 
     float threadDepth = texture(depthBuffer, gl_GlobalInvocationID.xy / zbufferResolution).r;
-//    vec4 gather_v1 = textureGather(depthBuffer, baseTexelCoords / zbufferResolution);
-//
-//    float minDepth = min(min(gather_v1.x, gather_v1.y), 
-//                         min(gather_v1.z, gather_v1.w));
-//
     atomicMin(s_workgroupMinDepthAsUint, floatBitsToUint(threadDepth));
 
     memoryBarrierShared();
