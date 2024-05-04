@@ -142,12 +142,14 @@ namespace sumire {
 
         hzbGenerator = std::make_unique<HzbGenerator>(
             sumiDevice,
-            sumiRenderer.getSwapChain()->getDepthAttachment()
+            sumiRenderer.getSwapChain()->getDepthAttachment(),
+            sumiRenderer.getHZB()
         );
 
         shadowMapper = std::make_unique<HighQualityShadowMapper>(
             sumiDevice,
-            screenWidth, screenHeight
+            screenWidth, screenHeight,
+            sumiRenderer.getHZB()
         );
 
         postProcessor = std::make_unique<PostProcessor>(
@@ -267,9 +269,16 @@ namespace sumire {
 
                 float aspect = sumiRenderer.getAspect();
                 camera.setAspect(aspect, true);
-                postProcessor->updateDescriptors(sumiRenderer.getIntermediateColorAttachments());
-                hzbGenerator->updateDescriptors(sumiRenderer.getSwapChain()->getDepthAttachment());
-                shadowMapper->updateScreenBounds(screenWidth, screenHeight);
+
+                postProcessor->updateDescriptors(
+                    sumiRenderer.getIntermediateColorAttachments()
+                );
+                hzbGenerator->updateDescriptors(
+                    sumiRenderer.getSwapChain()->getDepthAttachment(), sumiRenderer.getHZB()
+                );
+                shadowMapper->updateScreenBounds(
+                    screenWidth, screenHeight, sumiRenderer.getHZB()
+                );
                 sumiRenderer.resetScRecreatedFlag();
             }
 
@@ -367,8 +376,10 @@ namespace sumire {
 
                 if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
 
+                sumiRenderer.beginEarlyCompute(frameCommandBuffers.earlyCompute);
+
                 //   Generate HZB
-                //hzbGenerator->generateSingleHzbMip(frameCommandBuffers.earlyCompute);
+                hzbGenerator->generateShadowTileHzb(frameCommandBuffers.earlyCompute);
 
                 //   Shadow mapping
                 shadowMapper->findLightsApproximate(
@@ -379,6 +390,8 @@ namespace sumire {
                 //shadowMapper.findLightsAccurate(frameCommandBuffers.earlyCompute);
                 //shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.earlyCompute);
                 //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.earlyCompute);
+
+                sumiRenderer.endEarlyCompute(frameCommandBuffers.earlyCompute);
 
                 if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
 
@@ -448,19 +461,19 @@ namespace sumire {
         // TODO: Load objects in asynchronously
         // std::shared_ptr<SumiModel> modelObj1 = loaders::OBJloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/obj/clorinde.obj"));
         //std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/NormalTangentMirrorTest.glb"));
-        std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
-        auto obj1 = SumiObject::createObject();
-        obj1.model = modelObj1;
-        obj1.transform.setTranslation(glm::vec3{-8.0f, 0.0f, 0.0f});
-        obj1.transform.setScale(glm::vec3{1.0f});
-        objects.emplace(obj1.getId(), std::move(obj1));
+        //std::shared_ptr<SumiModel> modelObj1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/clorinde.glb"));
+        //auto obj1 = SumiObject::createObject();
+        //obj1.model = modelObj1;
+        //obj1.transform.setTranslation(glm::vec3{-8.0f, 0.0f, 0.0f});
+        //obj1.transform.setScale(glm::vec3{1.0f});
+        //objects.emplace(obj1.getId(), std::move(obj1));
 
-        std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/MetalRoughSpheres.glb"));
-        auto glb1 = SumiObject::createObject();
-        glb1.model = modelGlb1;
-        glb1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
-        glb1.transform.setScale(glm::vec3{0.2f});
-        objects.emplace(glb1.getId(), std::move(glb1));
+        //std::shared_ptr<SumiModel> modelGlb1 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/test/MetalRoughSpheres.glb"));
+        //auto glb1 = SumiObject::createObject();
+        //glb1.model = modelGlb1;
+        //glb1.transform.setTranslation(glm::vec3{-4.0f, 0.0f, 0.0f});
+        //glb1.transform.setScale(glm::vec3{0.2f});
+        //objects.emplace(glb1.getId(), std::move(glb1));
 
         // std::shared_ptr<SumiModel> modelGlb2 = loaders::GLTFloader::createModelFromFile(sumiDevice, SUMIRE_ENGINE_PATH("assets/models/gltf/doomslayer.glb"));
         // auto glb2 = SumiObject::createObject();
