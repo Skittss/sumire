@@ -140,10 +140,10 @@ namespace sumire {
             globalDescriptorSetLayout->getDescriptorSetLayout()
         );
 
-        //hzbGenerator = std::make_unique<HzbGenerator>(
-        //    sumiDevice,
-        //    sumiRenderer.
-        //);
+        hzbGenerator = std::make_unique<HzbGenerator>(
+            sumiDevice,
+            sumiRenderer.getSwapChain()->getDepthAttachment()
+        );
 
         shadowMapper = std::make_unique<HighQualityShadowMapper>(
             sumiDevice,
@@ -268,6 +268,7 @@ namespace sumire {
                 float aspect = sumiRenderer.getAspect();
                 camera.setAspect(aspect, true);
                 postProcessor->updateDescriptors(sumiRenderer.getIntermediateColorAttachments());
+                hzbGenerator->updateDescriptors(sumiRenderer.getSwapChain()->getDepthAttachment());
                 shadowMapper->updateScreenBounds(screenWidth, screenHeight);
                 sumiRenderer.resetScRecreatedFlag();
             }
@@ -348,16 +349,6 @@ namespace sumire {
                 // TODO: Compute based culling and skinning.
                 if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.predrawCompute, "0: PredrawCompute");
 
-                // Shadow mapping
-                shadowMapper->findLightsApproximate(
-                    frameCommandBuffers.predrawCompute, 
-                    camera.getNear(), camera.getFar()
-                );
-
-                //shadowMapper.findLightsAccurate(frameCommandBuffers.predrawCompute);
-                //shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.predrawCompute);
-                //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.predrawCompute);
-
                 if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.predrawCompute, "0: PredrawCompute");
 
                 // ---- Early Graphics ---------------------------------------------------------------------------
@@ -375,8 +366,19 @@ namespace sumire {
                 // Shadow mapping resolve which gbuffer resolve relies on
 
                 if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
-                //   Generate HZB
 
+                //   Generate HZB
+                //hzbGenerator->generateSingleHzbMip(frameCommandBuffers.earlyCompute);
+
+                //   Shadow mapping
+                shadowMapper->findLightsApproximate(
+                    frameCommandBuffers.earlyCompute,
+                    camera.getNear(), camera.getFar()
+                );
+
+                //shadowMapper.findLightsAccurate(frameCommandBuffers.earlyCompute);
+                //shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.earlyCompute);
+                //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.earlyCompute);
 
                 if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
 
