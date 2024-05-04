@@ -17,6 +17,42 @@ namespace sumire {
 
     HzbGenerator::~HzbGenerator() {
         vkDestroyPipelineLayout(sumiDevice.device(), computePipelineLayout, nullptr);
+        vkDestroySampler(sumiDevice.device(), zbufferSampler, nullptr);
+    }
+
+    void HzbGenerator::generateSingleHzbMip(VkCommandBuffer commandBuffer) {
+        computePipeline->bind(commandBuffer);
+
+        structs::hzbPush push{};
+        push.resolution = glm::vec2(
+            zbufferResolution.width, zbufferResolution.height);
+
+        vkCmdPushConstants(
+            commandBuffer,
+            computePipelineLayout,
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            0,
+            sizeof(structs::hzbPush),
+            &push
+        );
+
+        std::array<VkDescriptorSet, 1> hzbDescriptors{
+            descriptorSet
+        };
+
+        vkCmdBindDescriptorSets(
+            commandBuffer,
+            VK_PIPELINE_BIND_POINT_COMPUTE,
+            computePipelineLayout,
+            0, static_cast<uint32_t>(hzbDescriptors.size()),
+            hzbDescriptors.data(),
+            0, nullptr
+        );
+
+        uint32_t groupSizeX = zbufferResolution.width  / 8;
+        uint32_t groupSizeY = zbufferResolution.height / 8;
+
+        vkCmdDispatch(commandBuffer, groupSizeX, groupSizeY, 1);
     }
 
     void HzbGenerator::createZbufferSampler() {
@@ -24,7 +60,7 @@ namespace sumire {
         samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
         samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-        samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE; // Clamp to edge to not affect downsample min 
         samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerCreateInfo.anisotropyEnable = VK_FALSE;
@@ -84,7 +120,7 @@ namespace sumire {
 
         SumiDescriptorWriter(*descriptorSetLayout, *descriptorPool)
             .writeImage(0, &hzbImageStoreDescriptor)
-            .build(descriptorSet);
+            .overwrite(descriptorSet);
     }
 
     void HzbGenerator::createPipelineLayouts() {
@@ -122,7 +158,7 @@ namespace sumire {
 
         computePipeline = std::make_unique<SumiComputePipeline>(
             sumiDevice,
-            SUMIRE_ENGINE_PATH("shaders/post/tonemap_gt.comp.spv"),
+            SUMIRE_ENGINE_PATH("shaders/hzb/gen_single_hzb.comp.spv"),
             computePipelineLayout
         );
     }

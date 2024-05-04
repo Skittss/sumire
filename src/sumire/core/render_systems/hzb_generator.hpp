@@ -15,13 +15,14 @@ namespace sumire {
         HzbGenerator(SumiDevice& device, SumiAttachment* zbuffer);
         ~HzbGenerator();
 
-        void generateFullMipChain();
-        void generateSingleMip();
+        void generateFullHzbMipChain(VkCommandBuffer commandBuffer);
+        void generateSingleHzbMip(VkCommandBuffer commandBuffer);
+
+        void updateDescriptors(SumiAttachment* zbuffer);
 
     private:
         void createZbufferSampler();
         void initDescriptors(SumiAttachment* zbuffer);
-        void updateDescriptors(SumiAttachment* zbuffer);
         void createPipelineLayouts();
         void createPipelines();
 
