@@ -3,6 +3,8 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
+layout(set = 0, binding = 0, r16) uniform readonly image2D hzb;
+
 layout(push_constant) uniform Push {
     uvec2 tileResolution;
     uint numZbinSlices;
@@ -12,13 +14,13 @@ layout(push_constant) uniform Push {
 
 #include "../includes/inc_zbin.glsl"
 
-layout(set = 0, binding = 0) buffer ZbinBuffer {
+layout(set = 0, binding = 1) buffer ZbinBuffer {
     zBin zBins[];
 };
 
 #include "../includes/inc_light_mask.glsl"
 
-layout(set = 0, binding = 1) buffer LightMaskBuffer {
+layout(set = 0, binding = 2) buffer LightMaskBuffer {
     lightMask lightMasks[];
 };
 
@@ -27,8 +29,11 @@ uint getTileIdx(in uvec2 tileCoord) {
 }
 
 vec2 getTileNearFarDepth(in uvec2 tileCoord) {
-    // Fetch from HZB. 
-    // Resolution is 1/8th of full res so each pixel corresponds to a shadow tile.
+    // Fetch shadow tile depths from 1/8th HZB. 
+    // Light Mask checks against 32x32 pixels so consider a 4x4 grid of depths for mins and maxes.
+
+    // TODO: this would be a faster query if we textureGather from a texture not storage image.
+    vec4 tileDepth = imageLoad(hzb, ivec2(tileCoord));
 
     // TODO: query from HZB input texture(s)
     return  vec2(0.0, 0.0);
