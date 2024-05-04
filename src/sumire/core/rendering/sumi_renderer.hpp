@@ -68,6 +68,7 @@ namespace sumire {
 
         // Early Compute
         //  Compute that late graphics will utilize, that requires geometric information.
+        void beginEarlyCompute(VkCommandBuffer commandBuffer);
         void endEarlyCompute(VkCommandBuffer commandBuffer);
 
         // Late Graphics
@@ -98,6 +99,7 @@ namespace sumire {
         std::vector<SumiAttachment*> getIntermediateColorAttachments() const;
         VkFormat getIntermediateColorAttachmentFormat() const;
 
+        SumiHZB* getHZB() const { return hzb.get(); }
         bool wasHzbRecreated() const { return hzbRecreatedFlag; }
         void resetHzbRecreatedFlag() { hzbRecreatedFlag = false; }
 

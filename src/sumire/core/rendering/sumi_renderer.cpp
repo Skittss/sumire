@@ -14,6 +14,8 @@ namespace sumire {
 
         recreateSwapChain();
         recreateGbuffer();
+        recreateHZB();
+
         createEarlyGraphicsRenderPass();
         createLateGraphicsRenderPass();
         createCompositionRenderPass();
@@ -137,9 +139,7 @@ namespace sumire {
             sumiDevice,
             sumiSwapChain->getDepthAttachment(),
             VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            SumiHZB::HeirarchyType::SINGLE_IMAGE,
-            0, 
-            3
+            SumiHZB::HierarchyType::SHADOW_TILE_8X8
         );
 
         hzbRecreatedFlag = true;
@@ -339,7 +339,6 @@ namespace sumire {
     void SumiRenderer::createEarlyGraphicsRenderPass() {
         // This currently involves 1 subpass:
         //    - Gbuffer fill
-        //    - TODO: Heirarchical Z-buffer generation here? 
 
         std::array<VkAttachmentDescription, 6> attachmentDescriptions{};
 
@@ -351,7 +350,7 @@ namespace sumire {
         attachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         // 1: Gbuffer Position
         attachmentDescriptions[1].format = gbuffer->positionAttachment()->getFormat();
@@ -401,7 +400,7 @@ namespace sumire {
         attachmentDescriptions[5].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[5].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions[5].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[5].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachmentDescriptions[5].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
         std::array<VkSubpassDescription, 1> subpassDescriptions{};
         std::array<VkSubpassDependency, 3> subpassDependencies{};
@@ -997,13 +996,69 @@ namespace sumire {
         vkCmdEndRenderPass(commandBuffer);
     }
 
+    void SumiRenderer::beginEarlyCompute(VkCommandBuffer commandBuffer) {
+        // Transition HZB to Image Layout General for image store write
+        sumiDevice.imageMemoryBarrier(
+            hzb->getImage(),
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_GENERAL,
+            0,
+            0,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            hzb->getBaseImageViewCreateInfo().subresourceRange,
+            VK_QUEUE_FAMILY_IGNORED,
+            VK_QUEUE_FAMILY_IGNORED,
+            commandBuffer
+        );
+    }
+
     void SumiRenderer::endEarlyCompute(VkCommandBuffer commandBuffer) {
-        // TODO: Any releasing of images which may need to happen to late graphics
+        // Release Depth buffer back to graphics as DEPTH_ATTACHMENT_OPTIMAL
+        uint32_t computeFamilyIdx = sumiDevice.computeQueueFamilyIndex();
+        uint32_t graphicsFamilyIdx = sumiDevice.graphicsQueueFamilyIndex();
+
+        if (computeFamilyIdx != graphicsFamilyIdx) {
+            sumiDevice.imageMemoryBarrier(
+                sumiSwapChain->getDepthAttachment()->getImage(),
+                VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                0,
+                0,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                sumiSwapChain->getDepthAttachment()->getImageViewInfo().subresourceRange,
+                computeFamilyIdx, // Compute queue
+                graphicsFamilyIdx, // Graphics queue
+                commandBuffer
+            );
+        }
+
     }
 
     void SumiRenderer::beginLateGraphicsRenderPass(VkCommandBuffer commandBuffer) {
         assert(isFrameStarted && "Failed to begin late graphics render pass: No frame in flight.");
         currentLateGraphicsSubpass = 0;
+
+        // Re-aquire depth image from compute
+        uint32_t computeFamilyIdx = sumiDevice.computeQueueFamilyIndex();
+        uint32_t graphicsFamilyIdx = sumiDevice.graphicsQueueFamilyIndex();
+
+        if (computeFamilyIdx != graphicsFamilyIdx) {
+            sumiDevice.imageMemoryBarrier(
+                sumiSwapChain->getDepthAttachment()->getImage(),
+                VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                0,
+                0,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                sumiSwapChain->getDepthAttachment()->getImageViewInfo().subresourceRange,
+                computeFamilyIdx, // Compute queue
+                graphicsFamilyIdx, // Graphics queue
+                commandBuffer
+            );
+        }
 
         // Begin renderpass for gbuffer fill
         std::array<VkClearValue, 6> attachmentClearValues{};
