@@ -381,6 +381,21 @@ namespace sumire {
                 //   Generate HZB
                 hzbGenerator->generateShadowTileHzb(frameCommandBuffers.earlyCompute);
 
+                //   Transition HZB for combined image sampler use
+                sumiDevice.imageMemoryBarrier(
+                    sumiRenderer.getHZB()->getImage(),
+                    VK_IMAGE_LAYOUT_GENERAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    0,
+                    0,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                    sumiRenderer.getHZB()->getBaseImageViewCreateInfo().subresourceRange,
+                    VK_QUEUE_FAMILY_IGNORED,
+                    VK_QUEUE_FAMILY_IGNORED,
+                    frameCommandBuffers.earlyCompute
+                );
+
                 //   Shadow mapping
                 shadowMapper->findLightsApproximate(
                     frameCommandBuffers.earlyCompute,

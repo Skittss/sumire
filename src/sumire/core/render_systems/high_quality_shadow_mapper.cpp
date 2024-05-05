@@ -341,12 +341,12 @@ namespace sumire {
     void HighQualityShadowMapper::initDescriptorLayouts() {
         descriptorPool = SumiDescriptorPool::Builder(sumiDevice)
             .setMaxSets(3)
-            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
             .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2)
             .build();
 
         lightsApproxDescriptorLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-            .addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT)
             .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
             .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
             .build();
@@ -354,7 +354,7 @@ namespace sumire {
 
     void HighQualityShadowMapper::initLightsApproxPhase(SumiHZB* hzb) {
         //createLightsApproxUniformBuffer();
-        //createLightsApproxHZBsampler();
+        createLightsApproxHZBsampler();
         initLightsApproxDescriptorSet(hzb);
         initLightsApproxPipeline();
     }
@@ -370,30 +370,30 @@ namespace sumire {
     //	zBinBuffer->map();
     //}
 
-    //void HighQualityShadowMapper::createLightsApproxHZBsampler() {
-    //    VkSamplerCreateInfo samplerCreateInfo{};
-    //    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    //    samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
-    //    samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-    //    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE; // Clamp to edge to not affect downsample min 
-    //    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    //    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    //    samplerCreateInfo.anisotropyEnable = VK_FALSE;
-    //    samplerCreateInfo.maxAnisotropy = 0.0f;
-    //    samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    //    samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
-    //    samplerCreateInfo.compareEnable = VK_FALSE;
-    //    samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    //    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    //    samplerCreateInfo.mipLodBias = 0.0f;
-    //    samplerCreateInfo.minLod = 0.0f;
-    //    samplerCreateInfo.maxLod = 0.0f;
+    void HighQualityShadowMapper::createLightsApproxHZBsampler() {
+        VkSamplerCreateInfo samplerCreateInfo{};
+        samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+        samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+        samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE; // Clamp to edge to not affect downsample min 
+        samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerCreateInfo.anisotropyEnable = VK_FALSE;
+        samplerCreateInfo.maxAnisotropy = 0.0f;
+        samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+        samplerCreateInfo.compareEnable = VK_FALSE;
+        samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+        samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerCreateInfo.mipLodBias = 0.0f;
+        samplerCreateInfo.minLod = 0.0f;
+        samplerCreateInfo.maxLod = 0.0f;
 
-    //    VK_CHECK_SUCCESS(
-    //        vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &HZBsampler),
-    //        "[Sumire::HighQualityShadowMapper] Failed to create HZB sampler."
-    //    );
-    //}
+        VK_CHECK_SUCCESS(
+            vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &HZBsampler),
+            "[Sumire::HighQualityShadowMapper] Failed to create HZB sampler."
+        );
+    }
 
     void HighQualityShadowMapper::initLightsApproxDescriptorSet(SumiHZB* hzb) {
         assert(zBinBuffer != nullptr && "Cannot instantiate descriptor set with null zbin buffer");
@@ -403,7 +403,7 @@ namespace sumire {
         VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
 
         VkDescriptorImageInfo hzbInfo{};
-        hzbInfo.sampler     = VK_NULL_HANDLE;
+        hzbInfo.sampler     = HZBsampler;
         hzbInfo.imageView   = hzb->getBaseImageView();
         hzbInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
@@ -421,7 +421,7 @@ namespace sumire {
         VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
 
         VkDescriptorImageInfo hzbInfo{};
-        hzbInfo.sampler = VK_NULL_HANDLE;
+        hzbInfo.sampler = HZBsampler;
         hzbInfo.imageView = hzb->getBaseImageView();
         hzbInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
@@ -466,6 +466,6 @@ namespace sumire {
 
     void HighQualityShadowMapper::cleanupLightsApproxPhase() {
         vkDestroyPipelineLayout(sumiDevice.device(), findLightsApproxPipelineLayout, nullptr);
-        //vkDestroySampler(sumiDevice.device(), , nullptr);
+        vkDestroySampler(sumiDevice.device(), HZBsampler, nullptr);
     }
 }

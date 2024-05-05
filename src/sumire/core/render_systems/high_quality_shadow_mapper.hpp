@@ -96,7 +96,7 @@ namespace sumire {
 
         // Phase 2
         void initLightsApproxPhase(SumiHZB* hzb);
-        //void createLightsApproxHZBsampler();
+        void createLightsApproxHZBsampler();
         //void createLightsApproxUniformBuffer();
         void initLightsApproxDescriptorSet(SumiHZB* hzb);
         void updateLightsApproxDescriptorSet(SumiHZB* hzb);
@@ -107,7 +107,7 @@ namespace sumire {
         uint32_t screenWidth;
         uint32_t screenHeight;
 
-        //VkSampler HZBsampler = VK_NULL_HANDLE;
+        VkSampler HZBsampler = VK_NULL_HANDLE;
 
         structs::zBin zBin;
         std::unique_ptr<SumiBuffer> zBinBuffer;
