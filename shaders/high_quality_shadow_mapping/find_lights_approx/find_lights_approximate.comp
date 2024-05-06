@@ -6,11 +6,6 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) uniform sampler2D hzb;
-//layout(set = 0, binding = 1) uniform restrict writeonly image2D tileShadowSlotIDs;
-//layout(set = 0, binding = 2) uniform restrict writeonly image2D tileGroupLightMask;
-//layout(set = 0, binding = 3) uniform restrict writeonly image2D slotCounters;
-
 layout(push_constant) uniform Push {
     uvec2 tileResolution;
     uint numZbinSlices;
@@ -19,14 +14,22 @@ layout(push_constant) uniform Push {
 } push;
 
 #include "../includes/inc_zbin.glsl"
+#include "../includes/inc_light_mask.glsl"
 
-layout(set = 0, binding = 1) buffer ZbinBuffer {
+layout(set = 0, binding = 0) uniform sampler2D hzb;
+
+layout(set = 0, binding = 1) restrict writeonly buffer tileGroupLightMaskBuffer {
+    lightMask tileGroupLightMasks[];
+};
+
+//layout(set = 0, binding = 2) restrict writeonly buffer tileShadowSlotIDs;
+//layout(set = 0, binding = 3) restrict writeonly buffer slotCounters;
+
+layout(set = 0, binding = 2) restrict readonly buffer ZbinBuffer {
     zBin zBins[];
 };
 
-#include "../includes/inc_light_mask.glsl"
-
-layout(set = 0, binding = 2) buffer LightMaskBuffer {
+layout(set = 0, binding = 3) restrict readonly buffer LightMaskBuffer {
     lightMask lightMasks[];
 };
 
@@ -202,9 +205,10 @@ void main() {
             }
 
             uint tileGroupLightMask = subgroupOr(validLightMask);
-            //if (subgroupElect()) {
-            //    // Write tile group light mask
-            //}
+            if (subgroupElect()) {
+                // Write tile group light mask
+                tileGroupLightMasks[tileIdx].bits[lightGroupBit + 1] = tileGroupLightMask;
+            }
 
             // ---------------------------------------------------------------------------------------------------
             validLightGroupMask |= tileGroupLightMask != 0 ? 1 << lightGroupBit : 0;
@@ -212,8 +216,13 @@ void main() {
         }
     
         // First subgroup stores the LightGroup mask entry for the TileGroup, 
-        //if (subgroupElect()) {
-        //	
-        //}
+        if (subgroupElect()) {
+        	tileGroupLightMasks[tileIdx].bits[0] = validLightGroupMask;
+        }
+
+        // Allocate and store each Tile ShadowSlotID
+        uint shadowSlotID = allocateShadowSlotID(tileIdx, tileLightCount);
+        // 
+
     }
 }

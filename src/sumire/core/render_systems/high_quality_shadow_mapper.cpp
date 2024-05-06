@@ -77,7 +77,13 @@ namespace sumire {
         screenHeight = height;
 
         lightMask = std::make_unique<structs::lightMask>(screenWidth, screenHeight);
+
+        lightMaskBuffer = nullptr;
         createLightMaskBuffer();
+
+        tileGroupLightMaskBuffer = nullptr;
+        createTileGroupLightMaskBuffer();
+
         updateLightsApproxDescriptorSet(hzb);
     }
 
@@ -342,19 +348,21 @@ namespace sumire {
         descriptorPool = SumiDescriptorPool::Builder(sumiDevice)
             .setMaxSets(3)
             .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
-            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3)
             .build();
 
         lightsApproxDescriptorLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
-            .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT)
-            .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
-            .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT) // HZB
+            .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileGroupLightMaskBuffer
+            .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // zBin
+            .addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // LightMaskBuffer
             .build();
     }
 
     void HighQualityShadowMapper::initLightsApproxPhase(SumiHZB* hzb) {
         //createLightsApproxUniformBuffer();
         createLightsApproxHZBsampler();
+        createTileGroupLightMaskBuffer();
         initLightsApproxDescriptorSet(hzb);
         initLightsApproxPipeline();
     }
@@ -395,40 +403,63 @@ namespace sumire {
         );
     }
 
+    void HighQualityShadowMapper::createTileGroupLightMaskBuffer() {
+        // 1 Light mask entry per shadow tile
+        uint32_t nTiles = lightMask->numTilesX * lightMask->numTilesY;
+        tileGroupLightMaskBuffer = std::make_unique<SumiBuffer>(
+            sumiDevice,
+            nTiles * sizeof(structs::lightMaskTile),
+            1,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+    }
+
     void HighQualityShadowMapper::initLightsApproxDescriptorSet(SumiHZB* hzb) {
-        assert(zBinBuffer != nullptr && "Cannot instantiate descriptor set with null zbin buffer");
-        assert(lightMaskBuffer != nullptr && "Cannot instantiate descriptor set with null light mask buffer");
+        assert(zBinBuffer != nullptr 
+            && "Cannot instantiate descriptor set with null zbin buffer");
+        assert(lightMaskBuffer != nullptr 
+            && "Cannot instantiate descriptor set with null light mask buffer");
+        assert(tileGroupLightMaskBuffer != nullptr 
+            && "Cannot instantiate descriptor set with null tile group light mask buffer");
 
         VkDescriptorBufferInfo zbinInfo = zBinBuffer->descriptorInfo();
         VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
+        VkDescriptorBufferInfo tileGroupLightMaskInfo = tileGroupLightMaskBuffer->descriptorInfo();
 
         VkDescriptorImageInfo hzbInfo{};
         hzbInfo.sampler     = HZBsampler;
         hzbInfo.imageView   = hzb->getBaseImageView();
-        hzbInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        hzbInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         SumiDescriptorWriter(*lightsApproxDescriptorLayout, *descriptorPool)
             .writeImage(0, &hzbInfo)
-            .writeBuffer(1, &zbinInfo)
-            .writeBuffer(2, &lightMaskInfo)
+            .writeBuffer(1, &tileGroupLightMaskInfo)
+            .writeBuffer(2, &zbinInfo)
+            .writeBuffer(3, &lightMaskInfo)
             .build(lightsApproxDescriptorSet);
     }
 
     void HighQualityShadowMapper::updateLightsApproxDescriptorSet(SumiHZB* hzb) {
-        assert(lightMaskBuffer != nullptr && "Cannot update descriptor set with null light mask buffer");
+        assert(lightMaskBuffer != nullptr 
+            && "Cannot update descriptor set with null light mask buffer");
+        assert(tileGroupLightMaskBuffer != nullptr
+            && "Cannot update descriptor set with null tile group light mask buffer");
 
         VkDescriptorBufferInfo zbinInfo = zBinBuffer->descriptorInfo();
         VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
+        VkDescriptorBufferInfo tileGroupLightMaskInfo = tileGroupLightMaskBuffer->descriptorInfo();
 
         VkDescriptorImageInfo hzbInfo{};
         hzbInfo.sampler = HZBsampler;
         hzbInfo.imageView = hzb->getBaseImageView();
-        hzbInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        hzbInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         SumiDescriptorWriter(*lightsApproxDescriptorLayout, *descriptorPool)
             .writeImage(0, &hzbInfo)
-            .writeBuffer(1, &zbinInfo)
-            .writeBuffer(2, &lightMaskInfo)
+            .writeBuffer(1, &tileGroupLightMaskInfo)
+            .writeBuffer(2, &zbinInfo)
+            .writeBuffer(3, &lightMaskInfo)
             .overwrite(lightsApproxDescriptorSet);
     }
 
