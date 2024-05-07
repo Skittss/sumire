@@ -20,7 +20,9 @@ namespace sumire::structs {
     };
 
     struct findLightsApproxPush {
-        glm::uvec2   tileResolution;
+        glm::uvec2   shadowTileResolution;
+        glm::uvec2   tileGroupResolution;
+        glm::uvec2   lightMaskResolution;
         glm::uint    numZbinSlices;
         glm::float32 cameraNear;
         glm::float32 cameraFar;
@@ -92,8 +94,8 @@ namespace sumire::structs {
             const uint32_t width, const uint32_t height
         ) : width{ width }, 
             height{ height }, 
-            numTilesX{ static_cast<uint32_t>(glm::ceil(static_cast<float>(width) / 32)) }, 
-            numTilesY{ static_cast<uint32_t>(glm::ceil(static_cast<float>(height) / 32)) }
+            numTilesX{ static_cast<uint32_t>(glm::ceil(static_cast<float>(width)  / 32.0f)) }, 
+            numTilesY{ static_cast<uint32_t>(glm::ceil(static_cast<float>(height) / 32.0f)) }
         {
 
             tiles = std::vector<lightMaskTile>(numTilesX * numTilesY);

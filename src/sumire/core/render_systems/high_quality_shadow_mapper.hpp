@@ -98,6 +98,8 @@ namespace sumire {
         void initLightsApproxPhase(SumiHZB* hzb);
         void createLightsApproxHZBsampler();
         void createTileGroupLightMaskBuffer();
+        void createTileShadowSlotIDsBuffer();
+        void createSlotCountersBuffer();
         //void createLightsApproxUniformBuffer();
         void initLightsApproxDescriptorSet(SumiHZB* hzb);
         void updateLightsApproxDescriptorSet(SumiHZB* hzb);
@@ -116,6 +118,8 @@ namespace sumire {
         std::unique_ptr<structs::lightMask> lightMask;
         std::unique_ptr<SumiBuffer> lightMaskBuffer;
         std::unique_ptr<SumiBuffer> tileGroupLightMaskBuffer;
+        std::unique_ptr<SumiBuffer> tileShadowSlotIDsBuffer;
+        std::unique_ptr<SumiBuffer> slotCountersBuffer;
         std::unique_ptr<SumiBuffer> findLightsApproxUniformBuffer;
 
         std::unique_ptr<SumiDescriptorPool> descriptorPool;
