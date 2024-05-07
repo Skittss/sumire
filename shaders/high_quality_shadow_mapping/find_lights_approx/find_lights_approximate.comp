@@ -45,7 +45,7 @@ layout(set = 0, binding = 1) restrict writeonly buffer tileGroupLightMaskBuffer 
 };
 
 layout(set = 0, binding = 2) restrict writeonly buffer tileShadowSlotIDs {
-    float shadowSlotIDs[]; // per shadow tile
+    int shadowSlotIDs[]; // per shadow tile
 };
 
 layout(set = 0, binding = 3) restrict coherent writeonly buffer slotCounters {
@@ -61,6 +61,8 @@ layout(set = 0, binding = 5) restrict readonly buffer LightMaskBuffer {
 };
 
 // ---------------------------------------------------------------------------------------------------------------
+
+#include "../../includes/inc_z_depth_2_view_depth.glsl"
 
 uint roundUp(in uint value, in uint mult) {
     uint remainder = value % mult;
@@ -118,12 +120,18 @@ ivec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
     const float sliceFrac1 = nSlices / logFarNear;
     const float sliceFrac2 = sliceFrac1 * log(push.cameraNear);
 
-    const ivec2 minMaxIdx = ivec2(
-        floor(log(minMaxDepth.x) * sliceFrac1 - sliceFrac2),
-        floor(log(minMaxDepth.y) * sliceFrac1 - sliceFrac2)
-    );
+    const float minDepth = zDepth2viewDepth(minMaxDepth.x, push.cameraNear, push.cameraFar);
+    const float maxDepth = zDepth2viewDepth(minMaxDepth.y, push.cameraNear, push.cameraFar);
 
-    return minMaxIdx;
+    // TODO: there is a note in the paper about reading individual depth values 
+    //       if the maximum z = 1.0 in order to substantially reduce false positive lights.
+    //       For now, ignore and just clamp these to nSlices - 1 so no out of bounds errors.
+    int minSlice = int( floor(log(minDepth) * sliceFrac1 - sliceFrac2) );
+    int maxSlice = int( floor(log(maxDepth) * sliceFrac1 - sliceFrac2) );
+    minSlice = min(minSlice, int(nSlices) - 1);
+    maxSlice = min(maxSlice, int(nSlices) - 1);
+
+    return ivec2(minSlice, maxSlice);
 }
 ivec2 getZbinRangeFromIndex(in ivec2 zBinMinMaxIdx) {
     return ivec2(
@@ -231,7 +239,7 @@ void main() {
 
         // Allocate and store each Tile ShadowSlotID
         uint shadowSlotID = allocateShadowSlotID(tileGroupIdx, tileLightCount);
-        shadowSlotIDs[tileIdx] = tileMinMaxDepth.g;
+        shadowSlotIDs[tileIdx] = binRange.y;
         //shadowSlotIDs[tileIdx] = shadowSlotID;
     }
 }
