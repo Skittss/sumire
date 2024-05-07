@@ -446,7 +446,7 @@ namespace sumire {
                     }
                     break;
                     case AnimationChannel::PathType::WEIGHTS: {
-                        std::runtime_error("TODO: Morph target animation update via weights.");
+                        throw std::runtime_error("TODO: Morph target animation update via weights.");
                     }
                     break;
                 }
