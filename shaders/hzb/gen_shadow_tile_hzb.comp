@@ -2,7 +2,7 @@
 #extension GL_KHR_shader_subgroup_basic : enable
 
 layout(set = 0, binding = 0) uniform sampler2D depthBuffer;
-layout(set = 0, binding = 1) uniform writeonly restrict image2D hzbImage; //TODO: Need format?
+layout(set = 0, binding = 1) uniform writeonly restrict image2D minMaxHzbImage;
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -13,26 +13,35 @@ layout(push_constant) uniform Push {
 
 // TODO: This can probably be made "coherent" to remove need for barriers below?
 shared uint s_workgroupMinDepthAsUint;
+shared uint s_workgroupMaxDepthAsUint;
 
 const uint mipLevel = 3;
 
 void main() {
+    // Generate a 1/8th size min and max HZB.
+
     if (subgroupElect()) {
-        s_workgroupMinDepthAsUint = floatBitsToUint(1.0); 
+        s_workgroupMinDepthAsUint = floatBitsToUint(1.0);
+        s_workgroupMaxDepthAsUint = floatBitsToUint(0.0);
     }
 
     memoryBarrierShared();
     barrier();
 
     float threadDepth = texture(depthBuffer, gl_GlobalInvocationID.xy / zbufferResolution).r;
-    atomicMin(s_workgroupMinDepthAsUint, floatBitsToUint(threadDepth));
+    uint threadDepthAsUint = floatBitsToUint(threadDepth);
+    atomicMin(s_workgroupMinDepthAsUint, threadDepthAsUint);
+    atomicMax(s_workgroupMaxDepthAsUint, threadDepthAsUint);
 
     memoryBarrierShared();
     barrier();
 
-    // Write image once all depth comparisons are finished for the workgroup
+    // Write images once all depth comparisons are finished for the workgroup
     if (subgroupElect()) {
         float workgroupMinDepth = uintBitsToFloat(s_workgroupMinDepthAsUint);
-        imageStore(hzbImage, ivec2(gl_WorkGroupID.xy), vec4(workgroupMinDepth));
+        float workgroupMaxDepth = uintBitsToFloat(s_workgroupMaxDepthAsUint);
+        imageStore(minMaxHzbImage, ivec2(gl_WorkGroupID.xy), vec4(
+            workgroupMinDepth, workgroupMaxDepth, 0, 0
+        ));
     }
 }

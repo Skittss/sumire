@@ -139,7 +139,8 @@ namespace sumire {
             sumiDevice,
             sumiSwapChain->getDepthAttachment(),
             VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            SumiHZB::HierarchyType::SHADOW_TILE_8X8
+            SumiHZB::HierarchyType::SHADOW_TILE_8X8,
+            SumiHZB::DepthPoolingType::DEPTH_MIN_MAX
         );
 
         hzbRecreatedFlag = true;

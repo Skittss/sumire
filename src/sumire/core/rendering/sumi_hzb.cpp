@@ -9,9 +9,12 @@ namespace sumire {
         SumiAttachment* zbuffer,
         VkImageUsageFlags usageFlags,
         SumiHZB::HierarchyType heirarchyType,
+        SumiHZB::DepthPoolingType depthPoolingType,
         uint32_t mipLevels
     ) : sumiDevice{ device }, 
         heirarchyType{ heirarchyType }, 
+        depthPoolingType{ depthPoolingType },
+        format{ depthPoolingType == DEPTH_MIN_MAX ? VK_FORMAT_R16G16_UNORM : VK_FORMAT_R16_UNORM },
         zbufferResolution{ zbuffer->getExtent()},
         mipLevels{ mipLevels }
     {

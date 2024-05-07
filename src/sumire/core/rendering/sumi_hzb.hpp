@@ -12,11 +12,18 @@ namespace sumire {
             SHADOW_TILE_8X8
         };
 
+        enum DepthPoolingType {
+            DEPTH_MIN,
+            DEPTH_MAX,
+            DEPTH_MIN_MAX
+        };
+
         SumiHZB(
             SumiDevice& device, 
             SumiAttachment* zbuffer,
             VkImageUsageFlags usageFlags,
             SumiHZB::HierarchyType heirarchyType,
+            SumiHZB::DepthPoolingType depthPoolingType,
             uint32_t mipLevels = 1
         );
         ~SumiHZB();
@@ -36,8 +43,9 @@ namespace sumire {
 
         SumiDevice& sumiDevice;
         const HierarchyType heirarchyType;
+        const DepthPoolingType depthPoolingType;
 
-        const VkFormat format = VK_FORMAT_R16_UNORM;
+        const VkFormat format;
         const VkExtent2D zbufferResolution;
         const uint32_t mipLevels;
 
