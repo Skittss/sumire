@@ -70,9 +70,15 @@ uint roundUp(in uint value, in uint mult) {
     return remainder == 0 ? value : value + mult - remainder;
 }
 
+const uint DEBUG_FIXED_LIGHT_COUNT = 10;
+
 uint allocateShadowSlotID(in uint inTileGroupIndex, in uint inTileLightCount) {
     // TODO: The synchronization here is probably incorrect given we may have more than one subgroup.
     // TODO: careful that inTileLightCount is in, is this intentional?
+
+    if (DEBUG_FIXED_LIGHT_COUNT > 0) {
+        return inTileGroupIndex * roundUp(DEBUG_FIXED_LIGHT_COUNT, 3);
+    }
 
     // Round up to next mult of 3 as 3 indices stored per uint
     inTileLightCount         = roundUp(inTileLightCount, 3);
