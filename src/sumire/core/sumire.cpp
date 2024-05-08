@@ -511,6 +511,7 @@ namespace sumire {
             auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});
             float hue = i * 360.0f / radial_n_lights;
             light.color = glm::vec4(glm::rgbColor(glm::vec3{ hue, 1.0, 1.0 }), 1.0);
+            light.range = 4.0f;
             lights.emplace(light.getId(), std::move(light));
         }
 

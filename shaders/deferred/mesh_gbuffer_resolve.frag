@@ -28,6 +28,7 @@ layout (set = 1, binding = 2) uniform sampler2D gbufferAlbedo;
 layout (set = 1, binding = 3) uniform sampler2D gbufferAoMetalRoughEmissive;
 
 #include "../includes/inc_pbr_brdf.glsl"
+#include "../includes/inc_light_attenuation.glsl"
 
 void main() {
     // Raw buffer values
@@ -72,14 +73,16 @@ void main() {
         float NdotLplus = max(dot(normal, L), 0.0);
         float NdotHplus = max(dot(normal, H), 0.0);
         float VdotHplus = max(dot(V, H), 0.0);
-        if (NdotLplus > 0.0 || NdotHplus > 0.0) {
+        if (light.range > 0 && (NdotLplus > 0.0 || NdotHplus > 0.0)) {
             vec3 k_s = BRDF_F_schlick(VdotHplus, f0);
             vec3 k_d = mix(1.0 - k_s, vec3(0.0), metallic); // Metals diminish defuse reflectance
             vec3 f_d = BRDF_lambertian(albedo.rgb);
             vec3 f_s = BRDF_specular_GGX(alpha_roughness, f0, NdotLplus, NdotVplus, NdotHplus, VdotHplus);
             
-            // Attenuate light source
-            vec3 Li = light.color.rgb * light.color.a / (lightDist * lightDist);
+            // Controlled light attenuation to fade at range.
+            vec3 Li = light.color.rgb * 
+                            attenuateNoCusp(lightDist, light.range, light.color.a, 1.0);
+
             col += (k_d * f_d + f_s) * Li * NdotLplus;
         }
     }
