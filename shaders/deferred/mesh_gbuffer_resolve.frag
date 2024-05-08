@@ -65,6 +65,8 @@ void main() {
         vec3 perLightCol = vec3(0.0);
         
         vec3 pToL = light.translation - position;
+        // this is faster:
+        // float lightDist = 
         float lightDist = length(pToL);
 
         vec3 L = normalize(pToL);
@@ -80,9 +82,11 @@ void main() {
             vec3 f_s = BRDF_specular_GGX(alpha_roughness, f0, NdotLplus, NdotVplus, NdotHplus, VdotHplus);
             
             // Controlled light attenuation to fade at range.
-            vec3 Li = light.color.rgb * 
-                            attenuateNoCusp(lightDist, light.range, light.color.a, 1.0);
+            float att = 1.0;
+            float invSqrRange = 1.0 / (light.range * light.range); // TODO: move to CPU
+            att *= attDistanceFrosbite(pToL, invSqrRange, 0.01);
 
+            vec3 Li = light.color.rgb * light.color.a * att;
             col += (k_d * f_d + f_s) * Li * NdotLplus;
         }
     }
