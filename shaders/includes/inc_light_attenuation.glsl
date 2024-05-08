@@ -33,3 +33,18 @@ float attenuateNoCusp(float d, float R, float A, float F) {
 
     return A * one_minus_s2 * one_minus_s2 / (1.0 + F * s2);
 }
+
+// https://geom.io/bakery/wiki/index.php?title=Point_Light_Attenuation
+float attenuateUnity(float d, float R) {
+    float s = d / R;
+    float sx5 = s * 5.0;
+
+    return 1.0 / (sx5 * sx5 + 1);
+}
+
+// https://geom.io/bakery/wiki/index.php?title=Point_Light_Attenuation
+float attenuateFrosbite(float d, float R) {
+    float max_dR = max(d, R);
+
+    return 1.0 / max_dR * max_dR;
+}
