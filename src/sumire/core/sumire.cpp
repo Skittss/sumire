@@ -336,6 +336,7 @@ namespace sumire {
                 //   Write lights SSBO
                 //   TODO: This will be very slow when the number of lights increases.
                 //          We should only write to the buffer when absolutely necessary, i.e. on light change.
+                //   TODO: This also needs ring buffering as the sort will make in progress frames flicker.
                 auto lightData = std::vector<SumiLight::LightShaderData>{};
                 for (auto& viewSpaceLight : sortedLights) {
                     lightData.push_back(viewSpaceLight.lightPtr->getShaderData());
@@ -347,9 +348,7 @@ namespace sumire {
                 //  TODO: Only re-prepare if lights / camera view have changed.
                 shadowMapper->prepare(
                     sortedLights,
-                    camera.getNear(), camera.getFar(),
-                    cameraUbo.viewMatrix,
-                    cameraUbo.projectionMatrix
+                    camera
                 );
                 
                 if (gpuProfiler) gpuProfiler->beginFrame(frameCommandBuffers.predrawCompute);
@@ -539,6 +538,11 @@ namespace sumire {
         //auto light6 = SumiLight::createPointLight({ 0.5f, 1.0f, -100.0f });
         //light6.range = 1.0f;
         //lights.emplace(light6.getId(), std::move(light6));
+
+        // Light Mask Buffer Tests
+        //auto light1 = SumiLight::createPointLight({ 0.0f, 1.0f, 0.0f });
+        //light1.range = 1.0f;
+        //lights.emplace(light1.getId(), std::move(light1));
 
     }
 }

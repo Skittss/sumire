@@ -1,6 +1,8 @@
 #include <sumire/core/render_systems/high_quality_shadow_mapper.hpp>
 
 #include <sumire/math/view_space_depth.hpp>
+#include <sumire/math/frustum_culling.hpp>
+#include <sumire/math/coord_space_converters.hpp>
 #include <sumire/util/vk_check_success.hpp>
 #include <sumire/util/sumire_engine_path.hpp>
 
@@ -95,15 +97,13 @@ namespace sumire {
 
     void HighQualityShadowMapper::prepare(
         const std::vector<structs::viewSpaceLight>& lights,
-        float near, float far,
-        const glm::mat4& view,
-        const glm::mat4& projection
+        const SumiCamera& camera
     ) {
         // We end up doing this preparation step on the CPU as the light list needs
         //  to be view-depth sorted prior to zBin and light mask generation for memory reduction.
-        generateZbin(lights, near, far, view);
+        generateZbin(lights, camera);
         writeZbinBuffer();
-        generateLightMask(lights, projection);
+        generateLightMask(lights, camera);
         writeLightMaskBuffer();
     }
 
@@ -181,8 +181,7 @@ namespace sumire {
 
     void HighQualityShadowMapper::generateZbin(
         const std::vector<structs::viewSpaceLight>& lights,
-        float near, float far,
-        const glm::mat4 &view
+        const SumiCamera& camera
     ) {
         // Bin lights into discrete z intervals between the near and far camera plane.
         // Note: lights MUST BE PRE-SORTED BY VIEWSPACE DISTANCE. ( see sortLightsByViewSpaceDepth() ).
@@ -190,6 +189,10 @@ namespace sumire {
         zBin.reset();
 
         if (lights.size() == 0)  return;
+
+        const glm::mat4 view = camera.getViewMatrix();
+        const float near     = camera.getNear();
+        const float far      = camera.getFar();
 
         const float logFarNear = glm::log(far / near);
         const float sliceFrac1 = static_cast<float>(NUM_SLICES) / logFarNear;
@@ -315,38 +318,71 @@ namespace sumire {
 
     void HighQualityShadowMapper::generateLightMask(
         const std::vector<structs::viewSpaceLight>& lights,
-        const glm::mat4& projection
+        const SumiCamera& camera
     ) {
         assert(lights.size() < 1025);
 
         lightMask->clear();
 
-        for (uint32_t i = 0; i < lights.size(); i++) {
-            // TODO: should we be culling all lights off-screen?
-            //         there are some details on this at the end of the paper.
-            //if (light.viewSpaceDepth < near)
+        // Frustum calculations are done in view space as we have access
+        //   to all light positions in view space from the prior sort.
+        constexpr glm::vec3 origin = glm::vec3(0.0f);
+        const float near = camera.getNear();
+        const float far  = camera.getFar();
 
-            auto& light = lights[i];
+        const glm::vec2 screenDim{ screenWidth, screenHeight };
+        const glm::mat4 invProjection = glm::inverse(camera.getProjectionMatrix());
 
-            // light -> raster space
-            glm::vec4 screenPos = projection * glm::vec4(light.viewSpacePosition, 1.0);
-            screenPos /= screenPos.w;
-            
-            glm::vec2 ndcPos = 0.5f + 0.5f * glm::vec2(screenPos);
-            glm::vec2 rasterPos = glm::floor(glm::vec2{
-                ndcPos.x * screenWidth,
-                (1.0f - ndcPos.y) * screenHeight
-                });
+        // Cull lights against frusta with sphere intersection
+        for (uint32_t frustumX = 0; frustumX < lightMask->numTilesX; frustumX++) {
+            for (uint32_t frustumY = 0; frustumY < lightMask->numTilesY; frustumY++) {
+                structs::lightMaskTile& tile = lightMask->tileAtIdx(frustumX, frustumY);
 
-            if (rasterPos.x < 0 || rasterPos.y < 0 ||
-                rasterPos.x >= screenWidth || rasterPos.y >= screenHeight) { continue; }
+                constexpr float lightMaskTileSize = 32.0f;
 
-            // Set light validity for tile
-            uint32_t tileIdx_x = rasterPos.x / 32u;
-            uint32_t tileIdx_y = rasterPos.y / 32u;
+                // Screen space coords of frusta points
+                const glm::vec4 screenTopL = { lightMaskTileSize * glm::vec2{  frustumX  , frustumY  }, -1.0f, 1.0f };
+                const glm::vec4 screenTopR = { lightMaskTileSize * glm::vec2{  frustumX+1, frustumY  }, -1.0f, 1.0f };
+                const glm::vec4 screenBotL = { lightMaskTileSize * glm::vec2{  frustumX  , frustumY+1}, -1.0f, 1.0f };
+                const glm::vec4 screenBotR = { lightMaskTileSize * glm::vec2{  frustumX+1, frustumY+1}, -1.0f, 1.0f };
 
-            structs::lightMaskTile& tile = lightMask->tileAtIdx(tileIdx_x, tileIdx_y);
-            tile.setLightBit(i);
+                // View space coords of frusta points
+                // TODO: Can probably calculate these view space pos from camera's intrinsic to save 
+                //       On the inv projection calculation + four multiplications per tile
+                const glm::vec3 viewTopL = glm::vec3(screenToView(screenTopL, screenDim, invProjection));
+                const glm::vec3 viewTopR = glm::vec3(screenToView(screenTopR, screenDim, invProjection));
+                const glm::vec3 viewBotL = glm::vec3(screenToView(screenBotL, screenDim, invProjection));
+                const glm::vec3 viewBotR = glm::vec3(screenToView(screenBotR, screenDim, invProjection));
+
+                // Frusta bounding planes from points
+                const FrustumPlane tileFrustumT = computeFrustumPlane(origin, viewTopR, viewTopL);
+                const FrustumPlane tileFrustumB = computeFrustumPlane(origin, viewBotL, viewBotR);
+                const FrustumPlane tileFrustumR = computeFrustumPlane(origin, viewBotR, viewTopR);
+                const FrustumPlane tileFrustumL = computeFrustumPlane(origin, viewTopL, viewBotL);
+
+                for (uint32_t i = 0; i < lights.size(); i++) {
+                    const float r = lights[i].lightPtr->range;
+                    const glm::vec3 p = lights[i].viewSpacePosition;
+
+                    const bool intersectionIntT = tileFrustumT.intersectSphere(p, r);
+                    const bool intersectionIntB = tileFrustumB.intersectSphere(p, r);
+                    const bool intersectionIntL = tileFrustumL.intersectSphere(p, r);
+                    const bool intersectionIntR = tileFrustumR.intersectSphere(p, r);
+                    const bool intersectionIntN = lights[i].viewSpaceDepth + r > near;
+                    const bool intersectionIntF = lights[i].viewSpaceDepth - r < far;
+
+                    const bool intersects = (
+                        intersectionIntT &&
+                        intersectionIntB &&
+                        intersectionIntL &&
+                        intersectionIntR &&
+                        intersectionIntN &&
+                        intersectionIntF
+                    );
+
+                    if (intersects) tile.setLightBit(i);
+                }
+            }
         }
     }
 

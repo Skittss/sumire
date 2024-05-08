@@ -45,7 +45,7 @@ layout(set = 0, binding = 1) restrict writeonly buffer tileGroupLightMaskBuffer 
 };
 
 layout(set = 0, binding = 2) restrict writeonly buffer tileShadowSlotIDs {
-    int shadowSlotIDs[]; // per shadow tile
+    uint shadowSlotIDs[]; // per shadow tile
 };
 
 layout(set = 0, binding = 3) restrict coherent writeonly buffer slotCounters {
@@ -71,12 +71,12 @@ uint roundUp(in uint value, in uint mult) {
 }
 
 uint allocateShadowSlotID(in uint inTileGroupIndex, in uint inTileLightCount) {
+    // TODO: The synchronization here is probably incorrect given we may have more than one subgroup.
     // TODO: careful that inTileLightCount is in, is this intentional?
-    // TODO: any synchronization needed here?
 
     // Round up to next mult of 3 as 3 indices stored per uint
     inTileLightCount         = roundUp(inTileLightCount, 3);
-    uint tileGroupLightCount = subgroupAdd(inTileLightCount); // TODO: is inTileLightCount correct here?
+    uint tileGroupLightCount = subgroupAdd(inTileLightCount);
     uint tileGroupSlotID     = 0;
 
     // Single thread allocates space for entire tile group
@@ -192,7 +192,7 @@ void main() {
         const ivec2 binRange        = getZbinRangeFromIndex(zBinMinMaxIdx);
 
         uint lightGroupMask      = lightMasks[tileLightMaskIdx].bits[0];
-        //lightGroupMask           = intersectLightGroupMask(binRange, lightGroupMask);
+        lightGroupMask           = intersectLightGroupMask(binRange, lightGroupMask);
 
         uint tileLightCount      = 0;
         uint validLightGroupMask = 0;
@@ -202,7 +202,7 @@ void main() {
             uint validLightMask = 0;
             uint lightGroupBit  = findLSB(lightGroupMask);
             uint lightMask      = lightMasks[tileLightMaskIdx].bits[lightGroupBit + 1];
-            //lightMask           = intersectLightMask(binRange, lightGroupBit, lightMask);
+            lightMask           = intersectLightMask(binRange, lightGroupBit, lightMask);
 
             // ---- Process lights within set light groups -------------------------------------------------------
             while (lightMask != 0) {
@@ -239,7 +239,6 @@ void main() {
 
         // Allocate and store each Tile ShadowSlotID
         uint shadowSlotID = allocateShadowSlotID(tileGroupIdx, tileLightCount);
-        shadowSlotIDs[tileIdx] = binRange.y;
-        //shadowSlotIDs[tileIdx] = shadowSlotID;
+        shadowSlotIDs[tileIdx] = shadowSlotID;
     }
 }

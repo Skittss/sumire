@@ -52,9 +52,7 @@ namespace sumire {
         // Phase 1
         void prepare(
             const std::vector<structs::viewSpaceLight>& lights,
-            float near, float far,
-            const glm::mat4& view,
-            const glm::mat4& projection
+            const SumiCamera& camera
         );
         // Phase 2
         void findLightsApproximate(
@@ -68,6 +66,7 @@ namespace sumire {
         // Phase 5
         void compositeHighQualityShadows(VkCommandBuffer commandBuffer);
 
+        // TODO: debug views in composite renderpass.
 
         const structs::zBin& getZbin() { return zBin; }
         structs::lightMask* getLightMask() { return lightMask.get(); }
@@ -79,15 +78,14 @@ namespace sumire {
         void createZbinBuffer();
         void generateZbin(
             const std::vector<structs::viewSpaceLight>& lights,
-            float near, float far,
-            const glm::mat4& view
+            const SumiCamera& camera
         );
         void writeZbinBuffer();
 
         void createLightMaskBuffer();
         void generateLightMask(
             const std::vector<structs::viewSpaceLight>& lights,
-            const glm::mat4& projection
+            const SumiCamera& camera
         );
         void writeLightMaskBuffer();
 
