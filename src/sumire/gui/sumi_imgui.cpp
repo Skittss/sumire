@@ -299,20 +299,20 @@ namespace sumire {
 
                 ImGui::Spacing();
 
-                glm::vec3 camRight = frameInfo.camera.getRight();
+                glm::vec3 camRight = frameInfo.camera.getBasisRight();
                 float right[3] {camRight.x, camRight.y, camRight.z};
                 ImGui::InputFloat3("right", right, "%.2f");
-                frameInfo.camera.setRight(glm::vec3{right[0], right[1], right[2]});
+                frameInfo.camera.setBasisRight(glm::vec3{right[0], right[1], right[2]});
 
-                glm::vec3 camUp = frameInfo.camera.getUp();
+                glm::vec3 camUp = frameInfo.camera.getBasisUp();
                 float up[3] {camUp.x, camUp.y, camUp.z};
                 ImGui::InputFloat3("up", up, "%.2f");
-                frameInfo.camera.setUp(glm::vec3{up[0], up[1], up[2]});
+                frameInfo.camera.setBasisUp(glm::vec3{up[0], up[1], up[2]});
 
-                glm::vec3 camForward = frameInfo.camera.getForward();
+                glm::vec3 camForward = frameInfo.camera.getBasisForward();
                 float forward[3] {camForward.x, camForward.y, camForward.z};
                 ImGui::InputFloat3("forward", forward, "%.2f");
-                frameInfo.camera.setForward(glm::vec3{forward[0], forward[1], forward[2]});
+                frameInfo.camera.setBasisForward(glm::vec3{forward[0], forward[1], forward[2]});
 
                 ImGui::Spacing();
 

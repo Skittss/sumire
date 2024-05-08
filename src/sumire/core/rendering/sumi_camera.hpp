@@ -32,33 +32,42 @@ namespace sumire {
         void setPosX(float x);
         void setPosY(float y);
         void setPosZ(float z);
-        glm::vec3 getPosition() const;
+        glm::vec3 getPosition() const { return transform.getTranslation(); };
 
         void setRot(glm::vec3 rot);
         void setRot(float rotX, float rotY, float rotZ);
         void setRotX(float x);
         void setRotY(float y);
         void setRotZ(float z);
-        glm::vec3 getRotation() const;
+        glm::vec3 getRotation() const { return transform.getRotation(); }
 
-        // Orthonormal Bases Get & Set
-        const glm::mat4& getOrthonormalBasis() const { return orthonormalBasis; }
         glm::vec3 getRight() const {
-            return glm::vec3{ orthonormalBasis[0][0], orthonormalBasis[0][1], orthonormalBasis[0][2] };
+            return glm::vec3{ viewMatrix[0][0], viewMatrix[0][1], viewMatrix[0][2] };
         }
         glm::vec3 getUp() const {
-            return glm::vec3{ orthonormalBasis[1][0], orthonormalBasis[1][1], orthonormalBasis[1][2] };
+            return glm::vec3{ viewMatrix[1][0], viewMatrix[1][1], viewMatrix[1][2] };
         }
         glm::vec3 getForward() const {
+            return glm::vec3{ viewMatrix[2][0], viewMatrix[2][1], viewMatrix[2][2] };
+        }
+        // Orthonormal Bases Get & Set
+        const glm::mat4& getOrthonormalBasis() const { return orthonormalBasis; }
+        glm::vec3 getBasisRight() const {
+            return glm::vec3{ orthonormalBasis[0][0], orthonormalBasis[0][1], orthonormalBasis[0][2] };
+        }
+        glm::vec3 getBasisUp() const {
+            return glm::vec3{ orthonormalBasis[1][0], orthonormalBasis[1][1], orthonormalBasis[1][2] };
+        }
+        glm::vec3 getBasisForward() const {
             return glm::vec3{ orthonormalBasis[2][0], orthonormalBasis[2][1], orthonormalBasis[2][2] };
         }
-        void setRight(glm::vec3 right) {
+        void setBasisRight(glm::vec3 right) {
             orthonormalBasis[0][0] = right.x; orthonormalBasis[0][1] = right.y; orthonormalBasis[0][2] = right.z;
         }
-        void setUp(glm::vec3 up) {
+        void setBasisUp(glm::vec3 up) {
             orthonormalBasis[1][0] = up.x; orthonormalBasis[1][1] = up.y; orthonormalBasis[1][2] = up.z;
         }
-        void setForward(glm::vec3 forward) {
+        void setBasisForward(glm::vec3 forward) {
             orthonormalBasis[2][0] = forward.x; orthonormalBasis[2][1] = forward.y; orthonormalBasis[2][2] = forward.z;
         };
 
