@@ -5,9 +5,9 @@
 class Transform3DComponent {
 
     public:
-        glm::vec3 getTranslation() { return translation; }
-        glm::vec3 getScale() { return scale; }
-        glm::vec3 getRotation() { return rotation; }
+        glm::vec3 getTranslation() const { return translation; }
+        glm::vec3 getScale() const { return scale; }
+        glm::vec3 getRotation() const { return rotation; }
 
         void setTranslation(glm::vec3 translation) { 
             if (this->translation == translation) return;
