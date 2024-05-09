@@ -398,6 +398,8 @@ namespace sumire {
             .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5)
             .build();
 
+        // TODO: Consider splitting these descriptor sets into multiple sets so that 
+        //       shared buffers do not have to be re-bound (e.g. tileGroupLightMaskBuffer).
         lightsApproxDescriptorLayout = SumiDescriptorSetLayout::Builder(sumiDevice)
             .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT) // HZB
             .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileGroupLightMaskBuffer
@@ -584,7 +586,7 @@ namespace sumire {
         findLightsApproxPipeline = std::make_unique<SumiComputePipeline>(
             sumiDevice,
             SUMIRE_ENGINE_PATH(
-                "shaders/high_quality_shadow_mapping/find_lights_approx/find_lights_approximate.comp.spv"),
+                "shaders/high_quality_shadow_mapping/find_lights_approximate.comp.spv"),
             findLightsApproxPipelineLayout
         );
     }
