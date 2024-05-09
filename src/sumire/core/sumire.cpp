@@ -149,7 +149,8 @@ namespace sumire {
         shadowMapper = std::make_unique<HighQualityShadowMapper>(
             sumiDevice,
             screenWidth, screenHeight,
-            sumiRenderer.getHZB()
+            sumiRenderer.getHZB(),
+            sumiRenderer.getSwapChain()->getDepthAttachment()
         );
 
         postProcessor = std::make_unique<PostProcessor>(
@@ -261,6 +262,7 @@ namespace sumire {
 
             camera.setViewYXZ(camera.transform.getTranslation(), camera.transform.getRotation());
 
+            // TODO: Move these to separate func
             if (sumiRenderer.wasSwapChainRecreated()) {
                 // Update main application viewport size tracking vars
                 VkExtent2D newExtent = sumiRenderer.getWindow().getExtent();
@@ -277,7 +279,9 @@ namespace sumire {
                     sumiRenderer.getSwapChain()->getDepthAttachment(), sumiRenderer.getHZB()
                 );
                 shadowMapper->updateScreenBounds(
-                    screenWidth, screenHeight, sumiRenderer.getHZB()
+                    screenWidth, screenHeight,
+                    sumiRenderer.getHZB(),
+                    sumiRenderer.getSwapChain()->getDepthAttachment()
                 );
                 sumiRenderer.resetScRecreatedFlag();
             }

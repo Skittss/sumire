@@ -33,7 +33,8 @@ namespace sumire {
             SumiDevice& device,
             uint32_t screenWidth, 
             uint32_t screenHeight,
-            SumiHZB* hzb
+            SumiHZB* hzb,
+            SumiAttachment* zbuffer
         );
         ~HighQualityShadowMapper();
 
@@ -46,24 +47,30 @@ namespace sumire {
         );
 
         void updateScreenBounds(
-            uint32_t width, uint32_t height, SumiHZB* hzb
+            uint32_t width, uint32_t height, 
+            SumiHZB* hzb,
+            SumiAttachment* zbuffer
         );
 
-        // Phase 1
+        // ---- Phase 1: Prepare ---------------------------------------------------------------------------------
         void prepare(
             const std::vector<structs::viewSpaceLight>& lights,
             const SumiCamera& camera
         );
-        // Phase 2
+
+        // ---- Phase 2: Find Lights Approx ----------------------------------------------------------------------
         void findLightsApproximate(
             VkCommandBuffer commandBuffer,
             float near, float far
         );
-        // Phase 3
+
+        // ---- Phase 3: Find Lights Accurate --------------------------------------------------------------------
         void findLightsAccurate(VkCommandBuffer commandBuffer);
-        // Phase 4
+
+        // ---- Phase 4: Generate Deferred Shadows ---------------------------------------------------------------
         void generateDeferredShadowMaps(VkCommandBuffer commandBuffer);
-        // Phase 5
+
+        // ---- Phase 5: High Quality Shadows --------------------------------------------------------------------
         void compositeHighQualityShadows(VkCommandBuffer commandBuffer);
 
         // TODO: debug views in composite renderpass.
@@ -72,7 +79,7 @@ namespace sumire {
         structs::lightMask* getLightMask() { return lightMask.get(); }
 
     private:
-        // CPU (Phase 1)
+        // ---- (CPU) Phase 1: Prepare ---------------------------------------------------------------------------
         void initPreparePhase();
 
         void createZbinBuffer();
@@ -89,43 +96,73 @@ namespace sumire {
         );
         void writeLightMaskBuffer();
 
-        // GPU (Phases 2+)
-        void initDescriptorLayouts();
+        structs::zBin zBin;
+        std::unique_ptr<SumiBuffer> zBinBuffer;
+        std::unique_ptr<structs::lightMask> lightMask;
+        std::unique_ptr<SumiBuffer> lightMaskBuffer;
 
-        // Phase 2
+        // ---- (GPU) Phases 2+ ----------------------------------------------------------------------------------
+        void initDescriptorLayouts();
+        void createZbufferSampler();
+
+        VkSampler zBufferSampler = VK_NULL_HANDLE;
+
+        // ---- Phase 2: Find Lights Approx ----------------------------------------------------------------------
         void initLightsApproxPhase(SumiHZB* hzb);
-        void createLightsApproxHZBsampler();
         void createTileGroupLightMaskBuffer();
         void createTileShadowSlotIDsBuffer();
         void createSlotCountersBuffer();
-        //void createLightsApproxUniformBuffer();
         void initLightsApproxDescriptorSet(SumiHZB* hzb);
         void updateLightsApproxDescriptorSet(SumiHZB* hzb);
         void initLightsApproxPipeline();
         void cleanupLightsApproxPhase();
 
-        SumiDevice& sumiDevice;
-        uint32_t screenWidth;
-        uint32_t screenHeight;
-
-        VkSampler HZBsampler = VK_NULL_HANDLE;
-
-        structs::zBin zBin;
-        std::unique_ptr<SumiBuffer> zBinBuffer;
-
-        std::unique_ptr<structs::lightMask> lightMask;
-        std::unique_ptr<SumiBuffer> lightMaskBuffer;
         std::unique_ptr<SumiBuffer> tileGroupLightMaskBuffer;
         std::unique_ptr<SumiBuffer> tileShadowSlotIDsBuffer;
         std::unique_ptr<SumiBuffer> slotCountersBuffer;
-        std::unique_ptr<SumiBuffer> findLightsApproxUniformBuffer;
 
-        std::unique_ptr<SumiDescriptorPool> descriptorPool;
         std::unique_ptr<SumiDescriptorSetLayout> lightsApproxDescriptorLayout;
         VkDescriptorSet lightsApproxDescriptorSet = VK_NULL_HANDLE;
 
         VkPipelineLayout findLightsApproxPipelineLayout = VK_NULL_HANDLE;
         std::unique_ptr<SumiComputePipeline> findLightsApproxPipeline;
+
+        // ---- Phase 3: Find Lights Accurate --------------------------------------------------------------------
+        void initLightsAccuratePhase(SumiAttachment* zbuffer);
+        void createTileLightListEarlyBuffer();
+        void createTileLightCountEarlyBuffer();
+        void initLightsAccurateDescriptorSet(SumiAttachment* zbuffer);
+        void updateLightsAccurateDescriptorSet(SumiAttachment* zbuffer);
+        void initLightsAccuratePipeline();
+        void cleanupLightsAccuratePhase();
+
+        std::unique_ptr<SumiBuffer> tileLightListEarlyBuffer;
+        std::unique_ptr<SumiBuffer> tileLightCountEarlyBuffer;
+
+        std::unique_ptr<SumiDescriptorSetLayout> lightsAccurateDescriptorLayout;
+        VkDescriptorSet lightsAccurateDescriptorSet = VK_NULL_HANDLE;
+
+        VkPipelineLayout findLightsAccuratePipelineLayout = VK_NULL_HANDLE;
+        std::unique_ptr<SumiComputePipeline> findLightsAccuratePipeline;
+
+        // -------------------------------------------------------------------------------------------------------
+        
+        uint32_t screenWidth;
+        uint32_t screenHeight;
+
+        uint32_t numShadowTilesX = 0;
+        uint32_t numShadowTilesY = 0;
+        uint32_t numShadowTiles  = 0;
+        uint32_t numTileGroupsX  = 0;
+        uint32_t numTileGroupsY  = 0;
+        uint32_t numTileGroups   = 0;
+        void calculateTileResolutions();
+
+        SumiDevice& sumiDevice;
+
+        std::unique_ptr<SumiDescriptorPool> descriptorPool;
+
+
     };
 
 }

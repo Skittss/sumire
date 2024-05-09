@@ -20,22 +20,26 @@ namespace sumire {
         SumiDevice &device,
         const uint32_t screenWidth, 
         const uint32_t screenHeight,
-        SumiHZB* hzb
+        SumiHZB* hzb,
+        SumiAttachment* zbuffer
     ) : sumiDevice{ device },
         screenWidth{ screenWidth }, 
         screenHeight{ screenHeight }, 
         zBin{ NUM_SLICES }
     {
         lightMask = std::make_unique<structs::lightMask>(screenWidth, screenHeight);
+        calculateTileResolutions();
 
         initDescriptorLayouts();
 
-        initPreparePhase();
-        initLightsApproxPhase(hzb);
+        initPreparePhase();                // Phase 1
+        initLightsApproxPhase(hzb);        // Phase 2
+        initLightsAccuratePhase(zbuffer);  // Phase 3
     }
 
     HighQualityShadowMapper::~HighQualityShadowMapper() {
         cleanupLightsApproxPhase();
+        cleanupLightsAccuratePhase();
     }
 
     std::vector<structs::viewSpaceLight> HighQualityShadowMapper::sortLightsByViewSpaceDepth(
@@ -73,13 +77,17 @@ namespace sumire {
     }
 
     void HighQualityShadowMapper::updateScreenBounds(
-        uint32_t width, uint32_t height, SumiHZB* hzb
+        uint32_t width, uint32_t height, 
+        SumiHZB* hzb,
+        SumiAttachment* zbuffer
     ) {
         screenWidth = width;
         screenHeight = height;
 
         lightMask = std::make_unique<structs::lightMask>(screenWidth, screenHeight);
+        calculateTileResolutions();
 
+        // ---- Recreate Lights Approx Buffers -------------------------------------------------------------------
         lightMaskBuffer = nullptr;
         createLightMaskBuffer();
 
@@ -93,6 +101,16 @@ namespace sumire {
         createSlotCountersBuffer();
 
         updateLightsApproxDescriptorSet(hzb);
+
+        // ---- Recreate Lights Accurate Buffers -----------------------------------------------------------------
+        
+        tileLightListEarlyBuffer = nullptr;
+        createTileLightListEarlyBuffer();
+
+        tileLightCountEarlyBuffer = nullptr;
+        createTileLightCountEarlyBuffer();
+
+        updateLightsAccurateDescriptorSet(zbuffer);
     }
 
     void HighQualityShadowMapper::prepare(
@@ -113,14 +131,9 @@ namespace sumire {
     ) {
         findLightsApproxPipeline->bind(commandBuffer);
 
-        uint32_t nShadowTilesX = glm::ceil(static_cast<float>(screenWidth)  / 8.0f);
-        uint32_t nShadowTilesY = glm::ceil(static_cast<float>(screenHeight) / 8.0f);
-        uint32_t nTileGroupsX  = glm::ceil(static_cast<float>(screenWidth)  / 64.0f);
-        uint32_t nTileGroupsY  = glm::ceil(static_cast<float>(screenHeight) / 64.0f);
-
         structs::findLightsApproxPush push{};
-        push.shadowTileResolution = glm::uvec2(nShadowTilesX, nShadowTilesY);
-        push.tileGroupResolution  = glm::uvec2(nTileGroupsX, nTileGroupsY);
+        push.shadowTileResolution = glm::uvec2(numShadowTilesX, numShadowTilesY);
+        push.tileGroupResolution  = glm::uvec2(numTileGroupsX, numTileGroupsY);
         push.lightMaskResolution  = glm::uvec2(lightMask->numTilesX, lightMask->numTilesY);
         push.numZbinSlices        = NUM_SLICES;
         push.cameraNear           = glm::float32(near);
@@ -148,9 +161,11 @@ namespace sumire {
             0, nullptr
         );
 
-        vkCmdDispatch(commandBuffer, nTileGroupsX, nTileGroupsY, 1);
+        // Execute one work group per tile group
+        vkCmdDispatch(commandBuffer, numTileGroupsX, numTileGroupsY, 1);
     }
 
+    // ---- (CPU) Phase 1: Prepare -------------------------------------------------------------------------------
     void HighQualityShadowMapper::initPreparePhase() {
         createZbinBuffer();
         createLightMaskBuffer();
@@ -391,11 +406,20 @@ namespace sumire {
         lightMaskBuffer->flush();
     }
 
+    // ---- (GPU) Phases 2+ --------------------------------------------------------------------------------------
     void HighQualityShadowMapper::initDescriptorLayouts() {
         descriptorPool = SumiDescriptorPool::Builder(sumiDevice)
-            .setMaxSets(6)
+            .setMaxSets(
+                6 + // Lights Approx
+                5   // Lights Accurate
+            )
+            // ---- Lights Approx -----------------------------------------
             .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
             .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5)
+            // ---- Lights Accurate ---------------------------------------
+            .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4)
+            // ------------------------------------------------------------
             .build();
 
         // TODO: Consider splitting these descriptor sets into multiple sets so that 
@@ -408,35 +432,22 @@ namespace sumire {
             .addBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // zBin
             .addBinding(5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // LightMaskBuffer
             .build();
+
+        lightsAccurateDescriptorLayout  = SumiDescriptorSetLayout::Builder(sumiDevice)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT) // Z buffer
+            .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileGroupLightMaskBuffer
+            .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileShadowSlotIDsBuffer
+            .addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightListEarly
+            .addBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightCountEarly
+            .build();
     }
 
-    void HighQualityShadowMapper::initLightsApproxPhase(SumiHZB* hzb) {
-        //createLightsApproxUniformBuffer();
-        createLightsApproxHZBsampler();
-        createTileGroupLightMaskBuffer();
-        createTileShadowSlotIDsBuffer();
-        createSlotCountersBuffer();
-        initLightsApproxDescriptorSet(hzb);
-        initLightsApproxPipeline();
-    }
-
-    //void HighQualityShadowMapper::createLightsApproxUniformBuffer() {
-    //	zBinBuffer = std::make_unique<SumiBuffer>(
-    //		sumiDevice,
-    //		sizeof(structs::findLightsApproxUniforms),
-    //		1,
-    //		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-    //		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-    //	);
-    //	zBinBuffer->map();
-    //}
-
-    void HighQualityShadowMapper::createLightsApproxHZBsampler() {
+    void HighQualityShadowMapper::createZbufferSampler() {
         VkSamplerCreateInfo samplerCreateInfo{};
         samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
         samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-        samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE; // Clamp to edge to not affect downsample min 
+        samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerCreateInfo.anisotropyEnable = VK_FALSE;
@@ -451,19 +462,27 @@ namespace sumire {
         samplerCreateInfo.maxLod = 0.0f;
 
         VK_CHECK_SUCCESS(
-            vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &HZBsampler),
+            vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &zBufferSampler),
             "[Sumire::HighQualityShadowMapper] Failed to create HZB sampler."
         );
     }
 
+    // ---- Phase 2: Find Lights Approx --------------------------------------------------------------------------
+    void HighQualityShadowMapper::initLightsApproxPhase(SumiHZB* hzb) {
+        //createLightsApproxUniformBuffer();
+        createZbufferSampler();
+        createTileGroupLightMaskBuffer();
+        createTileShadowSlotIDsBuffer();
+        createSlotCountersBuffer();
+        initLightsApproxDescriptorSet(hzb);
+        initLightsApproxPipeline();
+    }
+
     void HighQualityShadowMapper::createTileGroupLightMaskBuffer() {
         // 1 Light mask entry per 8x8 shadow tile group
-        uint32_t nTileGroupsX = glm::ceil(static_cast<float>(screenWidth)  / 64.0f);
-        uint32_t nTileGroupsY = glm::ceil(static_cast<float>(screenHeight) / 64.0f);
-        uint32_t nTileGroups = nTileGroupsX * nTileGroupsY;
         tileGroupLightMaskBuffer = std::make_unique<SumiBuffer>(
             sumiDevice,
-            nTileGroups * sizeof(structs::lightMaskTile),
+            numTileGroups * sizeof(structs::lightMaskTile),
             1,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
@@ -472,12 +491,9 @@ namespace sumire {
 
     void HighQualityShadowMapper::createTileShadowSlotIDsBuffer() {
         // 1 ID per shadow tile
-        uint32_t nShadowTilesX = glm::ceil(static_cast<float>(screenWidth)  / 8.0f);
-        uint32_t nShadowTilesY = glm::ceil(static_cast<float>(screenHeight) / 8.0f);
-        uint32_t nShadowTiles = nShadowTilesX * nShadowTilesY;
         tileShadowSlotIDsBuffer = std::make_unique<SumiBuffer>(
             sumiDevice,
-            nShadowTiles * sizeof(uint32_t),
+            numShadowTiles * sizeof(uint32_t),
             1,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
@@ -485,12 +501,10 @@ namespace sumire {
     }
 
     void HighQualityShadowMapper::createSlotCountersBuffer() {
-        uint32_t nTileGroupsX = glm::ceil(static_cast<float>(screenWidth)  / 64.0f);
-        uint32_t nTileGroupsY = glm::ceil(static_cast<float>(screenHeight) / 64.0f);
-        uint32_t nTileGroups = nTileGroupsX * nTileGroupsY;
+        // 1 Counter per tile group
         slotCountersBuffer = std::make_unique<SumiBuffer>(
             sumiDevice,
-            nTileGroups * sizeof(uint32_t),
+            numTileGroups * sizeof(uint32_t),
             1,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
@@ -504,6 +518,8 @@ namespace sumire {
             && "Cannot instantiate descriptor set with null light mask buffer");
         assert(tileGroupLightMaskBuffer != nullptr 
             && "Cannot instantiate descriptor set with null tile group light mask buffer");
+        assert(tileShadowSlotIDsBuffer != nullptr
+            && "Cannot instantiate descriptor set with null tile shadow slot ids buffer");
         assert(slotCountersBuffer != nullptr
             && "Cannot instantiate descriptor set with null slot counters buffer");
 
@@ -514,7 +530,7 @@ namespace sumire {
         VkDescriptorBufferInfo slotCountersInfo       = slotCountersBuffer->descriptorInfo();
 
         VkDescriptorImageInfo hzbInfo{};
-        hzbInfo.sampler     = HZBsampler;
+        hzbInfo.sampler     = zBufferSampler;
         hzbInfo.imageView   = hzb->getBaseImageView();
         hzbInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -535,17 +551,19 @@ namespace sumire {
             && "Cannot update descriptor set with null light mask buffer");
         assert(tileGroupLightMaskBuffer != nullptr
             && "Cannot update descriptor set with null tile group light mask buffer");
+        assert(tileShadowSlotIDsBuffer != nullptr
+            && "Cannot update descriptor set with null tile shadow slot ids buffer");
         assert(slotCountersBuffer != nullptr
             && "Cannot update descriptor set with null slot counters buffer");
 
-        VkDescriptorBufferInfo zbinInfo = zBinBuffer->descriptorInfo();
-        VkDescriptorBufferInfo lightMaskInfo = lightMaskBuffer->descriptorInfo();
+        VkDescriptorBufferInfo zbinInfo               = zBinBuffer->descriptorInfo();
+        VkDescriptorBufferInfo lightMaskInfo          = lightMaskBuffer->descriptorInfo();
         VkDescriptorBufferInfo tileGroupLightMaskInfo = tileGroupLightMaskBuffer->descriptorInfo();
-        VkDescriptorBufferInfo tileShadowSlotIDsInfo = tileShadowSlotIDsBuffer->descriptorInfo();
-        VkDescriptorBufferInfo slotCountersInfo = slotCountersBuffer->descriptorInfo();
+        VkDescriptorBufferInfo tileShadowSlotIDsInfo  = tileShadowSlotIDsBuffer->descriptorInfo();
+        VkDescriptorBufferInfo slotCountersInfo       = slotCountersBuffer->descriptorInfo();
 
         VkDescriptorImageInfo hzbInfo{};
-        hzbInfo.sampler = HZBsampler;
+        hzbInfo.sampler = zBufferSampler;
         hzbInfo.imageView = hzb->getBaseImageView();
         hzbInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -563,19 +581,19 @@ namespace sumire {
 
         VkPushConstantRange pushRange{};
         pushRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-        pushRange.offset = 0;
-        pushRange.size = sizeof(structs::findLightsApproxPush);
+        pushRange.offset     = 0;
+        pushRange.size       = sizeof(structs::findLightsApproxPush);
 
         std::vector<VkDescriptorSetLayout> descriptorSetLayouts{
             lightsApproxDescriptorLayout->getDescriptorSetLayout()
         };
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
-        pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts            = descriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pPushConstantRanges = &pushRange;
+        pipelineLayoutInfo.pPushConstantRanges    = &pushRange;
 
         VK_CHECK_SUCCESS(
             vkCreatePipelineLayout(
@@ -593,6 +611,136 @@ namespace sumire {
 
     void HighQualityShadowMapper::cleanupLightsApproxPhase() {
         vkDestroyPipelineLayout(sumiDevice.device(), findLightsApproxPipelineLayout, nullptr);
-        vkDestroySampler(sumiDevice.device(), HZBsampler, nullptr);
+
+        // This cleanup func also handles cleaning up shared resources for phases 2+
+        vkDestroySampler(sumiDevice.device(), zBufferSampler, nullptr);  
+    }
+    
+    // ---- Phase 3: Find Lights Accurate ------------------------------------------------------------------------
+    void HighQualityShadowMapper::initLightsAccuratePhase(SumiAttachment* zbuffer) {
+        createTileLightListEarlyBuffer();
+        createTileLightCountEarlyBuffer();
+        initLightsAccurateDescriptorSet(zbuffer);
+        initLightsAccuratePipeline();
+    }
+
+    void HighQualityShadowMapper::createTileLightListEarlyBuffer() {
+        // 1 List per shadow tile
+        // TODO: What is the list size here?
+        tileLightListEarlyBuffer = std::make_unique<SumiBuffer>(
+            sumiDevice,
+            numShadowTiles * sizeof(uint32_t),
+            1,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+    }
+
+    void HighQualityShadowMapper::createTileLightCountEarlyBuffer() {
+        // 1 entry per shadow tile
+        tileLightCountEarlyBuffer = std::make_unique<SumiBuffer>(
+            sumiDevice,
+            numShadowTiles * sizeof(uint32_t),
+            1,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+    }
+
+    void HighQualityShadowMapper::initLightsAccurateDescriptorSet(SumiAttachment* zbuffer) {
+        assert(tileLightListEarlyBuffer != nullptr
+            && "Cannot instantiate descriptor set with null tile light list early buffer");
+        assert(tileLightCountEarlyBuffer != nullptr
+            && "Cannot instantiate descriptor set with null tile light count early buffer");
+
+        VkDescriptorBufferInfo tileGroupLightMaskInfo = tileGroupLightMaskBuffer->descriptorInfo();
+        VkDescriptorBufferInfo tileShadowSlotIDsInfo  = tileShadowSlotIDsBuffer->descriptorInfo();
+        VkDescriptorBufferInfo lightListEarlyInfo     = tileLightListEarlyBuffer->descriptorInfo();
+        VkDescriptorBufferInfo lightCountEarlyInfo    = tileLightCountEarlyBuffer->descriptorInfo();
+
+        VkDescriptorImageInfo zbufferInfo{};
+        zbufferInfo.sampler = zBufferSampler;
+        zbufferInfo.imageView = zbuffer->getImageView();
+        zbufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        SumiDescriptorWriter(*lightsAccurateDescriptorLayout, *descriptorPool)
+            .writeImage(0, &zbufferInfo)
+            .writeBuffer(1, &tileGroupLightMaskInfo)
+            .writeBuffer(2, &tileShadowSlotIDsInfo)
+            .writeBuffer(3, &lightListEarlyInfo)
+            .writeBuffer(4, &lightCountEarlyInfo)
+            .build(lightsAccurateDescriptorSet);
+    }
+
+    void HighQualityShadowMapper::updateLightsAccurateDescriptorSet(SumiAttachment* zbuffer) {
+        assert(tileLightListEarlyBuffer != nullptr
+            && "Cannot update descriptor set with null tile light list early buffer");
+        assert(tileLightCountEarlyBuffer != nullptr
+            && "Cannot update descriptor set with null tile light count early buffer");
+
+        VkDescriptorBufferInfo tileGroupLightMaskInfo = tileGroupLightMaskBuffer->descriptorInfo();
+        VkDescriptorBufferInfo tileShadowSlotIDsInfo  = tileShadowSlotIDsBuffer->descriptorInfo();
+        VkDescriptorBufferInfo lightListEarlyInfo     = tileLightListEarlyBuffer->descriptorInfo();
+        VkDescriptorBufferInfo lightCountEarlyInfo    = tileLightCountEarlyBuffer->descriptorInfo();
+
+        VkDescriptorImageInfo zbufferInfo{};
+        zbufferInfo.sampler = zBufferSampler;
+        zbufferInfo.imageView = zbuffer->getImageView();
+        zbufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        SumiDescriptorWriter(*lightsAccurateDescriptorLayout, *descriptorPool)
+            .writeImage(0, &zbufferInfo)
+            .writeBuffer(1, &tileGroupLightMaskInfo)
+            .writeBuffer(2, &tileShadowSlotIDsInfo)
+            .writeBuffer(3, &lightListEarlyInfo)
+            .writeBuffer(4, &lightCountEarlyInfo)
+            .overwrite(lightsAccurateDescriptorSet);
+    }
+
+    void HighQualityShadowMapper::initLightsAccuratePipeline() {
+
+        VkPushConstantRange pushRange{};
+        pushRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        pushRange.offset     = 0;
+        pushRange.size       = sizeof(structs::findLightsAccuratePush);
+
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts{
+            lightsAccurateDescriptorLayout->getDescriptorSetLayout()
+        };
+
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts            = descriptorSetLayouts.data();
+        pipelineLayoutInfo.pushConstantRangeCount = 1;
+        pipelineLayoutInfo.pPushConstantRanges    = &pushRange;
+
+        VK_CHECK_SUCCESS(
+            vkCreatePipelineLayout(
+                sumiDevice.device(), &pipelineLayoutInfo, nullptr, &findLightsAccuratePipelineLayout),
+            "[Sumire::HighQualityShadowMapper] Failed to create lights accurate pipeline layout (Phase 2)."
+        );
+
+        findLightsAccuratePipeline = std::make_unique<SumiComputePipeline>(
+            sumiDevice,
+            SUMIRE_ENGINE_PATH(
+                "shaders/high_quality_shadow_mapping/find_lights_accurate.comp.spv"),
+            findLightsAccuratePipelineLayout
+        );
+    }
+
+    void HighQualityShadowMapper::cleanupLightsAccuratePhase() {
+        vkDestroyPipelineLayout(sumiDevice.device(), findLightsAccuratePipelineLayout, nullptr);
+    }
+    
+    // -----------------------------------------------------------------------------------------------------------
+    void HighQualityShadowMapper::calculateTileResolutions() {
+        numShadowTilesX = glm::ceil(static_cast<float>(screenWidth) / 8.0f);
+        numShadowTilesY = glm::ceil(static_cast<float>(screenHeight) / 8.0f);
+        numShadowTiles = numShadowTilesX * numShadowTilesY;
+
+        numTileGroupsX = glm::ceil(static_cast<float>(screenWidth) / 64.0f);
+        numTileGroupsY = glm::ceil(static_cast<float>(screenHeight) / 64.0f);
+        numTileGroups = numTileGroupsX * numTileGroupsY;
     }
 }
