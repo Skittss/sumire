@@ -12,6 +12,7 @@
 #include <sumire/core/rendering/sumi_object.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>
 #include <sumire/core/profiling/gpu_profiler.hpp>
+#include <sumire/core/profiling/cpu_profiler.hpp>
 
 #include <sumire/core/render_systems/data_structs/high_quality_shadow_mapper_structs.hpp>
 
@@ -50,7 +51,8 @@ namespace sumire {
                 SumiKBMcontroller &cameraController,
                 const structs::zBin& zBin,
                 structs::lightMask* lightMask,
-                GpuProfiler* profiler
+                GpuProfiler* gpuProfiler,
+                CpuProfiler* cpuProfiler
             );
 
             ImGuiIO& getIO();
@@ -79,7 +81,11 @@ namespace sumire {
             void drawSceneSection(FrameInfo &frameInfo);
             void drawTransformUI(Transform3DComponent &transform, bool includeScale = true);
 
-            void drawProfilingSection(FrameInfo& frameInfo, GpuProfiler* profiler);
+            void drawProfilingSection(
+                FrameInfo& frameInfo, 
+                GpuProfiler* gpuProfiler, 
+                CpuProfiler* cpuProfiler
+            );
             void drawDebugSection(
                 const structs::zBin& zBin, structs::lightMask* lightMask);
 

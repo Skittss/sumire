@@ -14,6 +14,7 @@
 
 // Profiling
 #include <sumire/core/profiling/gpu_profiler.hpp>
+#include <sumire/core/profiling/cpu_profiler.hpp>
 
 // glm
 #define GLM_FORCE_RADIANS
@@ -204,7 +205,7 @@ namespace sumire {
 
         // Profiling, if enabled
         std::unique_ptr<GpuProfiler> gpuProfiler = nullptr;
-        if (sumiConfig.startupData.PROFILING) {
+        if (sumiConfig.startupData.GPU_PROFILING) {
             if (!sumiDevice.properties.limits.timestampComputeAndGraphics) {
                 std::cout << "[Sumire::Sumire] WARNING: Physical device does not support profiling." << std::endl;
             }
@@ -220,6 +221,13 @@ namespace sumire {
                     .addBlock("5: Composite")
                     .build();
             }
+        }
+
+        std::unique_ptr<CpuProfiler> cpuProfiler = nullptr;
+        if (sumiConfig.startupData.CPU_PROFILING) {
+            cpuProfiler = CpuProfiler::Builder()
+                .addBlock("0: Shadow Map Prepare")
+                .build();
         }
 
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -356,10 +364,12 @@ namespace sumire {
 
                 // ---- Shadow mapping preparation on the CPU ----------------------------------------------------
                 //  TODO: Only re-prepare if lights / camera view have changed.
+                if (cpuProfiler) cpuProfiler->beginBlock("0: Shadow Map Prepare");
                 shadowMapper->prepare(
                     sortedLights,
                     camera
                 );
+                if (cpuProfiler) cpuProfiler->endBlock("0: Shadow Map Prepare");
                 
                 if (gpuProfiler) gpuProfiler->beginFrame(frameCommandBuffers.predrawCompute);
 
@@ -462,7 +472,8 @@ namespace sumire {
                     cameraController,
                     shadowMapper->getZbin(),
                     shadowMapper->getLightMask(),
-                    gpuProfiler.get()
+                    gpuProfiler.get(),
+                    cpuProfiler.get()
                 );
                 gui.endFrame();
 

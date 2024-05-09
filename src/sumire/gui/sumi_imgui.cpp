@@ -122,7 +122,8 @@ namespace sumire {
         SumiKBMcontroller &cameraController,
         const structs::zBin& zBin,
         structs::lightMask* lightMask,
-        GpuProfiler* profiler
+        GpuProfiler* gpuProfiler,
+        CpuProfiler* cpuProfiler
     ) {
         //ImGui::ShowDemoWindow();
         
@@ -135,7 +136,7 @@ namespace sumire {
         drawConfigSection(cameraController);
 
         ImGui::Spacing();
-        drawProfilingSection(frameInfo, profiler);
+        drawProfilingSection(frameInfo, gpuProfiler, cpuProfiler);
 
         ImGui::Spacing();
         drawDebugSection(zBin, lightMask);
@@ -541,12 +542,29 @@ namespace sumire {
         ImGui::Spacing();
     }
 
-    void SumiImgui::drawProfilingSection(FrameInfo& frameInfo, GpuProfiler* profiler) {
+    void SumiImgui::drawProfilingSection(
+        FrameInfo& frameInfo, 
+        GpuProfiler* gpuProfiler,
+        CpuProfiler* cpuProfiler
+    ) {
         // TODO: It would be good to rolling average these values so they are more readable.
         if (ImGui::CollapsingHeader("Profiling")) {
 
             // ---- CPU ------------------------------------------------------------------------------------------
             ImGui::SeparatorText("CPU Profiling");
+            static bool cpuProfilingEnabled = sumiConfig.runtimeData.CPU_PROFILING;
+            ImGui::Checkbox("Enable CPU profiling blocks", &cpuProfilingEnabled);
+
+            if (cpuProfilingEnabled != sumiConfig.runtimeData.CPU_PROFILING) {
+                sumiConfig.runtimeData.CPU_PROFILING = cpuProfilingEnabled;
+                sumiConfig.writeConfig();
+            }
+
+            if (cpuProfilingEnabled != sumiConfig.startupData.CPU_PROFILING) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                ImGui::Text("A restart is required to change profiling settings.");
+                ImGui::PopStyleColor();
+            }
 
             float fps = frameInfo.frameTime == 0.0f ? 0.0f : 1.0f / frameInfo.frameTime;
 
@@ -559,26 +577,33 @@ namespace sumire {
             ImGui::Text("Frame time - %.5f ms (%.1f FPS)", frameInfo.frameTime * 1000.0, fps);
             ImGui::Spacing();
 
+            if (cpuProfiler) {
+                for (auto& kv : cpuProfiler->getNamedBlocks()) {
+                    ImGui::Text("%.5f ms - %s", kv.second.ms, kv.first.c_str());
+                }
+                ImGui::Spacing();
+            }
+
             // ---- GPU ------------------------------------------------------------------------------------------
             ImGui::SeparatorText("GPU Profiling");
-            static bool profilingEnabled = sumiConfig.runtimeData.PROFILING;
-            ImGui::Checkbox("Enable GPU profiling", &profilingEnabled);
+            static bool gpuProfilingEnabled = sumiConfig.runtimeData.GPU_PROFILING;
+            ImGui::Checkbox("Enable GPU profiling", &gpuProfilingEnabled);
 
-            if (profilingEnabled != sumiConfig.runtimeData.PROFILING) {
-                sumiConfig.runtimeData.PROFILING = profilingEnabled;
+            if (gpuProfilingEnabled != sumiConfig.runtimeData.GPU_PROFILING) {
+                sumiConfig.runtimeData.GPU_PROFILING = gpuProfilingEnabled;
                 sumiConfig.writeConfig();
             }
 
-            if (profilingEnabled != sumiConfig.startupData.PROFILING) {
+            if (gpuProfilingEnabled != sumiConfig.startupData.GPU_PROFILING) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
                 ImGui::Text("A restart is required to change profiling settings.");
                 ImGui::PopStyleColor();
             }
 
             ImGui::Spacing();
-            if (profiler) {
+            if (gpuProfiler) {
                 double total_ms = 0.0;
-                for (auto& kv : profiler->getNamedBlocks()) {
+                for (auto& kv : gpuProfiler->getNamedBlocks()) {
                     ImGui::Text("%.5f ms - %s", kv.second.ms, kv.first.c_str());
                     total_ms += kv.second.ms;
                 }
