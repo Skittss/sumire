@@ -2,12 +2,13 @@
     "graphics_device": {
         "idx": 0,
         "name": "unset"
-    }
+    },
     "resolution": {
         "width": 1920,
         "height": 1080
     },
-    "profiling": false,
+    "cpu_profiling": false,
+    "gpu_profiling": false,
     "vsync": false,
     "max_n_lights": 1024
 

@@ -18,7 +18,8 @@ namespace sumire {
     struct SumiConfigData {
         PersistentGraphicsDeviceData GRAPHICS_DEVICE{};
         ResolutionData RESOLUTION{};
-        bool PROFILING = false;
+        bool CPU_PROFILING = false;
+        bool GPU_PROFILING = false;
         bool VSYNC = false;
         uint32_t MAX_N_LIGHTS = 1024u;
     };

@@ -106,12 +106,20 @@ namespace sumire {
             std::cout << OBJECT_PARSE_WARNING_STR("resolution") << std::endl;
         }
 
-        // profiling
-        if (config.HasMember("profiling") && config["profiling"].IsBool()) {
-            data.PROFILING = config["profiling"].GetBool();
+        // cpu_profiling
+        if (config.HasMember("cpu_profiling") && config["cpu_profiling"].IsBool()) {
+            data.CPU_PROFILING = config["cpu_profiling"].GetBool();
         }
         else {
-            std::cout << FIELD_PARSE_WARNING_STR("profiling") << std::endl;
+            std::cout << FIELD_PARSE_WARNING_STR("cpu_profiling") << std::endl;
+        }
+
+        // gpu_profiling
+        if (config.HasMember("gpu_profiling") && config["gpu_profiling"].IsBool()) {
+            data.GPU_PROFILING = config["gpu_profiling"].GetBool();
+        }
+        else {
+            std::cout << FIELD_PARSE_WARNING_STR("gpu_profiling") << std::endl;
         }
 
         // vsync
@@ -160,8 +168,11 @@ namespace sumire {
         writer.Uint(data.RESOLUTION.HEIGHT);
         writer.EndObject();
 
-        writer.Key("profiling");
-        writer.Bool(data.PROFILING);
+        writer.Key("cpu_profiling");
+        writer.Bool(data.CPU_PROFILING);
+
+        writer.Key("gpu_profiling");
+        writer.Bool(data.GPU_PROFILING);
 
         writer.Key("vsync");
         writer.Bool(data.VSYNC);
