@@ -39,6 +39,7 @@ namespace sumire {
         void run();
 
     private:
+        void initBuffers();
         void initDescriptors();
         void initRenderSystems();
         void loadObjects();
@@ -69,7 +70,7 @@ namespace sumire {
 
         std::vector<std::unique_ptr<SumiBuffer>> globalUniformBuffers;
         std::vector<std::unique_ptr<SumiBuffer>> cameraUniformBuffers;
-        std::unique_ptr<SumiBuffer> lightSSBO;
+        std::vector<std::unique_ptr<SumiBuffer>> lightSSBOs;
 
         SumiObject::Map objects;
         SumiLight::Map lights;

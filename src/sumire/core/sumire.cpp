@@ -52,12 +52,13 @@ namespace sumire {
     }
 
     void Sumire::init() {
+        initBuffers();
         initDescriptors();
         initRenderSystems();
     }
 
-    void Sumire::initDescriptors() {
-        // --------------------- GLOBAL DESCRIPTORS (SET 0)
+    void Sumire::initBuffers() {
+        // ---- Global Descriptor Set ----------------------------------------------------------------------------
         // Uniform Buffers
         globalUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
         cameraUniformBuffers = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -84,16 +85,21 @@ namespace sumire {
             cameraUniformBuffers[i]->map(); //enable writing to buffer memory
         }
 
-        // Light SSBO
-        lightSSBO = std::make_unique<SumiBuffer>(
-            sumiDevice,
-            sumiConfig.runtimeData.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
-            1,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-        );
-        lightSSBO->map();
+        // ---- Light SSBOs --------------------------------------------------------------------------------------
+        lightSSBOs = std::vector<std::unique_ptr<SumiBuffer>>(SumiSwapChain::MAX_FRAMES_IN_FLIGHT);
+        for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
+            lightSSBOs[i] = std::make_unique<SumiBuffer>(
+                sumiDevice,
+                sumiConfig.runtimeData.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
+                1,
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            );
+            lightSSBOs[i]->map();
+        }
+    }
 
+    void Sumire::initDescriptors() {
         globalDescriptorPool = SumiDescriptorPool::Builder(sumiDevice)
             .setMaxSets((3 * SumiSwapChain::MAX_FRAMES_IN_FLIGHT))
             .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SumiSwapChain::MAX_FRAMES_IN_FLIGHT) // global
@@ -112,7 +118,7 @@ namespace sumire {
         for (int i = 0; i < globalDescriptorSets.size(); i++) {
             auto globalBufferInfo = globalUniformBuffers[i]->descriptorInfo();
             auto cameraBufferInfo = cameraUniformBuffers[i]->descriptorInfo();
-            auto lightSSBOinfo = lightSSBO->descriptorInfo(); // shared across swapchain images
+            auto lightSSBOinfo    = lightSSBOs[i]->descriptorInfo();
             SumiDescriptorWriter(*globalDescriptorSetLayout, *globalDescriptorPool)
                 .writeBuffer(0, &globalBufferInfo)
                 .writeBuffer(1, &cameraBufferInfo)
@@ -345,8 +351,8 @@ namespace sumire {
                 for (auto& viewSpaceLight : sortedLights) {
                     lightData.push_back(viewSpaceLight.lightPtr->getShaderData());
                 }
-                lightSSBO->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
-                lightSSBO->flush();
+                lightSSBOs[frameIdx]->writeToBuffer(lightData.data(), nLights * sizeof(SumiLight::LightShaderData));
+                lightSSBOs[frameIdx]->flush();
 
                 // ---- Shadow mapping preparation on the CPU ----------------------------------------------------
                 //  TODO: Only re-prepare if lights / camera view have changed.
