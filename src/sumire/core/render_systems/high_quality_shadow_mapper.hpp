@@ -22,6 +22,7 @@
 #include <sumire/core/rendering/sumi_light.hpp>
 #include <sumire/core/rendering/sumi_camera.hpp>
 #include <sumire/core/rendering/sumi_hzb.hpp>
+#include <sumire/core/rendering/sumi_gbuffer.hpp>
 
 #include <memory>
 
@@ -34,7 +35,8 @@ namespace sumire {
             uint32_t screenWidth, 
             uint32_t screenHeight,
             SumiHZB* hzb,
-            SumiAttachment* zbuffer
+            SumiAttachment* zbuffer,
+            SumiAttachment* gWorldPos
         );
         ~HighQualityShadowMapper();
 
@@ -49,7 +51,8 @@ namespace sumire {
         void updateScreenBounds(
             uint32_t width, uint32_t height, 
             SumiHZB* hzb,
-            SumiAttachment* zbuffer
+            SumiAttachment* zbuffer,
+            SumiAttachment* gWorldPos
         );
 
         // ---- Phase 1: Prepare ---------------------------------------------------------------------------------
@@ -103,9 +106,9 @@ namespace sumire {
 
         // ---- (GPU) Phases 2+ ----------------------------------------------------------------------------------
         void initDescriptorLayouts();
-        void createZbufferSampler();
+        void createAttachmentSampler();
 
-        VkSampler zBufferSampler = VK_NULL_HANDLE;
+        VkSampler attachmentSampler = VK_NULL_HANDLE;
 
         // ---- Phase 2: Find Lights Approx ----------------------------------------------------------------------
         void initLightsApproxPhase(SumiHZB* hzb);
@@ -128,11 +131,11 @@ namespace sumire {
         std::unique_ptr<SumiComputePipeline> findLightsApproxPipeline;
 
         // ---- Phase 3: Find Lights Accurate --------------------------------------------------------------------
-        void initLightsAccuratePhase(SumiAttachment* zbuffer);
+        void initLightsAccuratePhase(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
         void createTileLightListEarlyBuffer();
         void createTileLightCountEarlyBuffer();
-        void initLightsAccurateDescriptorSet(SumiAttachment* zbuffer);
-        void updateLightsAccurateDescriptorSet(SumiAttachment* zbuffer);
+        void initLightsAccurateDescriptorSet(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
+        void updateLightsAccurateDescriptorSet(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
         void initLightsAccuratePipeline();
         void cleanupLightsAccuratePhase();
 

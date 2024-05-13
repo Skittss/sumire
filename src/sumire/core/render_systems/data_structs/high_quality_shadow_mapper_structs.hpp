@@ -34,8 +34,6 @@ namespace sumire::structs {
         glm::uvec2   tileGroupResolution;
         glm::uvec2   lightMaskResolution;
         glm::uint    numZbinSlices;
-        glm::float32 cameraNear;
-        glm::float32 cameraFar;
     };
 
     // We send light mask bits to a shader as vectors of uint32_t

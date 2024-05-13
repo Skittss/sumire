@@ -157,7 +157,8 @@ namespace sumire {
             sumiDevice,
             screenWidth, screenHeight,
             sumiRenderer.getHZB(),
-            sumiRenderer.getSwapChain()->getDepthAttachment()
+            sumiRenderer.getSwapChain()->getDepthAttachment(),
+            sumiRenderer.getGbuffer()->positionAttachment()
         );
 
         postProcessor = std::make_unique<PostProcessor>(
@@ -295,7 +296,8 @@ namespace sumire {
                 shadowMapper->updateScreenBounds(
                     screenWidth, screenHeight,
                     sumiRenderer.getHZB(),
-                    sumiRenderer.getSwapChain()->getDepthAttachment()
+                    sumiRenderer.getSwapChain()->getDepthAttachment(),
+                    sumiRenderer.getGbuffer()->positionAttachment()
                 );
                 sumiRenderer.resetScRecreatedFlag();
             }
@@ -419,6 +421,10 @@ namespace sumire {
                 shadowMapper->findLightsApproximate(
                     frameCommandBuffers.earlyCompute,
                     camera.getNear(), camera.getFar()
+                );
+
+                shadowMapper->findLightsAccurate(
+                    frameCommandBuffers.earlyCompute
                 );
 
                 //shadowMapper.findLightsAccurate(frameCommandBuffers.earlyCompute);

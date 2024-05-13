@@ -22,27 +22,26 @@ layout(push_constant) uniform Push {
     uvec2 tileGroupResolution;
     uvec2 lightMaskResolution;
     uint  numZbinSlices;
-    float cameraNear;
-    float cameraFar;
 } push;
 
 #include "includes/inc_light_mask.glsl"
 
 layout(set = 0, binding = 0) uniform sampler2D zBuffer;
+layout(set = 0, binding = 1) uniform sampler2D g_WorldPos;
 
-layout(set = 0, binding = 1) restrict readonly buffer tileGroupLightMaskBuffer {
+layout(set = 0, binding = 2) restrict readonly buffer tileGroupLightMaskBuffer {
     lightMask tileGroupLightMasks[];
 };
 
-layout(set = 0, binding = 2) restrict readonly buffer tileShadowSlotIDs {
+layout(set = 0, binding = 3) restrict readonly buffer tileShadowSlotIDs {
     uint shadowSlotIDs[];
 };
 
-layout(set = 0, binding = 3) restrict writeonly buffer tileLightListEarly {
+layout(set = 0, binding = 4) restrict writeonly buffer tileLightListEarly {
     uint lightListEarly[];
 };
 
-layout(set = 0, binding = 4) restrict writeonly buffer tileLightCountEarly {
+layout(set = 0, binding = 5) restrict writeonly buffer tileLightCountEarly {
     uint earlyTileLightCounts[];
 };
 
@@ -57,13 +56,14 @@ uint getTileGroupIdx(in uvec2 tileGroupCoord) {
 }
 
 float getDepth(in uvec2 pixelCoord) {
-    return 1.0;
+    // Zbuffer Depth
+    return texture(zBuffer, pixelCoord / push.screenResolution).r;
 }
 
-vec3 getWorldPosFromScreen(in uvec2 pixelCoord, in float depth) {
-    // TODO: We can either reconstruct from depth here or read gbuffer texture
-    //       At the cost of higher memory pressure.
-    return vec3(0.0);
+vec3 getWorldPos(in uvec2 pixelCoord) {
+    // Read from Gbuffer
+    //   Alternatively we could reconstruct from view space depth if needed.
+    return texture(g_WorldPos, pixelCoord / push.screenResolution).rgb;
 }
 
 void main() {
@@ -76,7 +76,7 @@ void main() {
 
     const uint shadowSlotID = shadowSlotIDs[tileIdx];
     const float depth       = getDepth(pixelCoord);
-    const vec3 worldPos     = getWorldPosFromScreen(pixelCoord, depth);
+    const vec3 worldPos     = getWorldPos(pixelCoord);
     const bool isValidPixel = depth != 1.0 && all(lessThan(pixelCoord, push.screenResolution));
 
     uint lightGroupMask     = tileGroupLightMasks[tileGroupIdx].bits[0];
@@ -93,6 +93,7 @@ void main() {
         while (lightMask != 0) {
             uint lightBit   = findLSB(lightMask);
             uint lightIdx   = lightGroupBit * 32 + lightBit;
+            lightMask      ^= (1 << lightBit);
 
             // TODO: Cull light range against pixel
             bool validLight = isValidPixel && true; // lightPixelTests(...);

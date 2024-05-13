@@ -21,7 +21,8 @@ namespace sumire {
         const uint32_t screenWidth, 
         const uint32_t screenHeight,
         SumiHZB* hzb,
-        SumiAttachment* zbuffer
+        SumiAttachment* zbuffer,
+        SumiAttachment* gWorldPos
     ) : sumiDevice{ device },
         screenWidth{ screenWidth }, 
         screenHeight{ screenHeight }, 
@@ -34,7 +35,7 @@ namespace sumire {
 
         initPreparePhase();                // Phase 1
         initLightsApproxPhase(hzb);        // Phase 2
-        initLightsAccuratePhase(zbuffer);  // Phase 3
+        initLightsAccuratePhase(zbuffer, gWorldPos);  // Phase 3
     }
 
     HighQualityShadowMapper::~HighQualityShadowMapper() {
@@ -79,7 +80,8 @@ namespace sumire {
     void HighQualityShadowMapper::updateScreenBounds(
         uint32_t width, uint32_t height, 
         SumiHZB* hzb,
-        SumiAttachment* zbuffer
+        SumiAttachment* zbuffer,
+        SumiAttachment* gWorldPos
     ) {
         screenWidth = width;
         screenHeight = height;
@@ -110,7 +112,7 @@ namespace sumire {
         tileLightCountEarlyBuffer = nullptr;
         createTileLightCountEarlyBuffer();
 
-        updateLightsAccurateDescriptorSet(zbuffer);
+        updateLightsAccurateDescriptorSet(zbuffer, gWorldPos);
     }
 
     void HighQualityShadowMapper::prepare(
@@ -163,6 +165,44 @@ namespace sumire {
 
         // Execute one work group per tile group
         vkCmdDispatch(commandBuffer, numTileGroupsX, numTileGroupsY, 1);
+    }
+
+    void HighQualityShadowMapper::findLightsAccurate(
+        VkCommandBuffer commandBuffer
+    ) {
+        findLightsAccuratePipeline->bind(commandBuffer);
+
+        structs::findLightsAccuratePush push{};
+        push.screenResolution     = glm::uvec2(screenWidth, screenHeight);
+        push.shadowTileResolution = glm::uvec2(numShadowTilesX, numShadowTilesY);
+        push.tileGroupResolution  = glm::uvec2(numTileGroupsX, numTileGroupsY);
+        push.lightMaskResolution  = glm::uvec2(lightMask->numTilesX, lightMask->numTilesY);
+        push.numZbinSlices        = NUM_SLICES;
+
+        vkCmdPushConstants(
+            commandBuffer,
+            findLightsAccuratePipelineLayout,
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            0,
+            sizeof(structs::findLightsAccuratePush),
+            &push
+        );
+
+        std::array<VkDescriptorSet, 1> descriptors{
+            lightsAccurateDescriptorSet
+        };
+
+        vkCmdBindDescriptorSets(
+            commandBuffer,
+            VK_PIPELINE_BIND_POINT_COMPUTE,
+            findLightsAccuratePipelineLayout,
+            0, static_cast<uint32_t>(descriptors.size()),
+            descriptors.data(),
+            0, nullptr
+        );
+
+        // Execute one work group per shadow tile
+        vkCmdDispatch(commandBuffer, numShadowTilesX, numShadowTilesY, 1);
     }
 
     // ---- (CPU) Phase 1: Prepare -------------------------------------------------------------------------------
@@ -411,13 +451,13 @@ namespace sumire {
         descriptorPool = SumiDescriptorPool::Builder(sumiDevice)
             .setMaxSets(
                 6 + // Lights Approx
-                5   // Lights Accurate
+                6   // Lights Accurate
             )
             // ---- Lights Approx -----------------------------------------
             .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
             .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5)
             // ---- Lights Accurate ---------------------------------------
-            .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2)
             .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4)
             // ------------------------------------------------------------
             .build();
@@ -435,42 +475,42 @@ namespace sumire {
 
         lightsAccurateDescriptorLayout  = SumiDescriptorSetLayout::Builder(sumiDevice)
             .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT) // Z buffer
-            .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileGroupLightMaskBuffer
-            .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileShadowSlotIDsBuffer
-            .addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightListEarly
-            .addBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightCountEarly
+            .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT) // G world pos
+            .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileGroupLightMaskBuffer
+            .addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileShadowSlotIDsBuffer
+            .addBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightListEarly
+            .addBinding(5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightCountEarly
             .build();
     }
 
-    void HighQualityShadowMapper::createZbufferSampler() {
+    void HighQualityShadowMapper::createAttachmentSampler() {
         VkSamplerCreateInfo samplerCreateInfo{};
-        samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
-        samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-        samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerCreateInfo.anisotropyEnable = VK_FALSE;
-        samplerCreateInfo.maxAnisotropy = 0.0f;
-        samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        samplerCreateInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerCreateInfo.magFilter               = VK_FILTER_NEAREST;
+        samplerCreateInfo.minFilter               = VK_FILTER_NEAREST;
+        samplerCreateInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerCreateInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerCreateInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerCreateInfo.anisotropyEnable        = VK_FALSE;
+        samplerCreateInfo.maxAnisotropy           = 0.0f;
+        samplerCreateInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
         samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerCreateInfo.compareEnable = VK_FALSE;
-        samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-        samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        samplerCreateInfo.mipLodBias = 0.0f;
-        samplerCreateInfo.minLod = 0.0f;
-        samplerCreateInfo.maxLod = 0.0f;
+        samplerCreateInfo.compareEnable           = VK_FALSE;
+        samplerCreateInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
+        samplerCreateInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerCreateInfo.mipLodBias              = 0.0f;
+        samplerCreateInfo.minLod                  = 0.0f;
+        samplerCreateInfo.maxLod                  = 0.0f;
 
         VK_CHECK_SUCCESS(
-            vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &zBufferSampler),
-            "[Sumire::HighQualityShadowMapper] Failed to create HZB sampler."
+            vkCreateSampler(sumiDevice.device(), &samplerCreateInfo, nullptr, &attachmentSampler),
+            "[Sumire::HighQualityShadowMapper] Failed to create attachment sampler."
         );
     }
 
     // ---- Phase 2: Find Lights Approx --------------------------------------------------------------------------
     void HighQualityShadowMapper::initLightsApproxPhase(SumiHZB* hzb) {
-        //createLightsApproxUniformBuffer();
-        createZbufferSampler();
+        createAttachmentSampler();
         createTileGroupLightMaskBuffer();
         createTileShadowSlotIDsBuffer();
         createSlotCountersBuffer();
@@ -530,7 +570,7 @@ namespace sumire {
         VkDescriptorBufferInfo slotCountersInfo       = slotCountersBuffer->descriptorInfo();
 
         VkDescriptorImageInfo hzbInfo{};
-        hzbInfo.sampler     = zBufferSampler;
+        hzbInfo.sampler     = attachmentSampler;
         hzbInfo.imageView   = hzb->getBaseImageView();
         hzbInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -563,7 +603,7 @@ namespace sumire {
         VkDescriptorBufferInfo slotCountersInfo       = slotCountersBuffer->descriptorInfo();
 
         VkDescriptorImageInfo hzbInfo{};
-        hzbInfo.sampler = zBufferSampler;
+        hzbInfo.sampler = attachmentSampler;
         hzbInfo.imageView = hzb->getBaseImageView();
         hzbInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -613,14 +653,16 @@ namespace sumire {
         vkDestroyPipelineLayout(sumiDevice.device(), findLightsApproxPipelineLayout, nullptr);
 
         // This cleanup func also handles cleaning up shared resources for phases 2+
-        vkDestroySampler(sumiDevice.device(), zBufferSampler, nullptr);  
+        vkDestroySampler(sumiDevice.device(), attachmentSampler, nullptr);  
     }
     
     // ---- Phase 3: Find Lights Accurate ------------------------------------------------------------------------
-    void HighQualityShadowMapper::initLightsAccuratePhase(SumiAttachment* zbuffer) {
+    void HighQualityShadowMapper::initLightsAccuratePhase(
+        SumiAttachment* zbuffer, SumiAttachment* gWorldPos
+    ) {
         createTileLightListEarlyBuffer();
         createTileLightCountEarlyBuffer();
-        initLightsAccurateDescriptorSet(zbuffer);
+        initLightsAccurateDescriptorSet(zbuffer, gWorldPos);
         initLightsAccuratePipeline();
     }
 
@@ -647,53 +689,80 @@ namespace sumire {
         );
     }
 
-    void HighQualityShadowMapper::initLightsAccurateDescriptorSet(SumiAttachment* zbuffer) {
+    void HighQualityShadowMapper::initLightsAccurateDescriptorSet(
+        SumiAttachment* zbuffer,
+        SumiAttachment* gWorldPos
+    ) {
+        assert(zbuffer != nullptr
+            && "Cannot instantiate descriptor set with null zbuffer");
+        assert(gWorldPos != nullptr
+            && "Cannot instantiate descriptor set with null world pos attachment");
         assert(tileLightListEarlyBuffer != nullptr
             && "Cannot instantiate descriptor set with null tile light list early buffer");
         assert(tileLightCountEarlyBuffer != nullptr
             && "Cannot instantiate descriptor set with null tile light count early buffer");
 
+
+        VkDescriptorImageInfo zbufferInfo{};
+        zbufferInfo.sampler     = attachmentSampler;
+        zbufferInfo.imageView   = zbuffer->getImageView();
+        zbufferInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+        VkDescriptorImageInfo gWorldPosInfo{};
+        gWorldPosInfo.sampler     = attachmentSampler;
+        gWorldPosInfo.imageView   = gWorldPos->getImageView();
+        gWorldPosInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
         VkDescriptorBufferInfo tileGroupLightMaskInfo = tileGroupLightMaskBuffer->descriptorInfo();
         VkDescriptorBufferInfo tileShadowSlotIDsInfo  = tileShadowSlotIDsBuffer->descriptorInfo();
         VkDescriptorBufferInfo lightListEarlyInfo     = tileLightListEarlyBuffer->descriptorInfo();
         VkDescriptorBufferInfo lightCountEarlyInfo    = tileLightCountEarlyBuffer->descriptorInfo();
 
-        VkDescriptorImageInfo zbufferInfo{};
-        zbufferInfo.sampler = zBufferSampler;
-        zbufferInfo.imageView = zbuffer->getImageView();
-        zbufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
         SumiDescriptorWriter(*lightsAccurateDescriptorLayout, *descriptorPool)
             .writeImage(0, &zbufferInfo)
-            .writeBuffer(1, &tileGroupLightMaskInfo)
-            .writeBuffer(2, &tileShadowSlotIDsInfo)
-            .writeBuffer(3, &lightListEarlyInfo)
-            .writeBuffer(4, &lightCountEarlyInfo)
+            .writeImage(1, &gWorldPosInfo)
+            .writeBuffer(2, &tileGroupLightMaskInfo)
+            .writeBuffer(3, &tileShadowSlotIDsInfo)
+            .writeBuffer(4, &lightListEarlyInfo)
+            .writeBuffer(5, &lightCountEarlyInfo)
             .build(lightsAccurateDescriptorSet);
     }
 
-    void HighQualityShadowMapper::updateLightsAccurateDescriptorSet(SumiAttachment* zbuffer) {
+    void HighQualityShadowMapper::updateLightsAccurateDescriptorSet(
+        SumiAttachment* zbuffer, 
+        SumiAttachment* gWorldPos
+    ) {
+        assert(zbuffer != nullptr
+            && "Cannot update descriptor set with null zbuffer");
+        assert(gWorldPos != nullptr
+            && "Cannot update descriptor set with null world pos attachment");
         assert(tileLightListEarlyBuffer != nullptr
             && "Cannot update descriptor set with null tile light list early buffer");
         assert(tileLightCountEarlyBuffer != nullptr
             && "Cannot update descriptor set with null tile light count early buffer");
 
+        VkDescriptorImageInfo zbufferInfo{};
+        zbufferInfo.sampler     = attachmentSampler;
+        zbufferInfo.imageView   = zbuffer->getImageView();
+        zbufferInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+        VkDescriptorImageInfo gWorldPosInfo{};
+        gWorldPosInfo.sampler     = attachmentSampler;
+        gWorldPosInfo.imageView   = gWorldPos->getImageView();
+        gWorldPosInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
         VkDescriptorBufferInfo tileGroupLightMaskInfo = tileGroupLightMaskBuffer->descriptorInfo();
         VkDescriptorBufferInfo tileShadowSlotIDsInfo  = tileShadowSlotIDsBuffer->descriptorInfo();
         VkDescriptorBufferInfo lightListEarlyInfo     = tileLightListEarlyBuffer->descriptorInfo();
         VkDescriptorBufferInfo lightCountEarlyInfo    = tileLightCountEarlyBuffer->descriptorInfo();
 
-        VkDescriptorImageInfo zbufferInfo{};
-        zbufferInfo.sampler = zBufferSampler;
-        zbufferInfo.imageView = zbuffer->getImageView();
-        zbufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
         SumiDescriptorWriter(*lightsAccurateDescriptorLayout, *descriptorPool)
             .writeImage(0, &zbufferInfo)
-            .writeBuffer(1, &tileGroupLightMaskInfo)
-            .writeBuffer(2, &tileShadowSlotIDsInfo)
-            .writeBuffer(3, &lightListEarlyInfo)
-            .writeBuffer(4, &lightCountEarlyInfo)
+            .writeImage(1, &gWorldPosInfo)
+            .writeBuffer(2, &tileGroupLightMaskInfo)
+            .writeBuffer(3, &tileShadowSlotIDsInfo)
+            .writeBuffer(4, &lightListEarlyInfo)
+            .writeBuffer(5, &lightCountEarlyInfo)
             .overwrite(lightsAccurateDescriptorSet);
     }
 
