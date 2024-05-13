@@ -36,6 +36,14 @@ namespace sumire::structs {
         glm::uint    numZbinSlices;
     };
 
+    struct genDeferredShadowsPush {
+        glm::uvec2   screenResolution;
+        glm::uvec2   shadowTileResolution;
+        glm::uvec2   tileGroupResolution;
+        glm::uvec2   lightMaskResolution;
+        glm::uint    numZbinSlices;
+    };
+
     // We send light mask bits to a shader as vectors of uint32_t
     struct lightMaskBitField {
         long bits : 32;

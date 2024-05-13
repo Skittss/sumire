@@ -71,7 +71,7 @@ namespace sumire {
         void findLightsAccurate(VkCommandBuffer commandBuffer);
 
         // ---- Phase 4: Generate Deferred Shadows ---------------------------------------------------------------
-        void generateDeferredShadowMaps(VkCommandBuffer commandBuffer);
+        void generateDeferredShadows(VkCommandBuffer commandBuffer);
 
         // ---- Phase 5: High Quality Shadows --------------------------------------------------------------------
         void compositeHighQualityShadows(VkCommandBuffer commandBuffer);
@@ -147,6 +147,26 @@ namespace sumire {
 
         VkPipelineLayout findLightsAccuratePipelineLayout = VK_NULL_HANDLE;
         std::unique_ptr<SumiComputePipeline> findLightsAccuratePipeline;
+
+        // ---- Phase 4: Generate Deferred Shadows ---------------------------------------------------------------
+        void initDeferredShadowsPhase(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
+        void createTileLightListFinalBuffer();
+        void createTileLightCountFinalBuffer();
+        void createTileLightVisibilityBuffer();
+        void initDeferredShadowsDescriptorSet(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
+        void updateDeferredShadowsDescriptorSet(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
+        void initDeferredShadowsPipeline();
+        void cleanupDeferredShadowsPhase();
+
+        std::unique_ptr<SumiBuffer> tileLightListFinalBuffer;;
+        std::unique_ptr<SumiBuffer> tileLightCountFinalBuffer;
+        std::unique_ptr<SumiBuffer> tileLightVisibilityBuffer;
+
+        std::unique_ptr<SumiDescriptorSetLayout> deferredShadowsDescriptorLayout;
+        VkDescriptorSet deferredShadowsDescriptorSet = VK_NULL_HANDLE;
+
+        VkPipelineLayout genDeferredShadowsPipelineLayout = VK_NULL_HANDLE;
+        std::unique_ptr<SumiComputePipeline> genDeferredShadowsPipeline;
 
         // -------------------------------------------------------------------------------------------------------
         

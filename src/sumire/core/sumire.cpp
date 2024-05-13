@@ -422,13 +422,9 @@ namespace sumire {
                     frameCommandBuffers.earlyCompute,
                     camera.getNear(), camera.getFar()
                 );
+                shadowMapper->findLightsAccurate(frameCommandBuffers.earlyCompute);
+                shadowMapper->generateDeferredShadows(frameCommandBuffers.earlyCompute);
 
-                shadowMapper->findLightsAccurate(
-                    frameCommandBuffers.earlyCompute
-                );
-
-                //shadowMapper.findLightsAccurate(frameCommandBuffers.earlyCompute);
-                //shadowMapper.generateDeferredShadowMaps(frameCommandBuffers.earlyCompute);
                 //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.earlyCompute);
 
                 sumiRenderer.endEarlyCompute(frameCommandBuffers.earlyCompute);
