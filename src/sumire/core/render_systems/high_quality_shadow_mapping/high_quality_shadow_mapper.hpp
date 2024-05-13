@@ -15,7 +15,10 @@
 * TODO: More / refined info here.
 */ 
 
-#include <sumire/core/render_systems/data_structs/high_quality_shadow_mapper_structs.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/push_constant_structs.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/zbin.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/light_mask.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/view_space_light.hpp>
 
 #include <sumire/core/graphics_pipeline/sumi_buffer.hpp>
 #include <sumire/core/graphics_pipeline/sumi_compute_pipeline.hpp>

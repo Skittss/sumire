@@ -14,7 +14,7 @@
 #include <sumire/core/render_systems/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
 #include <sumire/core/render_systems/hzb_generator.hpp>
-#include <sumire/core/render_systems/high_quality_shadow_mapper.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/high_quality_shadow_mapper.hpp>
 #include <sumire/core/render_systems/post_processor.hpp>
 #include <sumire/core/render_systems/point_light_rendersys.hpp>
 #include <sumire/core/render_systems/grid_rendersys.hpp>

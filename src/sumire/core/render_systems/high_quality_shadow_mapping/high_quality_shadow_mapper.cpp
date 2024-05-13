@@ -1,4 +1,4 @@
-#include <sumire/core/render_systems/high_quality_shadow_mapper.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/high_quality_shadow_mapper.hpp>
 
 #include <sumire/math/view_space_depth.hpp>
 #include <sumire/math/frustum_culling.hpp>

@@ -14,7 +14,8 @@
 #include <sumire/core/profiling/gpu_profiler.hpp>
 #include <sumire/core/profiling/cpu_profiler.hpp>
 
-#include <sumire/core/render_systems/data_structs/high_quality_shadow_mapper_structs.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/zbin.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/light_mask.hpp>
 
 #include <sumire/input/sumi_kbm_controller.hpp>
 
