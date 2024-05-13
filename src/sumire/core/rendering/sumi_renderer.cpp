@@ -1035,6 +1035,22 @@ namespace sumire {
             );
         }
 
+        // Release Gbuffer Position back to graphics
+        if (computeFamilyIdx != graphicsFamilyIdx) {
+            sumiDevice.imageMemoryBarrier(
+                gbuffer->positionAttachment()->getImage(),
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                0,
+                0,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                gbuffer->positionAttachment()->getImageViewInfo().subresourceRange,
+                computeFamilyIdx, // Compute queue
+                graphicsFamilyIdx, // Graphics queue
+                commandBuffer
+            );
+        }
     }
 
     void SumiRenderer::beginLateGraphicsRenderPass(VkCommandBuffer commandBuffer) {
@@ -1055,6 +1071,23 @@ namespace sumire {
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                 sumiSwapChain->getDepthAttachment()->getImageViewInfo().subresourceRange,
+                computeFamilyIdx, // Compute queue
+                graphicsFamilyIdx, // Graphics queue
+                commandBuffer
+            );
+        }
+
+        // Re-aquire gbuffer position from compute
+        if (computeFamilyIdx != graphicsFamilyIdx) {
+            sumiDevice.imageMemoryBarrier(
+                gbuffer->positionAttachment()->getImage(),
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                0,
+                0,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                gbuffer->positionAttachment()->getImageViewInfo().subresourceRange,
                 computeFamilyIdx, // Compute queue
                 graphicsFamilyIdx, // Graphics queue
                 commandBuffer
