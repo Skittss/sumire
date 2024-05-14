@@ -69,4 +69,16 @@ float attDistanceFrosbite(vec3 unnormalizedLightVector, float invSqrAttRadius, f
     return attenuation;
 }
 
+float attAngleFrostbite(
+    vec3 normalizedLightVector, vec3 lightDir, 
+    float lightAngleScale, float lightAngleOffset
+) {
+    float cd = dot(lightDir, normalizedLightVector);
+    float attenuation = clamp(cd * lightAngleScale + lightAngleOffset, 0.0, 1.0);
+    // smooth the transition
+    attenuation *= attenuation;
+
+    return attenuation;
+}
+
 // ---------------------------------------------------------------------------------------------------------------

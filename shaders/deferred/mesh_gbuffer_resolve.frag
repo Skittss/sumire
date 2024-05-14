@@ -62,6 +62,8 @@ void main() {
     vec3 col = vec3(0.0);
     for (int i = 0; i < ubo.nLights; i++) {
         Light light = lights[i];
+        bool isSpotlight = light.type == 1;
+
         vec3 perLightCol = vec3(0.0);
         
         vec3 pToL = light.translation - position;
@@ -82,9 +84,14 @@ void main() {
             vec3 f_s = BRDF_specular_GGX(alpha_roughness, f0, NdotLplus, NdotVplus, NdotHplus, VdotHplus);
             
             // Controlled light attenuation to fade at range.
-            float att = 1.0;
             float invSqrRange = 1.0 / (light.range * light.range); // TODO: move to CPU
+
+            float att = 1.0;
             att *= attDistanceFrosbite(pToL, invSqrRange, 0.01);
+            if (isSpotlight) {
+                // TODO: spot light direction vec
+                att *= attAngleFrostbite(L, light.direction, light.lightAngleScale, light.lightAngleOffset);
+            }
 
             vec3 Li = light.color.rgb * light.color.a * att;
             col += (k_d * f_d + f_s) * Li * NdotLplus;

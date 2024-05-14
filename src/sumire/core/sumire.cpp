@@ -529,7 +529,7 @@ namespace sumire {
     }
 
     void Sumire::loadLights() {
-        constexpr float radial_n_lights = 40.0;
+        constexpr float radial_n_lights = 1.0;
         for (float i = 0; i < radial_n_lights; i++) {
             float rads = i * glm::two_pi<float>() / radial_n_lights;
             auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});

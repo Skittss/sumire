@@ -21,7 +21,6 @@ namespace sumire {
         light.innerConeAngle = innerConeAngle;
         light.outerConeAngle = outerConeAngle;
 
-
         return light;
     }
 
@@ -38,14 +37,16 @@ namespace sumire {
         float lightAngleOffset = 0;
         coneToLightAngle(innerConeAngle, outerConeAngle, lightAngleScale, lightAngleOffset);
 
+        glm::vec3 direction = glm::mat3(transform.modelMatrix()) * glm::vec3(0.0, 0.0, 1.0);
+
         return LightShaderData{
             color,
             transform.getTranslation(),
-            transform.getRotation(),
+            direction,
             static_cast<uint32_t>(type),
             range,
-            lightAngleOffset,
-            lightAngleScale
+            lightAngleScale,
+            lightAngleOffset
         };
     }
 
@@ -53,9 +54,12 @@ namespace sumire {
         float innerConeAngle, float outerConeAngle, 
         float &lightAngleScale, float &lightAngleOffset
     ) {
+        float cosInner = glm::cos(innerConeAngle);
+        float cosOuter = glm::cos(outerConeAngle);
+
         //https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md#inner-and-outer-cone-angles
-        lightAngleScale = 1.0f / glm::max(0.001f, glm::cos(innerConeAngle) - glm::cos(outerConeAngle));
-        lightAngleOffset = -glm::cos(outerConeAngle) * lightAngleScale;
+        lightAngleScale  = 1.0f / glm::max(0.001f, cosInner - cosOuter);
+        lightAngleOffset = -cosOuter * lightAngleScale;
     }
 
 }

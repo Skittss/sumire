@@ -38,7 +38,7 @@ namespace sumire {
                 // Shared - all light types
                 alignas(16) glm::vec4 color;
                 alignas(16) glm::vec3 translation;
-                alignas(16) glm::vec3 rotation;
+                alignas(16) glm::vec3 direction;
                 alignas(4)  uint32_t type;
                 // Type-specific 
                 alignas(4)  float range; // PUNCTUAL_POINT, PUNCTUAL_SPOT

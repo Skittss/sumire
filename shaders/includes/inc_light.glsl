@@ -6,7 +6,7 @@ const int LIGHT_TYPE_PUNCTUAL_DIRECTIONAL = 1;
 struct Light {
     vec4 color;
     vec3 translation;
-    vec3 rotation;
+    vec3 direction;
     int type;
     float range;
     float lightAngleScale;
