@@ -158,7 +158,8 @@ namespace sumire {
             screenWidth, screenHeight,
             sumiRenderer.getHZB(),
             sumiRenderer.getSwapChain()->getDepthAttachment(),
-            sumiRenderer.getGbuffer()->positionAttachment()
+            sumiRenderer.getGbuffer()->positionAttachment(),
+            globalDescriptorSetLayout->getDescriptorSetLayout()
         );
 
         postProcessor = std::make_unique<PostProcessor>(
@@ -423,7 +424,7 @@ namespace sumire {
                     camera.getNear(), camera.getFar()
                 );
                 shadowMapper->findLightsAccurate(frameCommandBuffers.earlyCompute);
-                shadowMapper->generateDeferredShadows(frameCommandBuffers.earlyCompute);
+                shadowMapper->generateDeferredShadows(frameCommandBuffers.earlyCompute, frameInfo);
 
                 //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.earlyCompute);
 

@@ -26,6 +26,7 @@
 #include <sumire/core/rendering/sumi_camera.hpp>
 #include <sumire/core/rendering/sumi_hzb.hpp>
 #include <sumire/core/rendering/sumi_gbuffer.hpp>
+#include <sumire/core/rendering/sumi_frame_info.hpp>
 
 #include <memory>
 
@@ -39,7 +40,8 @@ namespace sumire {
             uint32_t screenHeight,
             SumiHZB* hzb,
             SumiAttachment* zbuffer,
-            SumiAttachment* gWorldPos
+            SumiAttachment* gWorldPos,
+            VkDescriptorSetLayout globalDescriptorSetLayout
         );
         ~HighQualityShadowMapper();
 
@@ -74,7 +76,7 @@ namespace sumire {
         void findLightsAccurate(VkCommandBuffer commandBuffer);
 
         // ---- Phase 4: Generate Deferred Shadows ---------------------------------------------------------------
-        void generateDeferredShadows(VkCommandBuffer commandBuffer);
+        void generateDeferredShadows(VkCommandBuffer commandBuffer, FrameInfo& frameInfo);
 
         // ---- Phase 5: High Quality Shadows --------------------------------------------------------------------
         void compositeHighQualityShadows(VkCommandBuffer commandBuffer);
@@ -152,13 +154,16 @@ namespace sumire {
         std::unique_ptr<SumiComputePipeline> findLightsAccuratePipeline;
 
         // ---- Phase 4: Generate Deferred Shadows ---------------------------------------------------------------
-        void initDeferredShadowsPhase(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
+        void initDeferredShadowsPhase(
+            SumiAttachment* zbuffer, SumiAttachment* gWorldPos,
+            VkDescriptorSetLayout globalDescriptorSetLayout
+        );
         void createTileLightListFinalBuffer();
         void createTileLightCountFinalBuffer();
         void createTileLightVisibilityBuffer();
         void initDeferredShadowsDescriptorSet(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
         void updateDeferredShadowsDescriptorSet(SumiAttachment* zbuffer, SumiAttachment* gWorldPos);
-        void initDeferredShadowsPipeline();
+        void initDeferredShadowsPipeline(VkDescriptorSetLayout globalDescriptorSetLayout);
         void cleanupDeferredShadowsPhase();
 
         std::unique_ptr<SumiBuffer> tileLightListFinalBuffer;;

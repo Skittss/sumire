@@ -22,7 +22,8 @@ namespace sumire {
         const uint32_t screenHeight,
         SumiHZB* hzb,
         SumiAttachment* zbuffer,
-        SumiAttachment* gWorldPos
+        SumiAttachment* gWorldPos,
+        VkDescriptorSetLayout globalDescriptorSetLayout
     ) : sumiDevice{ device },
         screenWidth{ screenWidth }, 
         screenHeight{ screenHeight }, 
@@ -36,7 +37,10 @@ namespace sumire {
         initPreparePhase();                           // Phase 1
         initLightsApproxPhase(hzb);                   // Phase 2
         initLightsAccuratePhase(zbuffer, gWorldPos);  // Phase 3
-        initDeferredShadowsPhase(zbuffer, gWorldPos); // Phase 4
+        initDeferredShadowsPhase(                     // Phase 4
+            zbuffer, gWorldPos, 
+            globalDescriptorSetLayout
+        ); 
     }
 
     HighQualityShadowMapper::~HighQualityShadowMapper() {
@@ -219,7 +223,7 @@ namespace sumire {
     }
 
     void HighQualityShadowMapper::generateDeferredShadows(
-        VkCommandBuffer commandBuffer
+        VkCommandBuffer commandBuffer, FrameInfo& frameInfo
     ) {
         genDeferredShadowsPipeline->bind(commandBuffer);
 
@@ -239,7 +243,8 @@ namespace sumire {
             &push
         );
 
-        std::array<VkDescriptorSet, 1> descriptors{
+        std::array<VkDescriptorSet, 2> descriptors{
+            frameInfo.globalDescriptorSet,
             deferredShadowsDescriptorSet
         };
 
@@ -503,7 +508,7 @@ namespace sumire {
             .setMaxSets(
                 6 + // Lights Approx
                 6 + // Lights Accurate
-                7   // Deferred Shadows
+                9   // Deferred Shadows
             )
             // ---- Lights Approx -----------------------------------------
             .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
@@ -513,7 +518,7 @@ namespace sumire {
             .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4)
             // ---- Deferred Shadows --------------------------------------
             .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2)
-            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 7)
             // ------------------------------------------------------------
             .build();
 
@@ -541,11 +546,12 @@ namespace sumire {
             .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT) // Z buffer
             .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT) // G world pos
             .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileShadowSlotIDsBuffer
-            .addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightListEarly
-            .addBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightCountEarly
-            .addBinding(5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightListFinal
-            .addBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightCountFinal
-            .addBinding(7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightVisibility
+            .addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // SlotCountersBuffer
+            .addBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightListEarly
+            .addBinding(5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightCountEarly
+            .addBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightListFinal
+            .addBinding(7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightCountFinal
+            .addBinding(8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT) // TileLightVisibility
             .build();
     }
 
@@ -869,13 +875,14 @@ namespace sumire {
 
     // ---- Phase 4: Generate Deferred Shadows -------------------------------------------------------------------
     void HighQualityShadowMapper::initDeferredShadowsPhase(
-        SumiAttachment* zbuffer, SumiAttachment* gWorldPos
+        SumiAttachment* zbuffer, SumiAttachment* gWorldPos,
+        VkDescriptorSetLayout globalDescriptorSetLayout
     ) {
         createTileLightListFinalBuffer();
         createTileLightCountFinalBuffer();
         createTileLightVisibilityBuffer();
         initDeferredShadowsDescriptorSet(zbuffer, gWorldPos);
-        initDeferredShadowsPipeline();
+        initDeferredShadowsPipeline(globalDescriptorSetLayout);
     }
 
     void HighQualityShadowMapper::createTileLightListFinalBuffer() {
@@ -997,14 +1004,16 @@ namespace sumire {
             .overwrite(deferredShadowsDescriptorSet);
     }
 
-    void HighQualityShadowMapper::initDeferredShadowsPipeline() {
-
+    void HighQualityShadowMapper::initDeferredShadowsPipeline(
+        VkDescriptorSetLayout globalDescriptorSetLayout
+    ) {
         VkPushConstantRange pushRange{};
         pushRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
         pushRange.offset = 0;
         pushRange.size = sizeof(structs::genDeferredShadowsPush);
 
         std::vector<VkDescriptorSetLayout> descriptorSetLayouts{
+            globalDescriptorSetLayout,
             deferredShadowsDescriptorLayout->getDescriptorSetLayout()
         };
 
