@@ -1,6 +1,7 @@
 #include <sumire/core/sumire.hpp>
 #include <sumire/core/graphics_pipeline/sumi_buffer.hpp>
 #include <sumire/util/sumire_engine_path.hpp>
+#include <sumire/core/shaders/shader_manager.hpp>
 
 // Asset loaders
 #include <sumire/loaders/gltf_loader.hpp>
@@ -53,9 +54,14 @@ namespace sumire {
     }
 
     void Sumire::init() {
+        initShaderManager();
         initBuffers();
         initDescriptors();
         initRenderSystems();
+    }
+
+    void Sumire::initShaderManager() {
+        shaders::g_ShaderManager.setDevice(&sumiDevice);
     }
 
     void Sumire::initBuffers() {
