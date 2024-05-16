@@ -20,6 +20,7 @@ namespace sumire {
         ResolutionData RESOLUTION{};
         bool CPU_PROFILING = false;
         bool GPU_PROFILING = false;
+        bool SHADER_HOT_RELOADING = false;
         bool VSYNC = false;
         uint32_t MAX_N_LIGHTS = 1024u;
     };

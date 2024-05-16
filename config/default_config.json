@@ -9,6 +9,7 @@
     },
     "cpu_profiling": false,
     "gpu_profiling": false,
+    "shader_hot_reloading": false,
     "vsync": false,
     "max_n_lights": 1024
 

@@ -9,11 +9,11 @@
 #include <fstream>
 #include <vector>
 
-#define FIELD_PARSE_WARNING_STR(field_name)										\
+#define FIELD_PARSE_WARNING_STR(field_name)										    \
         "[Sumire::SumiConfig] WARNING: Failed to parse value of config field \""	\
         field_name "\" - using default value."	
 
-#define OBJECT_PARSE_WARNING_STR(obj_name)										\
+#define OBJECT_PARSE_WARNING_STR(obj_name)										    \
         "[Sumire::SumiConfig] WARNING: Failed to parse value of config object \""	\
         obj_name "\" - using default value."	
 
@@ -122,6 +122,14 @@ namespace sumire {
             std::cout << FIELD_PARSE_WARNING_STR("gpu_profiling") << std::endl;
         }
 
+        // shader_hot_reloading
+        if (config.HasMember("shader_hot_reloading") && config["shader_hot_reloading"].IsBool()) {
+            data.SHADER_HOT_RELOADING = config["shader_hot_reloading"].GetBool();
+        }
+        else {
+            std::cout << FIELD_PARSE_WARNING_STR("shader_hot_reloading") << std::endl;
+        }
+
         // vsync
         if (config.HasMember("vsync") && config["vsync"].IsBool()) {
             data.VSYNC = config["vsync"].GetBool();
@@ -173,6 +181,9 @@ namespace sumire {
 
         writer.Key("gpu_profiling");
         writer.Bool(data.GPU_PROFILING);
+
+        writer.Key("shader_hot_reloading");
+        writer.Bool(data.SHADER_HOT_RELOADING);
 
         writer.Key("vsync");
         writer.Bool(data.VSYNC);

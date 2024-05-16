@@ -207,6 +207,24 @@ namespace sumire {
                 }
             }
 
+            ImGui::Spacing();
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Shaders")) {
+            static bool shaderHotReloadingEnabled = sumiConfig.runtimeData.SHADER_HOT_RELOADING;
+            ImGui::Checkbox("Enable Shader Hot-Reloading", &shaderHotReloadingEnabled);
+
+            if (shaderHotReloadingEnabled != sumiConfig.runtimeData.SHADER_HOT_RELOADING) {
+                sumiConfig.runtimeData.SHADER_HOT_RELOADING = shaderHotReloadingEnabled;
+                sumiConfig.writeConfig();
+            }
+
+            if (shaderHotReloadingEnabled != sumiConfig.startupData.SHADER_HOT_RELOADING) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                ImGui::Text("A restart is required to change hot reloading settings.");
+                ImGui::PopStyleColor();
+            }
+
             ImGui::TreePop();
         }
     }
