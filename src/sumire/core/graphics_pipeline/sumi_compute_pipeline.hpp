@@ -22,18 +22,15 @@ namespace sumire {
         void bind(VkCommandBuffer commandBuffer);
 
     private:
-
-        void createComputePipeline(
-            const std::string& compFilepath, VkPipelineLayout pipelineLayout);
-
-        static std::vector<char> readFile(const std::string& filepath);
-        void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
+        void createComputePipeline(VkPipelineLayout pipelineLayout);
+        void getShaderSources(const std::string& compFilepath);
 
         std::string compFilePath = "Undefined";
 
+        ShaderSource* compShaderSource = nullptr;
+
         SumiDevice& sumiDevice;
-        VkPipeline computePipeline;
-        VkShaderModule compShaderModule;
+        VkPipeline computePipeline = VK_NULL_HANDLE;
 
         static SumiComputePipeline* boundPipeline;
 

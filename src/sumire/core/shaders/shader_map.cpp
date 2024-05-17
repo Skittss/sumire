@@ -10,16 +10,14 @@ namespace sumire {
         const std::string& sourcePath,
         SumiPipeline* dependency
     ) {
-        assert(sumiDevice != nullptr && "Cannot add a source with no SumiDevice specified.");
-
         if (sourceExists(sourcePath)) {
             std::cout << "[Sumire::ShaderMap] WARNING: "
                 << "Attempted to add already existing shader source to the shader map. ("
                 << sourcePath << "). The existing entry was not modified." << std::endl;
         }
         else {
-            ShaderSource newSource = ShaderSource{ device, sourcePath };
-            assert(newSource.getSourceType() == ShaderSource::SourceType::COMPUTE
+            std::unique_ptr<ShaderSource> newSource = std::make_unique<ShaderSource>(device, sourcePath);
+            assert(newSource->getSourceType() == ShaderSource::SourceType::GRAPHICS
                 && "Loaded incompatible shader source type when attempting to add a graphics source.");
 
             sources.emplace(sourcePath, std::move(newSource));
@@ -40,16 +38,14 @@ namespace sumire {
         const std::string& sourcePath,
         SumiComputePipeline* dependency
     ) {
-        assert(sumiDevice != nullptr && "Cannot add a source with no SumiDevice specified.");
-
         if (sourceExists(sourcePath)) {
             std::cout << "[Sumire::ShaderMap] WARNING: "
                 << "Attempted to add already existing shader source to the shader map. ("
                 << sourcePath << "). The existing entry was not modified." << std::endl;
         }
         else {
-            ShaderSource newSource = ShaderSource{ device, sourcePath };
-            assert(newSource.getSourceType() == ShaderSource::SourceType::COMPUTE
+            std::unique_ptr<ShaderSource> newSource = std::make_unique<ShaderSource>(device, sourcePath);
+            assert(newSource->getSourceType() == ShaderSource::SourceType::COMPUTE
                 && "Loaded incompatible shader source type when attempting to add a compute source.");
 
             sources.emplace(sourcePath, std::move(newSource));
@@ -65,12 +61,12 @@ namespace sumire {
         }
     }
 
-    bool ShaderMap::sourceExists(const std::string& sourcePath) {
+    bool ShaderMap::sourceExists(const std::string& sourcePath) const {
         return sources.find(sourcePath) != sources.end();
     }
 
-    ShaderSource* ShaderMap::getSource(const std::string& sourcePath) {
-        return &sources.at(sourcePath);
+    ShaderSource* ShaderMap::getSource(const std::string& sourcePath) const {
+        return sources.at(sourcePath).get();
     }
 
 }

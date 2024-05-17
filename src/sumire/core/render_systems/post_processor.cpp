@@ -209,7 +209,7 @@ namespace sumire {
 
         computePipeline = std::make_unique<SumiComputePipeline>(
             sumiDevice,
-            SUMIRE_ENGINE_PATH("shaders/post/tonemap_gt.comp.spv"),
+            SUMIRE_ENGINE_PATH("shaders/post/tonemap_gt.comp"),
             computePipelineLayout
         );
 
@@ -223,8 +223,8 @@ namespace sumire {
 
         compositePipeline = std::make_unique<SumiPipeline>(
             sumiDevice,
-            SUMIRE_ENGINE_PATH("shaders/post/composite.vert.spv"),
-            SUMIRE_ENGINE_PATH("shaders/post/composite.frag.spv"),
+            SUMIRE_ENGINE_PATH("shaders/post/composite.vert"),
+            SUMIRE_ENGINE_PATH("shaders/post/composite.frag"),
             compositePipelineInfo
         );
     }

@@ -74,6 +74,7 @@ namespace sumire {
         SumiDevice& operator=(SumiDevice&&) = delete;
 
         VkDevice device() const { return device_; }
+        ShaderManager* shaderManager() const { return shaderManager_.get(); }
         VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
         PhysicalDeviceDetails getPhysicalDeviceDetails() const { return physicalDeviceDetails; }
         const std::vector<PhysicalDeviceDetails>& getPhysicalDeviceList() const { 
@@ -176,23 +177,24 @@ namespace sumire {
         bool findFirstValidQueueFamily(VkPhysicalDevice device, VkQueueFlags flags, uint32_t& idx);
 
         SumiWindow& window;
-        //std::unique_ptr<ShaderManager> shaderManager;
+        std::unique_ptr<ShaderManager> shaderManager_;
 
-        VkInstance instance;
-        VkDebugUtilsMessengerEXT debugMessenger;
-        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+        VkInstance instance                     = VK_NULL_HANDLE;
+        VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+        VkPhysicalDevice physicalDevice         = VK_NULL_HANDLE;
 
         VkDevice device_;
 
-        VkCommandPool graphicsCommandPool;
-        VkCommandPool presentCommandPool;
-        VkCommandPool computeCommandPool = VK_NULL_HANDLE;
+        VkCommandPool graphicsCommandPool = VK_NULL_HANDLE;
+        VkCommandPool presentCommandPool  = VK_NULL_HANDLE;
+        VkCommandPool computeCommandPool  = VK_NULL_HANDLE;
 
-        VkSurfaceKHR surface_;
+        VkSurfaceKHR surface_ = VK_NULL_HANDLE;
+
         QueueFamilyIndices queueFamilyIndices;
-        VkQueue graphicsQueue_;
-        VkQueue computeQueue_;
-        VkQueue presentQueue_;
+        VkQueue graphicsQueue_ = VK_NULL_HANDLE;
+        VkQueue computeQueue_  = VK_NULL_HANDLE;
+        VkQueue presentQueue_  = VK_NULL_HANDLE;
 
         // this should be a static member if we ever want more than one SumiDevice
         std::vector<PhysicalDeviceDetails> physicalDeviceList{};

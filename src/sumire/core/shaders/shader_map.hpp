@@ -5,6 +5,7 @@
 #include <sumire/core/shaders/shader_source.hpp>
 
 #include <unordered_map>
+#include <memory>
 
 namespace sumire {
 
@@ -19,11 +20,11 @@ namespace sumire {
             VkDevice device, const std::string& sourcePath, SumiPipeline* dependency);
         void addComputeSource(
             VkDevice device, const std::string& sourcePath, SumiComputePipeline *dependency);
-        bool sourceExists(const std::string& sourcePath);
-        ShaderSource* getSource(const std::string& sourcePath);
+        bool sourceExists(const std::string& sourcePath) const;
+        ShaderSource* getSource(const std::string& sourcePath) const;
 
     private:
-        std::unordered_map<std::string, ShaderSource> sources;
+        std::unordered_map<std::string, std::unique_ptr<ShaderSource>> sources;
         std::unordered_map<std::string, std::vector<SumiPipeline*>> graphicsDependencies;
         std::unordered_map<std::string, std::vector<SumiComputePipeline*>> computeDependencies;
     };

@@ -19,38 +19,27 @@ namespace sumire {
         const std::string& fragFilepath,
         const PipelineConfigInfo& configInfo
     ) : sumiDevice{ device }, vertFilePath{ vertFilePath }, fragFilePath{fragFilepath} {
-        createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
+        getShaderSources(vertFilepath, fragFilepath);
+        createGraphicsPipeline(configInfo);
     }
 
     SumiPipeline::~SumiPipeline() {
-        vkDestroyShaderModule(sumiDevice.device(), vertShaderModule, nullptr);
-        vkDestroyShaderModule(sumiDevice.device(), fragShaderModule, nullptr);
         vkDestroyPipeline(sumiDevice.device(), graphicsPipeline, nullptr);
 
         // nullify binding reference if this pipeline is currently bound.
         if (boundPipeline == this) boundPipeline = nullptr;
     }
 
-    void SumiPipeline::createGraphicsPipeline(
-        const std::string& vertFilepath, 
-        const std::string& fragFilepath,
-        const PipelineConfigInfo& configInfo
-    ) {
+    void SumiPipeline::createGraphicsPipeline(const PipelineConfigInfo& configInfo) {
         assert(configInfo.pipelineLayout != VK_NULL_HANDLE
             && "Cannot create graphics pipeline: pipelineLayout is not provided in configInfo");
         assert(configInfo.renderPass != VK_NULL_HANDLE
             && "Cannot create graphics pipeline: renderPass is not provided in configInfo");
 
-        auto vertCode = readFile(vertFilepath);
-        auto fragCode = readFile(fragFilepath);
-
-        createShaderModule(vertCode, &vertShaderModule);
-        createShaderModule(fragCode, &fragShaderModule);
-
         VkPipelineShaderStageCreateInfo shaderStages[2];
         shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-        shaderStages[0].module = vertShaderModule;
+        shaderStages[0].module = vertShaderSource->getShaderModule();
         shaderStages[0].pName = "main"; // Name of entry function in vert shader.
         shaderStages[0].flags = 0;
         shaderStages[0].pNext = nullptr;
@@ -58,7 +47,7 @@ namespace sumire {
 
         shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        shaderStages[1].module = fragShaderModule;
+        shaderStages[1].module = fragShaderSource->getShaderModule();
         shaderStages[1].pName = "main"; // Name of entry function in frag shader.
         shaderStages[1].flags = 0;
         shaderStages[1].pNext = nullptr;
@@ -105,33 +94,13 @@ namespace sumire {
         );
     }
 
-    std::vector<char> SumiPipeline::readFile(const std::string& filepath) {
-        std::ifstream file{ filepath, std::ios::ate | std::ios::binary };
-
-        if (!file.is_open()) {
-            throw std::runtime_error("[Sumire::SumiPipeline] Could not open file: " + filepath);
-        }
-
-        size_t fileSize = static_cast<size_t>(file.tellg());
-        std::vector<char> buffer(fileSize);
-
-        file.seekg(0);
-        file.read(buffer.data(), fileSize);
-
-        file.close();
-        return buffer;
-    }
-
-    void SumiPipeline::createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) {
-        VkShaderModuleCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.codeSize = code.size();
-        createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-        VK_CHECK_SUCCESS(
-            vkCreateShaderModule(sumiDevice.device(), &createInfo, nullptr, shaderModule),
-            "[Sumire::SumiPipeline] Failed to create shader module."
-        );
+    void SumiPipeline::getShaderSources(
+        const std::string& vertFilepath,
+        const std::string& fragFilepath
+    ) {
+        ShaderManager* shaderManager = sumiDevice.shaderManager();
+        vertShaderSource = shaderManager->requestShaderSource(vertFilepath, this);
+        fragShaderSource = shaderManager->requestShaderSource(fragFilepath, this);
     }
 
     void SumiPipeline::bind(VkCommandBuffer commandBuffer) {
@@ -141,6 +110,7 @@ namespace sumire {
         //		 This could be fixed by comparing a hash of the pipeline state instead of a reference.
         // TODO: It would also be beneficial to organise drawing code such that minimal pipeline
         //		 switching is required in the first place.
+        // TODO: bound pipeline should be reset between frames.
         if (boundPipeline != this) {
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
             boundPipeline = this;

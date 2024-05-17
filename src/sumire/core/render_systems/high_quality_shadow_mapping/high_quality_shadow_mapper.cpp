@@ -716,7 +716,7 @@ namespace sumire {
         findLightsApproxPipeline = std::make_unique<SumiComputePipeline>(
             sumiDevice,
             SUMIRE_ENGINE_PATH(
-                "shaders/high_quality_shadow_mapping/find_lights_approximate.comp.spv"),
+                "shaders/high_quality_shadow_mapping/find_lights_approximate.comp"),
             findLightsApproxPipelineLayout
         );
     }
@@ -864,7 +864,7 @@ namespace sumire {
         findLightsAccuratePipeline = std::make_unique<SumiComputePipeline>(
             sumiDevice,
             SUMIRE_ENGINE_PATH(
-                "shaders/high_quality_shadow_mapping/find_lights_accurate.comp.spv"),
+                "shaders/high_quality_shadow_mapping/find_lights_accurate.comp"),
             findLightsAccuratePipelineLayout
         );
     }
@@ -1033,7 +1033,7 @@ namespace sumire {
         genDeferredShadowsPipeline = std::make_unique<SumiComputePipeline>(
             sumiDevice,
             SUMIRE_ENGINE_PATH(
-                "shaders/high_quality_shadow_mapping/generate_deferred_shadows.comp.spv"),
+                "shaders/high_quality_shadow_mapping/generate_deferred_shadows.comp"),
             genDeferredShadowsPipelineLayout
         );
     }

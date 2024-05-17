@@ -273,8 +273,8 @@ namespace sumire {
         defaultConfig.colorBlendInfo.pAttachments = colorBlendAttachments.data();
         defaultConfig.colorBlendInfo.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
 
-        std::string defaultVertShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill.vert.spv");
-        std::string defaultFragShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill.frag.spv");
+        std::string defaultVertShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill.vert");
+        std::string defaultFragShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill.frag");
 
         // All permutations (including default)
         const uint32_t pipelinePermutations = 2 * SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_HIGHEST;
@@ -286,8 +286,8 @@ namespace sumire {
 
             // Deal with each bit flag
             if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_UNLIT_BIT) {
-                permutationVertShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill_unlit.vert.spv");
-                permutationFragShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill_unlit.frag.spv");
+                permutationVertShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill_unlit.vert");
+                permutationFragShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill_unlit.frag");
             }
             if (permutationFlags & SumiPipelineStateFlagBits::SUMI_PIPELINE_STATE_DOUBLE_SIDED_BIT)
                 permutationConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
@@ -316,8 +316,8 @@ namespace sumire {
 
         resolvePipeline = std::make_unique<SumiPipeline>(
             sumiDevice,
-            SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_resolve.vert.spv"),
-            SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_resolve.frag.spv"),
+            SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_resolve.vert"),
+            SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_resolve.frag"),
             resolvePipelineConfig
         );
     }

@@ -13,6 +13,10 @@ namespace sumire {
         findSourceType();
     }
 
+    ShaderSource::~ShaderSource() {
+        destroyShaderModule();
+    }
+
     void ShaderSource::invalidate() {
         invalid = true;
 
@@ -78,6 +82,10 @@ namespace sumire {
             vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule),
             "[Sumire::ShaderSource] Failed to create shader module."
         );
+    }
+
+    void ShaderSource::destroyShaderModule() {
+        vkDestroyShaderModule(device, shaderModule, nullptr);
     }
 
     void ShaderSource::findSourceType() {

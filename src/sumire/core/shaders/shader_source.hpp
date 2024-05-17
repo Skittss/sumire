@@ -10,7 +10,7 @@ namespace sumire {
     class ShaderSource {
     public:
         ShaderSource(VkDevice device, std::string sourcePath);
-        ~ShaderSource() = default;
+        ~ShaderSource();
 
         void invalidate();
         void revalidate();
@@ -23,6 +23,8 @@ namespace sumire {
         };
         SourceType getSourceType() const { return sourceType; }
 
+        VkShaderModule getShaderModule() const { return shaderModule; }
+
     private:
         void initShaderSource(bool hotReload);
         void hotReloadShaderSource();
@@ -30,6 +32,7 @@ namespace sumire {
         void getSourceParents(const std::vector<char>& shaderCode);
         void compile();
         void createShaderModule(const std::vector<char>& spvCode);
+        void destroyShaderModule();
 
         void findSourceType();
 

@@ -43,23 +43,17 @@ namespace sumire {
         static void enableAlphaBlending(PipelineConfigInfo& configInfo);
 
     private:
-        void createGraphicsPipeline(
-            const std::string& vertFilepath, 
-            const std::string& fragFilepath,
-            const PipelineConfigInfo& configInfo
-        );
-
-        static std::vector<char> readFile(const std::string& filepath);
-        void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
+        void createGraphicsPipeline(const PipelineConfigInfo& configInfo);
+        void getShaderSources(const std::string& vertFilepath, const std::string& fragFilepath);
 
         std::string vertFilePath = "Undefined";
         std::string fragFilePath = "Undefined";
 
-        // Aggregatitive relationship so this reference member is memory-safe.
+        ShaderSource* vertShaderSource = nullptr;
+        ShaderSource* fragShaderSource = nullptr;
+
         SumiDevice& sumiDevice;
-        VkPipeline graphicsPipeline;
-        VkShaderModule vertShaderModule;
-        VkShaderModule fragShaderModule;
+        VkPipeline graphicsPipeline     = VK_NULL_HANDLE;
 
         static SumiPipeline* boundPipeline;
 

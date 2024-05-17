@@ -65,6 +65,8 @@ namespace sumire {
     }
 
     SumiDevice::~SumiDevice() {
+        shaderManager_ = nullptr;
+
         // compute command pool mirrors the graphics command pool if it is VK_NULL_HANDLE.
         if (computeCommandPool != VK_NULL_HANDLE) 
             vkDestroyCommandPool(device_, computeCommandPool, nullptr);
@@ -324,7 +326,7 @@ namespace sumire {
     }
 
     void SumiDevice::initShaderManager() {
-        //shaderManager = std::make_unique<ShaderManager>(device_);
+        shaderManager_ = std::make_unique<ShaderManager>(device_);
     }
 
     void SumiDevice::createCommandPools() {

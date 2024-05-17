@@ -173,7 +173,7 @@ namespace sumire {
 
         computePipeline = std::make_unique<SumiComputePipeline>(
             sumiDevice,
-            SUMIRE_ENGINE_PATH("shaders/hzb/gen_shadow_tile_hzb.comp.spv"),
+            SUMIRE_ENGINE_PATH("shaders/hzb/gen_shadow_tile_hzb.comp"),
             computePipelineLayout
         );
     }
