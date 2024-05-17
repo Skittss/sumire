@@ -2,13 +2,15 @@
 #include <sumire/util/vk_check_success.hpp>
 
 #include <fstream>
+#include <filesystem>
 
-namespace sumire::shaders {
+namespace sumire {
 
     ShaderSource::ShaderSource(
-        SumiDevice* sumiDevice, std::string sourcePath
-    ) : sumiDevice{ sumiDevice }, sourcePath { sourcePath } {
+        VkDevice device, std::string sourcePath
+    ) : device{ device }, sourcePath { sourcePath } {
         initShaderSource(true);
+        findSourceType();
     }
 
     void ShaderSource::invalidate() {
@@ -57,6 +59,8 @@ namespace sumire::shaders {
     }
 
     void ShaderSource::getSourceParents(const std::vector<char>& shaderCode) {
+
+        int test = 1;
         // TODO: Read includes and fetch parent ShaderSources (they may not be added yet)
     }
 
@@ -71,8 +75,32 @@ namespace sumire::shaders {
         createInfo.pCode = reinterpret_cast<const uint32_t*>(spvCode.data());
 
         VK_CHECK_SUCCESS(
-            vkCreateShaderModule(sumiDevice->device(), &createInfo, nullptr, &shaderModule),
+            vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule),
             "[Sumire::ShaderSource] Failed to create shader module."
         );
+    }
+
+    void ShaderSource::findSourceType() {
+        std::filesystem::path fp = sourcePath;
+        std::filesystem::path ext = fp.extension();
+
+        if (
+            ext == ".frag" ||
+            ext == ".vert"
+        ) {
+            sourceType = SourceType::GRAPHICS;
+        }
+        else if (ext == ".comp") {
+            sourceType = SourceType::COMPUTE;
+        }
+        else if (ext == ".glsl") {
+            sourceType = SourceType::INCLUDE;
+        }
+        else {
+            throw std::runtime_error(
+                "[Sumire::ShaderSource] Incompatible shader extension present for shader " 
+                + sourcePath
+            );
+        }
     }
 }

@@ -3,9 +3,9 @@
 #include <iostream>
 #include <cassert>
 
-namespace sumire::shaders {
+namespace sumire {
 
-    void ShaderMap::addSource(SumiDevice* sumiDevice, const std::string& sourcePath) {
+    void ShaderMap::addSource(VkDevice device, const std::string& sourcePath) {
         assert(sumiDevice != nullptr && "Cannot add a source with no SumiDevice specified.");
 
         if (sourceExists(sourcePath)) {
@@ -14,7 +14,7 @@ namespace sumire::shaders {
                 << sourcePath << "). The existing entry was not modified." << std::endl;
         }
         else {
-            ShaderSource newSource = ShaderSource{ sumiDevice, sourcePath };
+            ShaderSource newSource = ShaderSource{ device, sourcePath };
             sources.emplace(sourcePath, std::move(newSource));
         }
     }

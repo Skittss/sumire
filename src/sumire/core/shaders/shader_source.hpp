@@ -1,21 +1,27 @@
 #pragma once
 
-#include <sumire/core/graphics_pipeline/sumi_device.hpp>
-
 #include <vulkan/vulkan.h>
 
 #include <string>
 #include <vector>
 
-namespace sumire::shaders {
+namespace sumire {
 
     class ShaderSource {
     public:
-        ShaderSource(SumiDevice* sumiDevice, std::string sourcePath);
+        ShaderSource(VkDevice device, std::string sourcePath);
         ~ShaderSource() = default;
 
         void invalidate();
         void revalidate();
+
+        enum SourceType {
+            GRAPHICS,
+            COMPUTE,
+            // RAYTRACING
+            INCLUDE
+        };
+        SourceType getSourceType() const { return sourceType; }
 
     private:
         void initShaderSource(bool hotReload);
@@ -25,9 +31,12 @@ namespace sumire::shaders {
         void compile();
         void createShaderModule(const std::vector<char>& spvCode);
 
-        SumiDevice* sumiDevice = nullptr;
+        void findSourceType();
+
+        VkDevice device;
         
         std::string sourcePath;
+        SourceType sourceType;
         std::vector<ShaderSource*> parents;
 
         VkShaderModule shaderModule = VK_NULL_HANDLE;

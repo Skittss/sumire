@@ -1,15 +1,14 @@
 #include <sumire/core/shaders/shader_manager.hpp>
 
-#include <cassert>
+namespace sumire {
 
-namespace sumire::shaders {
-
-    ShaderManager g_ShaderManager = ShaderManager{};
+    ShaderManager::ShaderManager(
+        VkDevice device
+    ) : device{ device } {}
 
     ShaderSource* ShaderManager::getShaderSource(std::string shaderPath) {
-        assert(sumiDevice != nullptr && "SumiDevice needs setting before modifying any shader maps.");
         if (!shaderMap.sourceExists(shaderPath)) {
-            shaderMap.addSource(sumiDevice, shaderPath);
+            shaderMap.addSource(device, shaderPath);
         }
 
         return shaderMap.getSource(shaderPath);

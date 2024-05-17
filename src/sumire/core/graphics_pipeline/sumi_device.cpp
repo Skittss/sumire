@@ -59,6 +59,7 @@ namespace sumire {
         createSurface();
         pickPhysicalDevice(config);
         createLogicalDevice();
+        initShaderManager();
         createCommandPools();
         writeDeviceInfoToConfig(config);
     }
@@ -320,6 +321,10 @@ namespace sumire {
         // Use highest priority compute and present queues
         vkGetDeviceQueue(device_, queueFamilyIndices.computeFamily, 0, &computeQueue_);
         vkGetDeviceQueue(device_, queueFamilyIndices.presentFamily, 0, &presentQueue_);
+    }
+
+    void SumiDevice::initShaderManager() {
+        //shaderManager = std::make_unique<ShaderManager>(device_);
     }
 
     void SumiDevice::createCommandPools() {

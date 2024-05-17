@@ -39,7 +39,6 @@ namespace sumire {
         void run();
 
     private:
-        void initShaderManager();
         void initBuffers();
         void initDescriptors();
         void initRenderSystems();

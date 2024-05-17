@@ -4,22 +4,18 @@
 
 #include <string>
 
-namespace sumire::shaders {
+namespace sumire {
 
     class ShaderManager {
     public:
-        ShaderManager() = default;
-
-        void setDevice(SumiDevice* device) { sumiDevice = device; }
+        ShaderManager(VkDevice device);
 
         ShaderSource* getShaderSource(std::string shaderPath);
 
     private:
-        SumiDevice* sumiDevice;
+        VkDevice device;
 
         ShaderMap shaderMap{};
     };
-
-    extern ShaderManager g_ShaderManager;
 
 }

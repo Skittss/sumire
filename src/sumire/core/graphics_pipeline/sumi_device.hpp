@@ -4,11 +4,13 @@
 
 #include <sumire/config/sumi_config.hpp>
 #include <sumire/core/windowing/sumi_window.hpp>
+#include <sumire/core/shaders/shader_manager.hpp>
 
 #include <cstdint>
 #include <string>
 #include <vector>
 #include <array>
+#include <memory>
 
 namespace sumire {
 
@@ -152,6 +154,7 @@ namespace sumire {
         void createSurface();
         void pickPhysicalDevice(SumiConfig* config);
         void createLogicalDevice();
+        void initShaderManager();
         void createCommandPools();
         void writeDeviceInfoToConfig(SumiConfig* config);
 
@@ -173,6 +176,7 @@ namespace sumire {
         bool findFirstValidQueueFamily(VkPhysicalDevice device, VkQueueFlags flags, uint32_t& idx);
 
         SumiWindow& window;
+        //std::unique_ptr<ShaderManager> shaderManager;
 
         VkInstance instance;
         VkDebugUtilsMessengerEXT debugMessenger;
