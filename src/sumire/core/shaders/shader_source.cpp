@@ -84,10 +84,7 @@ namespace sumire {
         std::filesystem::path fp = sourcePath;
         std::filesystem::path ext = fp.extension();
 
-        if (
-            ext == ".frag" ||
-            ext == ".vert"
-        ) {
+        if (ext == ".frag" || ext == ".vert") {
             sourceType = SourceType::GRAPHICS;
         }
         else if (ext == ".comp") {

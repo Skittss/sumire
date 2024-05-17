@@ -10,7 +10,8 @@ namespace sumire {
     public:
         ShaderManager(VkDevice device);
 
-        ShaderSource* getShaderSource(std::string shaderPath);
+        ShaderSource* requestShaderSource(std::string shaderPath, SumiPipeline* requester);
+        ShaderSource* requestShaderSource(std::string shaderPath, SumiComputePipeline* requester);
 
     private:
         VkDevice device;

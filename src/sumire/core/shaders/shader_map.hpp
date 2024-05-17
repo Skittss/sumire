@@ -15,7 +15,10 @@ namespace sumire {
     public:
         ShaderMap() = default;
 
-        void addSource(VkDevice device, const std::string& sourcePath);
+        void addGraphicsSource(
+            VkDevice device, const std::string& sourcePath, SumiPipeline* dependency);
+        void addComputeSource(
+            VkDevice device, const std::string& sourcePath, SumiComputePipeline *dependency);
         bool sourceExists(const std::string& sourcePath);
         ShaderSource* getSource(const std::string& sourcePath);
 
