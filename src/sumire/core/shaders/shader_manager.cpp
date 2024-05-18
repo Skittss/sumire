@@ -1,30 +1,164 @@
 #include <sumire/core/shaders/shader_manager.hpp>
 
+#include <iostream>
+#include <cassert>
+
 namespace sumire {
 
-    ShaderManager::ShaderManager(
-        VkDevice device
-    ) : device{ device } {}
+
+    ShaderManager::ShaderManager(VkDevice device, bool hotReloadingEnabled)
+        : device_{ device }, hotReloadingEnabled{ hotReloadingEnabled } {}
 
     ShaderSource* ShaderManager::requestShaderSource(
         std::string shaderPath, SumiPipeline* requester
     ) {
-        if (!shaderMap.sourceExists(shaderPath)) {
-            shaderMap.addGraphicsSource(device, shaderPath, requester);
-        }
+        std::string formattedPath = formatPath(shaderPath);
 
-        return shaderMap.getSource(shaderPath);
+        if (!sourceExists(formattedPath)) {
+            addGraphicsSource(device_, formattedPath, requester);
+        }
+        addGraphicsDependency(shaderPath, requester);
+
+        return getSource(formattedPath);
     }
 
     ShaderSource* ShaderManager::requestShaderSource(
         std::string shaderPath, SumiComputePipeline* requester
     ) {
-        if (!shaderMap.sourceExists(shaderPath)) {
-            shaderMap.addComputeSource(device, shaderPath, requester);
-        }
+        std::string formattedPath = formatPath(shaderPath);
 
-        return shaderMap.getSource(shaderPath);
+        if (!sourceExists(formattedPath)) {
+            addComputeSource(device_, formattedPath, requester);
+        }
+        addComputeDependency(shaderPath, requester);
+
+        return getSource(formattedPath);
     }
 
+    void ShaderManager::addGraphicsSource(
+        VkDevice device,
+        const std::string& sourcePath,
+        SumiPipeline* dependency
+    ) {
+        std::string formattedPath = formatPath(sourcePath);
+
+        if (sourceExists(formattedPath)) {
+            std::cout << "[Sumire::ShaderManager] WARNING: "
+                << "Attempted to add already existing shader source to the shader map. ("
+                << sourcePath << "). The existing entry was not modified." << std::endl;
+        }
+        else {
+            std::unique_ptr<ShaderSource> newSource = std::make_unique<ShaderSource>(device, formattedPath);
+            ShaderSource::SourceType newSourceType = newSource->getSourceType();
+            assert(
+                newSourceType == ShaderSource::SourceType::GRAPHICS ||
+                newSourceType == ShaderSource::SourceType::INCLUDE
+                && "Loaded incompatible shader source type when attempting to add a graphics source."
+            );
+
+            if (hotReloadingEnabled) {
+                resolveSourceParents(newSource.get(), dependency);
+            }
+
+            sources.emplace(formattedPath, std::move(newSource));
+        }
+    }
+    
+    void ShaderManager::addGraphicsDependency(
+        const std::string& sourcePath, 
+        SumiPipeline* dependency
+    ) {
+        std::string formattedPath = formatPath(sourcePath);
+
+        auto& dependencyEntry = graphicsDependencies.find(formattedPath);
+        if (dependencyEntry == graphicsDependencies.end()) {
+            graphicsDependencies.emplace(formattedPath, std::vector<SumiPipeline*>{ dependency });
+        }
+        else {
+            dependencyEntry->second.push_back(dependency);
+        }
+    }
+
+    void ShaderManager::addComputeSource(
+        VkDevice device,
+        const std::string& sourcePath,
+        SumiComputePipeline* dependency
+    ) {
+        std::string formattedPath = formatPath(sourcePath);
+
+        if (sourceExists(formattedPath)) {
+            std::cout << "[Sumire::ShaderManager] WARNING: "
+                << "Attempted to add already existing shader source to the shader map. ("
+                << formattedPath << "). The existing entry was not modified." << std::endl;
+        }
+        else {
+            std::unique_ptr<ShaderSource> newSource = std::make_unique<ShaderSource>(device, formattedPath);
+            ShaderSource::SourceType newSourceType = newSource->getSourceType();
+            assert(
+                newSource->getSourceType() == ShaderSource::SourceType::COMPUTE ||
+                newSourceType == ShaderSource::SourceType::INCLUDE
+                && "Loaded incompatible shader source type when attempting to add a compute source.");
+
+            if (hotReloadingEnabled) {
+                resolveSourceParents(newSource.get(), dependency);
+            }
+
+            sources.emplace(formattedPath, std::move(newSource));
+        }
+    }
+
+    void ShaderManager::addComputeDependency(
+        const std::string& sourcePath,
+        SumiComputePipeline* dependency
+    ) {
+        std::string formattedPath = formatPath(sourcePath);
+
+        auto& dependencyEntry = computeDependencies.find(formattedPath);
+        if (dependencyEntry == computeDependencies.end()) {
+            computeDependencies.emplace(formattedPath, std::vector<SumiComputePipeline*>{ dependency });
+        }
+        else {
+            dependencyEntry->second.push_back(dependency);
+        }
+    }
+
+    void ShaderManager::resolveSourceParents(ShaderSource* source, SumiPipeline* dependency) {
+        std::vector<std::string> includes = source->getSourceIncludes();
+        for (std::string& inc : includes) {
+            std::filesystem::path sourcePath{ source->getSourcePath() };
+            std::filesystem::path incPath{ inc };
+            std::filesystem::path combinedPath = std::filesystem::canonical(sourcePath.parent_path() / incPath);
+            std::filesystem::path cleanedPath = combinedPath.make_preferred();
+            std::filesystem::path enginePath = std::filesystem::relative(cleanedPath);
+            ShaderSource* parent = requestShaderSource(enginePath.u8string(), dependency);
+            source->addParent(parent);
+        }
+    }
+
+    void ShaderManager::resolveSourceParents(ShaderSource* source, SumiComputePipeline* dependency) {
+        std::vector<std::string> includes = source->getSourceIncludes();
+        for (std::string& inc : includes) {
+            std::filesystem::path sourcePath{ source->getSourcePath() };
+            std::filesystem::path incPath{ inc };
+            std::filesystem::path combinedPath = std::filesystem::canonical(sourcePath.parent_path() / incPath);
+            std::filesystem::path cleanedPath = combinedPath.make_preferred();
+            std::filesystem::path enginePath = std::filesystem::relative(cleanedPath);
+            ShaderSource* parent = requestShaderSource(enginePath.u8string(), dependency);
+            source->addParent(parent);
+        }
+    }
+
+    bool ShaderManager::sourceExists(const std::string& sourcePath) const {
+        return sources.find(sourcePath) != sources.end();
+    }
+
+    ShaderSource* ShaderManager::getSource(const std::string& sourcePath) const {
+        return sources.at(sourcePath).get();
+    }
+
+    std::string ShaderManager::formatPath(const std::string& path) const {
+        std::filesystem::path fp = path;
+        return fp.make_preferred().u8string();
+    }
 
 }

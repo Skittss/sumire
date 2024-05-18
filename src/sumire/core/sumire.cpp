@@ -130,12 +130,12 @@ namespace sumire {
 
     void Sumire::initRenderSystems() {
 
-        meshRenderSystem = std::make_unique<MeshRenderSys>(
-            sumiDevice,
-            sumiRenderer.getLateGraphicsRenderPass(),
-            sumiRenderer.forwardRenderSubpassIdx(),
-            globalDescriptorSetLayout->getDescriptorSetLayout()
-        );
+        //meshRenderSystem = std::make_unique<MeshRenderSys>(
+        //    sumiDevice,
+        //    sumiRenderer.getLateGraphicsRenderPass(),
+        //    sumiRenderer.forwardRenderSubpassIdx(),
+        //    globalDescriptorSetLayout->getDescriptorSetLayout()
+        //);
 
         deferredMeshRenderSystem = std::make_unique<DeferredMeshRenderSys>(
             sumiDevice,

@@ -59,7 +59,7 @@ namespace sumire {
         createSurface();
         pickPhysicalDevice(config);
         createLogicalDevice();
-        initShaderManager();
+        initShaderManager(config);
         createCommandPools();
         writeDeviceInfoToConfig(config);
     }
@@ -325,8 +325,11 @@ namespace sumire {
         vkGetDeviceQueue(device_, queueFamilyIndices.presentFamily, 0, &presentQueue_);
     }
 
-    void SumiDevice::initShaderManager() {
-        shaderManager_ = std::make_unique<ShaderManager>(device_);
+    void SumiDevice::initShaderManager(SumiConfig* config) {
+        bool hotReloading = config ? 
+            config->startupData.SHADER_HOT_RELOADING : false;
+
+        shaderManager_ = std::make_unique<ShaderManager>(device_, hotReloading);
     }
 
     void SumiDevice::createCommandPools() {

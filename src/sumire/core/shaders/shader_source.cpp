@@ -9,8 +9,8 @@ namespace sumire {
     ShaderSource::ShaderSource(
         VkDevice device, std::string sourcePath
     ) : device{ device }, sourcePath { sourcePath } {
-        initShaderSource(true);
         findSourceType();
+        initShaderSource();
     }
 
     ShaderSource::~ShaderSource() {
@@ -25,21 +25,19 @@ namespace sumire {
         }
     }
 
-    void ShaderSource::initShaderSource(bool hotReload) {
-        if (hotReload) {
-            std::vector<char> shaderCode = readFile(sourcePath);
-            getSourceParents(shaderCode);
+    void ShaderSource::initShaderSource() {
+        if (sourceType != SourceType::INCLUDE) {
+            std::vector<char> spvCode = readFile(sourcePath + ".spv");
+            createShaderModule(spvCode);
         }
-        std::vector<char> spvCode = readFile(sourcePath + ".spv");
-        createShaderModule(spvCode);
     }
 
     void ShaderSource::hotReloadShaderSource() {
-        std::vector<char> newShaderCode = readFile(sourcePath);
-        getSourceParents(newShaderCode);
-        compile();
-        std::vector<char> newSpvCode = readFile(sourcePath + ".spv");
-        createShaderModule(newSpvCode);
+        if (sourceType != SourceType::INCLUDE) {
+            compile();
+            std::vector<char> newSpvCode = readFile(sourcePath + ".spv");
+            createShaderModule(newSpvCode);
+        }
     }
 
     std::vector<char> ShaderSource::readFile(const std::string& filepath) {
@@ -62,10 +60,53 @@ namespace sumire {
         return buffer;
     }
 
-    void ShaderSource::getSourceParents(const std::vector<char>& shaderCode) {
+    std::vector<std::string> ShaderSource::getSourceIncludes() {
+        std::ifstream file{ sourcePath, std::ios::in };
 
-        int test = 1;
-        // TODO: Read includes and fetch parent ShaderSources (they may not be added yet)
+        file.seekg(0);
+
+        if (!file.is_open()) {
+            throw std::runtime_error(
+                "[Sumire::ShaderSource] Could not open source file: "
+                + sourcePath
+            );
+        }
+        
+        // Note: There are whitespace characters not considered as I don't think
+        //       these should pass the glsl compiler - \f \v
+        std::vector<std::string> includes{};
+        std::string line;
+        while (std::getline(file, line)) {
+            size_t firstNonWsp = line.find_first_not_of(" \t\r\n");
+            if (firstNonWsp == line.npos) continue;
+
+            // #include
+            int includeCmp = line.compare(firstNonWsp, 8, "#include");
+            if (includeCmp != 0) continue;
+
+            // At least one whitespace following #include
+            size_t incWspIdx = firstNonWsp + 8;
+            char& incWsp = line.at(incWspIdx);
+            if ( !(incWsp == ' ' || incWsp == '\t') ) continue;
+
+            // Next non wsp character must be open quote: "
+            size_t openQuoteIdx = line.find_first_not_of(" \t\r\n", incWspIdx + 1);
+            if (openQuoteIdx == line.npos || line.at(openQuoteIdx) != '"') continue;
+
+            // Must be a close quote to finish the include;
+            size_t closeQuoteIdx = line.find_first_of('"', openQuoteIdx + 1);
+            if (closeQuoteIdx == line.npos) continue;
+
+            // Only allow trailing whitespace after close quote
+            if (line.find_first_not_of(" \t\r\n", closeQuoteIdx + 1) != line.npos) continue;
+
+            std::string includePath = line.substr(openQuoteIdx + 1, closeQuoteIdx - openQuoteIdx - 1);
+            includes.push_back(includePath);
+        }
+
+        file.close();
+
+        return includes;
     }
 
     void ShaderSource::compile() {

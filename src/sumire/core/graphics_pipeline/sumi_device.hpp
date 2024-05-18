@@ -155,7 +155,7 @@ namespace sumire {
         void createSurface();
         void pickPhysicalDevice(SumiConfig* config);
         void createLogicalDevice();
-        void initShaderManager();
+        void initShaderManager(SumiConfig* config);
         void createCommandPools();
         void writeDeviceInfoToConfig(SumiConfig* config);
 

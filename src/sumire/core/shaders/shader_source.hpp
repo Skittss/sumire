@@ -22,14 +22,16 @@ namespace sumire {
             INCLUDE
         };
         SourceType getSourceType() const { return sourceType; }
-
         VkShaderModule getShaderModule() const { return shaderModule; }
+        std::string getSourcePath() const { return sourcePath; }
+        std::vector<std::string> getSourceIncludes();
+
+        void addParent(ShaderSource* parent) { parents.push_back(parent); }
 
     private:
-        void initShaderSource(bool hotReload);
+        void initShaderSource();
         void hotReloadShaderSource();
         std::vector<char> readFile(const std::string& filepath);
-        void getSourceParents(const std::vector<char>& shaderCode);
         void compile();
         void createShaderModule(const std::vector<char>& spvCode);
         void destroyShaderModule();
