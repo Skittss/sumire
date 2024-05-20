@@ -134,6 +134,31 @@ namespace sumire {
         }
     }
 
+    void ShaderManager::invalidateSourceAndChildren(const std::string& sourcePath) {
+        std::string formattedPath = formatPath(sourcePath);
+
+        auto& sourceEntry = sources.find(formattedPath);
+        if (sourceEntry != sources.end()) {
+            sourceEntry->second->invalidate();
+        }
+        else {
+            std::cout << "[Sumire::ShaderManager] WARNING: Source <" << formattedPath
+                << "> was modified but is not indexed - the source was not recompiled." << std::endl;
+        }
+    }
+
+    void ShaderManager::revalidateSources() {
+        for (auto& kv : sources) {
+            const std::string& pth = kv.first;
+            ShaderSource* source   = kv.second.get();
+            source->revalidate();
+        }
+    }
+
+    void ShaderManager::updatePipelines() {
+        // TODO: All pipelines which were a dependency of a revalidated source need to be recreated.
+    }
+
     void ShaderManager::resolveSourceParents(ShaderSource* source, SumiPipeline* dependency) {
         std::vector<std::string> includes = source->getSourceIncludes();
         for (std::string& inc : includes) {
@@ -144,6 +169,7 @@ namespace sumire {
             std::filesystem::path enginePath = std::filesystem::relative(cleanedPath);
             ShaderSource* parent = requestShaderSource(enginePath.u8string(), dependency);
             source->addParent(parent);
+            parent->addChild(source);
         }
     }
 
@@ -157,6 +183,7 @@ namespace sumire {
             std::filesystem::path enginePath = std::filesystem::relative(cleanedPath);
             ShaderSource* parent = requestShaderSource(enginePath.u8string(), dependency);
             source->addParent(parent);
+            parent->addChild(source);
         }
     }
 
@@ -174,33 +201,10 @@ namespace sumire {
     }
     
     // ---- Hot Reloading ----------------------------------------------------------------------------------------
-    void ShaderManager::ShaderUpdateListener::handleFileAction(
-        watchers::FsWatchAction action,
-        const std::string& dir,
-        const std::string& filename
-    ) {
-        switch (action) {
-        case watchers::FsWatchAction::FS_MODIFIED: {
-            std::cout << "[Sumire::ShaderManager] INFO: File <" + filename + "> modified." << std::endl;
-        } break;
-        case watchers::FsWatchAction::FS_MOVED: {
-            std::cout << "[Sumire::ShaderManager] INFO: File <" + filename + "> moved." << std::endl;
-        } break;
-        case watchers::FsWatchAction::FS_ADD: {
-            std::cout << "[Sumire::ShaderManager] INFO: File <" + filename + "> added." << std::endl;
-        } break;
-        case watchers::FsWatchAction::FS_DELETE: {
-            std::cout << "[Sumire::ShaderManager] INFO: File <" + filename + "> deleted." << std::endl;
-        } break;
-        default:
-            throw std::runtime_error("[Sumire::ShaderManager] Received invalid FsWatchAction.");
-        }
-    }
-
     void ShaderManager::initShaderDirWatcher() {
         const std::string dir{ shaderDir };
 
-        listener = std::make_unique<ShaderUpdateListener>();
+        listener = std::make_unique<ShaderUpdateListener>(this);
 
 #ifdef _WIN32
         shaderDirWatcher = std::make_unique<watchers::FsWatcherWin>(

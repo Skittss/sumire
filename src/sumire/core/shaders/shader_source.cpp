@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <iostream>
 
 namespace sumire {
 
@@ -20,9 +21,23 @@ namespace sumire {
     void ShaderSource::invalidate() {
         invalid = true;
 
-        for (auto& parent : parents) {
-            parent->invalidate();
+        for (auto& child : children) {
+            child->invalidate();
         }
+    }
+
+    void ShaderSource::revalidate() {
+        // Ensure all parents are validated before recompiling
+        for (auto& parent : parents) {
+            parent->revalidate();
+        }
+
+        // Includes do not need compiling
+        if (invalid && sourceType != SourceType::INCLUDE) {
+            recompile();
+        }
+
+        invalid = false;
     }
 
     void ShaderSource::initShaderSource() {
@@ -34,7 +49,7 @@ namespace sumire {
 
     void ShaderSource::hotReloadShaderSource() {
         if (sourceType != SourceType::INCLUDE) {
-            compile();
+            recompile();
             std::vector<char> newSpvCode = readFile(sourcePath + ".spv");
             createShaderModule(newSpvCode);
         }
@@ -109,8 +124,12 @@ namespace sumire {
         return includes;
     }
 
-    void ShaderSource::compile() {
+    void ShaderSource::recompile() {
+        std::cout << "[Sumire::ShaderSource] Recompiling Shader Source: " << sourcePath << std::endl;
+
         // TODO: Compile with gslang?
+
+        // Recreate shader module
     }
 
     void ShaderSource::createShaderModule(const std::vector<char>& spvCode) {

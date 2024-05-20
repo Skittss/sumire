@@ -6,7 +6,7 @@
 #include <sumire/util/sumire_engine_path.hpp>
 
 // File watchers
-#include <sumire/watchers/fs_watch_listener.hpp>
+#include <sumire/core/shaders/shader_update_listener.hpp>
 #ifdef _WIN32
 #include <sumire/watchers/fs_watcher_win.hpp>
 #endif
@@ -22,6 +22,9 @@ namespace sumire {
     class SumiComputePipeline;
 
     class ShaderManager {
+
+        friend class ShaderUpdateListener;
+
     public:
         ShaderManager(VkDevice device, bool hotReloadingEnabled);
         ~ShaderManager();
@@ -36,6 +39,9 @@ namespace sumire {
         void addComputeSource(
             VkDevice device, const std::string& sourcePath, SumiComputePipeline* dependency);
         void addComputeDependency(const std::string& sourcePath, SumiComputePipeline* dependency);
+        void invalidateSourceAndChildren(const std::string& sourcePath);
+        void revalidateSources();
+        void updatePipelines();
         void resolveSourceParents(ShaderSource* source, SumiPipeline* dependency);
         void resolveSourceParents(ShaderSource* source, SumiComputePipeline* dependency);
         bool sourceExists(const std::string& sourcePath) const;
@@ -52,14 +58,6 @@ namespace sumire {
         VkDevice device_;
 
         // ---- Hot reloading ------------------------------------------------------------------------------------
-        class ShaderUpdateListener : public watchers::FsWatchListener {
-        public:
-            void handleFileAction(
-                watchers::FsWatchAction action,
-                const std::string& dir,
-                const std::string& filename
-            ) override;
-        };
         std::unique_ptr<ShaderUpdateListener> listener; 
 
         static constexpr char* shaderDir = SUMIRE_ENGINE_PATH("shaders/");

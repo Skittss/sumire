@@ -27,12 +27,13 @@ namespace sumire {
         std::vector<std::string> getSourceIncludes();
 
         void addParent(ShaderSource* parent) { parents.push_back(parent); }
+        void addChild(ShaderSource* child) { children.push_back(child); }
 
     private:
         void initShaderSource();
         void hotReloadShaderSource();
         std::vector<char> readFile(const std::string& filepath);
-        void compile();
+        void recompile();
         void createShaderModule(const std::vector<char>& spvCode);
         void destroyShaderModule();
 
@@ -43,6 +44,7 @@ namespace sumire {
         std::string sourcePath;
         SourceType sourceType;
         std::vector<ShaderSource*> parents;
+        std::vector<ShaderSource*> children;
 
         VkShaderModule shaderModule = VK_NULL_HANDLE;
 
