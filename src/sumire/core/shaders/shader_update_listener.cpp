@@ -23,8 +23,7 @@ namespace sumire {
                 std::filesystem::path dirPath{ dir };
                 std::filesystem::path combinedPath = dirPath / filePath ;
 
-                shaderManager->invalidateSourceAndChildren(combinedPath.u8string());
-                shaderManager->revalidateSources();
+                shaderManager->hotReload(combinedPath.u8string());
             }
 
         } break;

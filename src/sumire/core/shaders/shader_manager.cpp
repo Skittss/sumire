@@ -107,7 +107,7 @@ namespace sumire {
             std::unique_ptr<ShaderSource> newSource = std::make_unique<ShaderSource>(device, formattedPath);
             ShaderSource::SourceType newSourceType = newSource->getSourceType();
             assert(
-                newSource->getSourceType() == ShaderSource::SourceType::COMPUTE ||
+                newSourceType == ShaderSource::SourceType::COMPUTE ||
                 newSourceType == ShaderSource::SourceType::INCLUDE
                 && "Loaded incompatible shader source type when attempting to add a compute source.");
 
@@ -134,6 +134,12 @@ namespace sumire {
         }
     }
 
+    void ShaderManager::hotReload(const std::string& sourcePath) {
+        invalidateSourceAndChildren(sourcePath);
+        revalidateSources();
+        updatePipelines();
+    }
+
     void ShaderManager::invalidateSourceAndChildren(const std::string& sourcePath) {
         std::string formattedPath = formatPath(sourcePath);
 
@@ -148,15 +154,41 @@ namespace sumire {
     }
 
     void ShaderManager::revalidateSources() {
+        std::set<ShaderSource*> revalidatedSources{};
+
         for (auto& kv : sources) {
             const std::string& pth = kv.first;
             ShaderSource* source   = kv.second.get();
-            source->revalidate();
+            std::vector<ShaderSource*> updatedSources = source->revalidate();
+            revalidatedSources.insert(updatedSources.begin(), updatedSources.end());
         }
+
+        // Find dependencies which are now pending update
+        for (auto& src : revalidatedSources) {
+            if (src->getSourceType() == ShaderSource::SourceType::GRAPHICS) {
+                std::vector<SumiPipeline*>& pipelines = graphicsDependencies.at(src->getSourcePath());
+                graphicsPipelinesPendingUpdate.insert(pipelines.begin(), pipelines.end());
+            }
+            else if (src->getSourceType() == ShaderSource::SourceType::COMPUTE) {
+                std::vector<SumiComputePipeline*>& pipelines = computeDependencies.at(src->getSourcePath());
+                computePipelinesPendingUpdate.insert(pipelines.begin(), pipelines.end());
+            }
+        }
+
     }
 
     void ShaderManager::updatePipelines() {
-        // TODO: All pipelines which were a dependency of a revalidated source need to be recreated.
+        for (auto& pipeline : graphicsPipelinesPendingUpdate) {
+            std::cout << "[Sumire::ShaderSource] Recreating graphics pipeline " << pipeline << std::endl;
+            // TODO: recreate pipelines with new ShaderSource VkShaderModule
+        }
+
+        for (auto& pipeline : computePipelinesPendingUpdate) {
+            std::cout << "[Sumire::ShaderSource] Recreating compute pipeline " << pipeline << std::endl;
+        }
+
+        graphicsPipelinesPendingUpdate.clear();
+        computePipelinesPendingUpdate.clear();
     }
 
     void ShaderManager::resolveSourceParents(ShaderSource* source, SumiPipeline* dependency) {

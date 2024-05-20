@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <filesystem>
+#include <set>
 
 namespace sumire {
 
@@ -39,6 +40,7 @@ namespace sumire {
         void addComputeSource(
             VkDevice device, const std::string& sourcePath, SumiComputePipeline* dependency);
         void addComputeDependency(const std::string& sourcePath, SumiComputePipeline* dependency);
+        void hotReload(const std::string& sourcePath);
         void invalidateSourceAndChildren(const std::string& sourcePath);
         void revalidateSources();
         void updatePipelines();
@@ -52,6 +54,8 @@ namespace sumire {
         std::unordered_map<std::string, std::unique_ptr<ShaderSource>> sources;
         std::unordered_map<std::string, std::vector<SumiPipeline*>> graphicsDependencies;
         std::unordered_map<std::string, std::vector<SumiComputePipeline*>> computeDependencies;
+        std::set<SumiPipeline*> graphicsPipelinesPendingUpdate;
+        std::set<SumiComputePipeline*> computePipelinesPendingUpdate;
 
         const bool hotReloadingEnabled;
 

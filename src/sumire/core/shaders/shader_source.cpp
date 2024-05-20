@@ -26,18 +26,28 @@ namespace sumire {
         }
     }
 
-    void ShaderSource::revalidate() {
+    // Returns a vector to all sources updated (i.e. including parents) from this call
+    std::vector<ShaderSource*> ShaderSource::revalidate() {
         // Ensure all parents are validated before recompiling
+        std::vector<ShaderSource*> updatedSources{};
+
         for (auto& parent : parents) {
-            parent->revalidate();
+            std::vector<ShaderSource*> parentSources = parent->revalidate();
+            // concat
+            updatedSources.insert(updatedSources.end(), parentSources.begin(), parentSources.end());
         }
 
-        // Includes do not need compiling
-        if (invalid && sourceType != SourceType::INCLUDE) {
-            recompile();
+        if (invalid) {
+            if (sourceType != SourceType::INCLUDE) {
+                // Includes do not need compiling
+                recompile();
+            }
+            updatedSources.push_back(this);
         }
 
         invalid = false;
+
+        return updatedSources;
     }
 
     void ShaderSource::initShaderSource() {

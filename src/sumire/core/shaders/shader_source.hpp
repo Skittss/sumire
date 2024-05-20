@@ -13,7 +13,7 @@ namespace sumire {
         ~ShaderSource();
 
         void invalidate();
-        void revalidate();
+        std::vector<ShaderSource*> revalidate();
 
         enum SourceType {
             GRAPHICS,
