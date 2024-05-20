@@ -19,7 +19,11 @@ namespace sumire::watchers {
         watchHandle{getWatchHandle()} 
     {}
 
-    FsWatcherWin::~FsWatcherWin() {}
+    FsWatcherWin::~FsWatcherWin() {
+        if (watching) {
+            endWatch();
+        }
+    }
 
     void FsWatcherWin::watch() {
         std::cout << "[Sumire::FsWatcherWin] INFO: Beginning watch of dir " << watchDir << std::endl;
