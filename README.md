@@ -80,7 +80,7 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
     - [X] Compute -> Fragment interleaving needs profiling to ensure it's working correctly. (Cannot test on my Pascal GPU)
 - [X] Compute-based post-processing dispatch.
 - [ ] Pre-draw compute needs to be ring-buffered or better synchroinzed.
-- [ ] Light buffers should be ring-buffered also as start of frame sort can cause discontinuities for in flight frames
+- [X] Light buffers should be ring-buffered also as start of frame sort can cause discontinuities for in flight frames
 - [ ] High quality deferred shadows (modification on cascaded shadow maps) via compute.
 - [ ] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
