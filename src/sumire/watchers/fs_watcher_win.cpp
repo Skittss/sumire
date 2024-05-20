@@ -74,6 +74,7 @@ namespace sumire::watchers {
                 } while (info->NextEntryOffset > 0);
             }
 
+            // TODO: Deal with double modification notifications
             auto now = std::chrono::steady_clock::now();
             size_t elapsed = static_cast<size_t>(
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count());
@@ -122,7 +123,7 @@ namespace sumire::watchers {
     }
 
     std::string FsWatcherWin::toString(const std::wstring& wstr) {
-        using convert_typeX = std::codecvt_utf16<wchar_t>;
+        using convert_typeX = std::codecvt_utf8<wchar_t>;
         std::wstring_convert<convert_typeX, wchar_t> converterX;
 
         return converterX.to_bytes(wstr);
