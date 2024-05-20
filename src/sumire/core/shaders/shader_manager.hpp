@@ -3,6 +3,13 @@
 #include <vulkan/vulkan.h>
 
 #include <sumire/core/shaders/shader_source.hpp>
+#include <sumire/util/sumire_engine_path.hpp>
+
+// File watchers
+#include <sumire/watchers/fs_watch_listener.hpp>
+#ifdef _WIN32
+#include <sumire/watchers/fs_watcher_win.hpp>
+#endif
 
 #include <unordered_map>
 #include <memory>
@@ -17,6 +24,7 @@ namespace sumire {
     class ShaderManager {
     public:
         ShaderManager(VkDevice device, bool hotReloadingEnabled);
+        ~ShaderManager();
 
         ShaderSource* requestShaderSource(std::string shaderPath, SumiPipeline* requester);
         ShaderSource* requestShaderSource(std::string shaderPath, SumiComputePipeline* requester);
@@ -42,6 +50,25 @@ namespace sumire {
         const bool hotReloadingEnabled;
 
         VkDevice device_;
+
+        // ---- Hot reloading ------------------------------------------------------------------------------------
+        class ShaderUpdateListener : public watchers::FsWatchListener {
+        public:
+            void handleFileAction(
+                watchers::FsWatchAction action,
+                const std::string& dir,
+                const std::string& filename
+            ) override;
+        };
+        std::unique_ptr<ShaderUpdateListener> listener; 
+
+        static constexpr char* shaderDir = SUMIRE_ENGINE_PATH("shaders/");
+        void initShaderDirWatcher();
+        void startShaderDirWatcher();
+        void stopShaderDirWatcher();
+#ifdef _WIN32
+        std::unique_ptr<watchers::FsWatcherWin> shaderDirWatcher;
+#endif
 
     };
 

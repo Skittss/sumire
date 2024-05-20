@@ -22,9 +22,16 @@ namespace sumire::watchers {
     FsWatcherWin::~FsWatcherWin() {}
 
     void FsWatcherWin::watch() {
+        std::cout << "[Sumire::FsWatcherWin] INFO: Beginning watch of dir " << watchDir << std::endl;
+        watching = true;
+
+        watcherThread = std::make_unique<std::thread>(& FsWatcherWin::asyncWatch, this);
+    }
+    
+    void FsWatcherWin::asyncWatch() {
         auto start = std::chrono::steady_clock::now();
-        
-        while (true) {
+
+        while (watching) {
             DWORD bytesReturned = 0;
             BOOL res = ReadDirectoryChangesW(
                 watchHandle.handle,
@@ -39,7 +46,7 @@ namespace sumire::watchers {
 
             // Handle watch callbacks
             if (res != 0) {
-                FILE_NOTIFY_INFORMATION* info = 
+                FILE_NOTIFY_INFORMATION* info =
                     reinterpret_cast<FILE_NOTIFY_INFORMATION*>(watchHandle.buffer.data());
 
                 do {
@@ -63,16 +70,21 @@ namespace sumire::watchers {
                 } while (info->NextEntryOffset > 0);
             }
 
-            auto now  = std::chrono::steady_clock::now();
+            auto now = std::chrono::steady_clock::now();
             size_t elapsed = static_cast<size_t>(
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count());
-
         }
-        watching = true;
     }
 
     void FsWatcherWin::endWatch() {
         watching = false;
+
+        std::cout << "[Sumire::FsWatcherWin] INFO: Ending watch of dir " << watchDir << std::endl;
+        CancelIoEx(watchHandle.handle, NULL);
+        watcherThread->join();
+        std::cout << "[Sumire::FsWatcherWin] INFO: Watch thread finished for dir " << watchDir << std::endl;
+
+        watcherThread = nullptr;
     }
 
     FsWatcherWin::DirWatchHandle FsWatcherWin::getWatchHandle() {

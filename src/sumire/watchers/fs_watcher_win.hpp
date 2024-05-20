@@ -5,11 +5,16 @@
 #include <sumire/watchers/fs_watch_listener.hpp>
 #include <sumire/watchers/fs_watch_action.hpp>
 
+// Windows includes, excluding some annoying macros.
+#define NOMINMAX
 #include <Windows.h>
+#undef near
+#undef far
 
 #include <string>
 #include <vector>
 #include <array>
+#include <thread>
 
 namespace sumire::watchers {
 
@@ -34,11 +39,15 @@ namespace sumire::watchers {
         static FsWatchAction toFsWatchAction(DWORD action);
         static std::string toString(const std::wstring& wstr);
 
+        void asyncWatch();
+        std::unique_ptr<std::thread> watcherThread;
+
         const std::string watchDir;
         DirWatchHandle watchHandle;
         FsWatchListener* listener;
         bool recursive;
 
+        // TODO: atomic?
         bool watching = false;
     };
 

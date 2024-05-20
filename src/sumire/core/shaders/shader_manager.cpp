@@ -6,8 +6,20 @@
 namespace sumire {
 
 
-    ShaderManager::ShaderManager(VkDevice device, bool hotReloadingEnabled)
-        : device_{ device }, hotReloadingEnabled{ hotReloadingEnabled } {}
+    ShaderManager::ShaderManager(
+        VkDevice device, bool hotReloadingEnabled
+    ) : device_{ device }, hotReloadingEnabled{ hotReloadingEnabled } {
+        if (hotReloadingEnabled) {
+            initShaderDirWatcher();
+            startShaderDirWatcher();
+        }
+    }
+
+    ShaderManager::~ShaderManager() {
+        if (hotReloadingEnabled) {
+            stopShaderDirWatcher();
+        }
+    }
 
     ShaderSource* ShaderManager::requestShaderSource(
         std::string shaderPath, SumiPipeline* requester
@@ -159,6 +171,56 @@ namespace sumire {
     std::string ShaderManager::formatPath(const std::string& path) const {
         std::filesystem::path fp = path;
         return fp.make_preferred().u8string();
+    }
+    
+    // ---- Hot Reloading ----------------------------------------------------------------------------------------
+    void ShaderManager::ShaderUpdateListener::handleFileAction(
+        watchers::FsWatchAction action,
+        const std::string& dir,
+        const std::string& filename
+    ) {
+        switch (action) {
+        case watchers::FsWatchAction::FS_MODIFIED: {
+            std::cout << "[Sumire::ShaderManager] INFO: File <" + filename + "> modified." << std::endl;
+        } break;
+        case watchers::FsWatchAction::FS_MOVED: {
+            std::cout << "[Sumire::ShaderManager] INFO: File <" + filename + "> moved." << std::endl;
+        } break;
+        case watchers::FsWatchAction::FS_ADD: {
+            std::cout << "[Sumire::ShaderManager] INFO: File <" + filename + "> added." << std::endl;
+        } break;
+        case watchers::FsWatchAction::FS_DELETE: {
+            std::cout << "[Sumire::ShaderManager] INFO: File <" + filename + "> deleted." << std::endl;
+        } break;
+        default:
+            throw std::runtime_error("[Sumire::ShaderManager] Received invalid FsWatchAction.");
+        }
+    }
+
+    void ShaderManager::initShaderDirWatcher() {
+        const std::string dir{ shaderDir };
+
+        listener = std::make_unique<ShaderUpdateListener>();
+
+#ifdef _WIN32
+        shaderDirWatcher = std::make_unique<watchers::FsWatcherWin>(
+            dir,
+            listener.get(),
+            true
+        );
+#endif
+    }
+
+    void ShaderManager::startShaderDirWatcher() {
+#ifdef _WIN32
+        shaderDirWatcher->watch();
+#endif
+    }
+
+    void ShaderManager::stopShaderDirWatcher() {
+#ifdef _WIN32
+        shaderDirWatcher->endWatch();
+#endif
     }
 
 }
