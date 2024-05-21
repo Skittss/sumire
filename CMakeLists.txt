@@ -132,13 +132,33 @@ if (WIN32)
             ${PROJECT_SOURCE_DIR}/src
     )
  
-    # Link libraries to probject
+    # Link libraries to project
     target_link_directories(${PROJECT_NAME} PUBLIC
         ${Vulkan_LIBRARIES}
         ${GLFW_LIB}
     )
- 
-    target_link_libraries(${PROJECT_NAME} glfw3 vulkan-1)
+
+    # TODO: glslang should probably *not* be linked in a release distribution 
+    #       as shaders should be precompiled only - this link is pretty heavy.
+    set(GLSLANG_LIBS
+        GenericCodeGen
+        glslang
+        glslang-default-resource-limits
+        MachineIndependent
+        OSDependent
+        OGLCompiler
+        SPIRV
+        SPIRV-Tools
+        SPIRV-Tools-opt
+        SPVRemapper
+    )
+
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+        glfw3 
+        vulkan-1
+        ${GLSLANG_LIBS}
+    )
+
 
 elseif (UNIX)
     message(STATUS "CREATING BUILD FOR UNIX")
@@ -156,10 +176,9 @@ elseif (UNIX)
 
 endif()
  
- 
 ############## Custom Target SHADERS #######################
  
-message(STATUS "COMPILING SHADERS")
+message(STATUS "CREATING SHADERS TARGET")
 # Find all shader sources within shaders directory
 # taken from VBlancos vulkan tutorial
 # https://github.com/vblanco20-1/vulkan-guide/blob/all-chapters/CMakeLists.txt
