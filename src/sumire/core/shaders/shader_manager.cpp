@@ -159,7 +159,7 @@ namespace sumire {
         for (auto& kv : sources) {
             const std::string& pth = kv.first;
             ShaderSource* source   = kv.second.get();
-            std::vector<ShaderSource*> updatedSources = source->revalidate();
+            std::vector<ShaderSource*> updatedSources = source->revalidate(compiler.get());
             revalidatedSources.insert(updatedSources.begin(), updatedSources.end());
         }
 
@@ -233,6 +233,10 @@ namespace sumire {
     }
     
     // ---- Hot Reloading ----------------------------------------------------------------------------------------
+    void ShaderManager::initShaderCompiler() {
+        compiler = std::make_unique<ShaderGlslangCompiler>(sources);
+    }
+
     void ShaderManager::initShaderDirWatcher() {
         const std::string dir{ shaderDir };
 

@@ -11,6 +11,9 @@
 #include <sumire/watchers/fs_watcher_win.hpp>
 #endif
 
+// Shader compiling
+#include <sumire/core/shaders/shader_glslang_compiler.hpp>
+
 #include <unordered_map>
 #include <memory>
 #include <string>
@@ -63,6 +66,8 @@ namespace sumire {
 
         // ---- Hot reloading ------------------------------------------------------------------------------------
         std::unique_ptr<ShaderUpdateListener> listener; 
+        std::unique_ptr<ShaderGlslangCompiler> compiler;
+        void initShaderCompiler();
 
         static constexpr char* shaderDir = SUMIRE_ENGINE_PATH("shaders/");
         void initShaderDirWatcher();

@@ -1,5 +1,6 @@
 #include <sumire/core/shaders/shader_source.hpp>
 #include <sumire/util/vk_check_success.hpp>
+#include <sumire/util/read_file_binary.hpp>
 
 #include <fstream>
 #include <filesystem>
@@ -27,12 +28,12 @@ namespace sumire {
     }
 
     // Returns a vector to all sources updated (i.e. including parents) from this call
-    std::vector<ShaderSource*> ShaderSource::revalidate() {
+    std::vector<ShaderSource*> ShaderSource::revalidate(ShaderGlslangCompiler* compiler) {
         // Ensure all parents are validated before recompiling
         std::vector<ShaderSource*> updatedSources{};
 
         for (auto& parent : parents) {
-            std::vector<ShaderSource*> parentSources = parent->revalidate();
+            std::vector<ShaderSource*> parentSources = parent->revalidate(compiler);
             // concat
             updatedSources.insert(updatedSources.end(), parentSources.begin(), parentSources.end());
         }
@@ -40,7 +41,7 @@ namespace sumire {
         if (invalid) {
             if (sourceType != SourceType::INCLUDE) {
                 // Includes do not need compiling
-                recompile();
+                recompile(compiler);
             }
             updatedSources.push_back(this);
         }
@@ -57,31 +58,25 @@ namespace sumire {
         }
     }
 
-    void ShaderSource::hotReloadShaderSource() {
+    void ShaderSource::hotReloadShaderSource(ShaderGlslangCompiler* compiler) {
         if (sourceType != SourceType::INCLUDE) {
-            recompile();
+            recompile(compiler);
             std::vector<char> newSpvCode = readFile(sourcePath + ".spv");
             createShaderModule(newSpvCode);
         }
     }
 
     std::vector<char> ShaderSource::readFile(const std::string& filepath) {
-        std::ifstream file{ filepath, std::ios::ate | std::ios::binary };
+        std::vector<char> buffer;
+        bool success = util::readFileBinary(filepath, buffer);
 
-        if (!file.is_open()) {
+        if (!success) {
             throw std::runtime_error(
                 "[Sumire::ShaderSource] Could not open file: " 
                 + filepath + ". (SPIR-V needs to be compiled before startup)."
             );
         }
 
-        size_t fileSize = static_cast<size_t>(file.tellg());
-        std::vector<char> buffer(fileSize);
-
-        file.seekg(0);
-        file.read(buffer.data(), fileSize);
-
-        file.close();
         return buffer;
     }
 
@@ -134,10 +129,11 @@ namespace sumire {
         return includes;
     }
 
-    void ShaderSource::recompile() {
+    void ShaderSource::recompile(ShaderGlslangCompiler* compiler) {
         std::cout << "[Sumire::ShaderSource] Recompiling Shader Source: " << sourcePath << std::endl;
 
-        // TODO: Compile with gslang?
+        // Async compile with glslang
+        compiler->compile(sourcePath);
 
         // Recreate shader module
     }
