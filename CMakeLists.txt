@@ -58,11 +58,7 @@ endif()
 # TINY OBJ LOADER
 set(TINYOBJ_PATH external/tinyobjloader)
 # TINY GLTF LOADER
-if (NOT TINYGLTF_PATH)
-    message(STATUS "TINYGLTF_PATH not specified in .env.cmake, using external/tinygltf")
-    set(TINYGLTF_PATH external/tinygltf)
-endif()
-
+set(TINYGLTF_PATH external/tinygltf)
 # IMGUI
 set(IMGUI_PATH external/imgui)
 set(IMGUI_BACKEND_PATH external/imgui/backends)
