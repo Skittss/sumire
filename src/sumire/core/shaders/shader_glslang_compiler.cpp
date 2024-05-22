@@ -1,8 +1,7 @@
 #include <sumire/core/shaders/shader_glslang_compiler.hpp>
 
+#include <sumire/core/shaders/shader_resource_limits.hpp>
 #include <sumire/util/read_file_binary.hpp>
-
-#include <glslang/Public/ResourceLimits.h>
 
 #include <filesystem>
 #include <array>
@@ -79,7 +78,7 @@ namespace sumire {
         shader.setEnvTarget(glslang::EshTargetSpv, spirvVersion);
         shader.setEntryPoint("main");
 
-        const TBuiltInResource* resources = GetDefaultResources();
+        const TBuiltInResource* resources = GetSumireDefaultResources();
         const bool forwardCompatible      = false;
         const EShMessages messageFlags    = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
         EProfile defaultProfile           = ENoProfile;
