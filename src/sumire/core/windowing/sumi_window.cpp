@@ -29,7 +29,7 @@ namespace sumire {
         glfwSetFramebufferSizeCallback(window, fbResizeCallback);
 
         setMousePollMode(MousePollMode::MANUAL);
-        if (glfwRawMouseMotionSupported)
+        if (glfwRawMouseMotionSupported())
             glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
         glfwSetKeyCallback(window, keyCallback);
