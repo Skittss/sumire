@@ -4,3 +4,6 @@
 [submodule "external/MikkTSpace"]
 	path = external/MikkTSpace
 	url = https://github.com/mmikk/MikkTSpace
+[submodule "external/tinyobjloader"]
+	path = external/tinyobjloader
+	url = https://github.com/tinyobjloader/tinyobjloader

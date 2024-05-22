@@ -54,12 +54,9 @@ else()
     message(STATUS "Using glfw lib at: ${GLFW_LIB}")
 endif()
   
+# ---- External Lib Paths -----------------------------------------------------------------------------------------
 # TINY OBJ LOADER
-if (NOT TINYOBJ_PATH)
-    message(STATUS "TINYOBJ_PATH not specified in .env.cmake, using external/tinyobjloader")
-    set(TINYOBJ_PATH external/tinyobjloader)
-endif()
-
+set(TINYOBJ_PATH external/tinyobjloader)
 # TINY GLTF LOADER
 if (NOT TINYGLTF_PATH)
     message(STATUS "TINYGLTF_PATH not specified in .env.cmake, using external/tinygltf")
