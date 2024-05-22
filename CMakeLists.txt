@@ -67,10 +67,8 @@ if (NOT TINYGLTF_PATH)
 endif()
 
 # IMGUI
-if (NOT IMGUI_PATH)
-    message(STATUS "IMGUI_PATH not specified in .env.cmake, using external/imgui")
-    set(IMGUI_PATH external/imgui)
-endif()
+set(IMGUI_PATH external/imgui)
+set(IMGUI_BACKEND_PATH external/imgui/backends)
 
 if (NOT MIKKTSPACE_PATH)
     message(STATUS "MIKKTSPACE_PATH not specified in .env.cmake, using external/mikktspace")
@@ -132,6 +130,7 @@ set(GLSLANG_LIBS
 )
 
 # ---- Sumire Binary ----------------------------------------------------------------------------------------------
+# Binary Output Dirs
 SET(OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release") # VS uses no configuration suffix for releases
@@ -143,11 +142,21 @@ SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
 SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release")
 SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}/Release")
 
-file(GLOB_RECURSE MIKKTSPACE_SOURCES ${MIKKTSPACE_PATH}/*.c)
-file(GLOB_RECURSE IMGUI_SOURCES ${IMGUI_PATH}/*.cpp)
+# External Sources
+file(GLOB MIKKTSPACE_SOURCES ${MIKKTSPACE_PATH}/*.c)
+file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp)
+file(GLOB IMGUI_BACKEND_SOURCES # Only use required Imgui Backends
+    ${IMGUI_BACKEND_PATH}/imgui_impl_vulkan.cpp ${IMGUI_BACKEND_PATH}/imgui_impl_glfw.cpp)
+
+# Sumire Sources
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp) # find cpp files (nested) -> store in ${SOURCES}
  
-add_executable(${PROJECT_NAME} ${SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES})
+add_executable(${PROJECT_NAME} 
+    ${SOURCES} 
+    ${IMGUI_SOURCES} 
+    ${IMGUI_BACKEND_SOURCES} 
+    ${MIKKTSPACE_SOURCES}
+)
  
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # c++ 17 standard
  
@@ -173,6 +182,7 @@ if (WIN32)
             ${TINYOBJ_PATH}
             ${TINYGLTF_PATH}
             ${IMGUI_PATH}
+            ${IMGUI_BACKEND_PATH}
             ${MIKKTSPACE_PATH}
             ${RAPIDJSON_PATH}/include
             ${GLFW_INCLUDE_DIRS}
@@ -195,19 +205,7 @@ if (WIN32)
     )
 
 elseif (UNIX)
-    message(STATUS "CREATING BUILD FOR UNIX")
-    target_include_directories(${PROJECT_NAME} 
-    PUBLIC
-        ${TINYOBJ_PATH}
-        ${TINYGLTF_PATH}
-        ${IMGUI_PATH}
-        ${MIKKTSPACE_PATH}
-        ${RAPIDJSON_PATH}/include
-    PRIVATE
-        ${PROJECT_SOURCE_DIR}/src
-    )
-    target_link_libraries(${PROJECT_NAME} glfw ${Vulkan_LIBRARIES})
-
+    message(FATAL_ERROR "Building for UNIX is currently unsupported.")
 endif()
  
 # ---- Custom Target SHADERS --------------------------------------------------------------------------------------
