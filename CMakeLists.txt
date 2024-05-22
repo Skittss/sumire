@@ -64,11 +64,10 @@ set(IMGUI_PATH external/imgui)
 set(IMGUI_BACKEND_PATH external/imgui/backends)
 # MIKKTSPACE
 set(MIKKTSPACE_PATH external/MikkTSpace)
-
-if (NOT RAPIDJSON_PATH)
-    message(STATUS "RAPIDJSON_PATH not specified in .env.cmake, using external/rapidjson")
-    set(RAPIDJSON_PATH external/rapidjson)
-endif()
+# RAPIDJSON
+set(RAPIDJSON_PATH external/rapidjson)
+# GLM
+set(GLM_PATH external/glm)
 
 # ---- Glslang libs ---------------------------------------------------------------------------------------------
 # NOTE: Vulkan installation provides includes.
