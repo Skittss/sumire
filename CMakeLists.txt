@@ -1,9 +1,11 @@
+cmake_minimum_required(VERSION 3.15.0)
+set(NAME sumire)
+project(${NAME} VERSION 0.1.0)
+
+option(ENABLE_BUILD_ERRORS "Enable build warnings and errors." ON)
+
 include(./.env.cmake OPTIONAL RESULT_VARIABLE LOCAL_ENV)
 message(STATUS "Local .env.cmake: ${LOCAL_ENV}")
- 
-cmake_minimum_required(VERSION 3.11.0)
- 
-set(NAME sumire)
  
 # Compiler choice
 message(STATUS "using ${CMAKE_GENERATOR}")
@@ -15,8 +17,6 @@ if (CMAKE_GENERATOR STREQUAL "MinGW Makefiles")
     set(CMAKE_C_COMPILER ${MINGW_PATH}/bin/gcc.exe)
     set(CMAKE_CXX_COMPILER  ${MINGW_PATH}/bin/g++.exe)
 endif()
- 
-project(${NAME} VERSION 0.1.0)
  
 # Target vulkan
 if (DEFINED VULKAN_SDK_PATH)
@@ -32,7 +32,6 @@ if (NOT Vulkan_FOUND)
 else()
     message(STATUS "Using vulkan lib at: ${Vulkan_LIBRARIES}")
 endif()
- 
  
 # Target GLFW
 if (DEFINED GLFW_PATH)
@@ -83,8 +82,57 @@ if (NOT RAPIDJSON_PATH)
     set(RAPIDJSON_PATH external/rapidjson)
 endif()
 
-# Bin path
-set(OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
+# ---- Glslang libs ---------------------------------------------------------------------------------------------
+# NOTE: Vulkan installation provides includes.
+# TODO: glslang should probably *not* be linked in a release binary 
+#       as shaders should be precompiled only - this link is pretty heavy.
+
+if (CMAKE_BUILD_TYPE STREQUAL Debug)
+    set(GLSLANG_LIB_DIR "external/glslang/build/Windows/Debug/lib")
+else()
+    set(GLSLANG_LIB_DIR "external/glslang/build/Windows/Release/lib")
+endif()
+
+#if (NOT EXISTS ${GLSLANG_LIB_DIR})
+#    message(FATAL_ERROR 
+#        "Glslang libs not found at ${GLSLANG_LIB_DIR}. "
+#        "Ensure setup.py was run, or manually download the libs manually otherwise."
+#    )
+#endif()
+
+find_library(GENERIC_CODE_GEN_LIB NAMES GenericCodeGen GenericCodeGend
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+find_library(GLSLANG_LIB NAMES glslang glslangd
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+find_library(GLSLANG_DEFAULT_RESOURCE_LIMITS_LIB NAMES glslang-default-resource-limits glslang-default-resource-limitsd
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+find_library(MACHINE_INDEPENDENT_LIB NAMES MachineIndependent MachineIndependentd
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+find_library(OS_DEPENDENT_LIB NAMES OSDependent OSDependentd
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+find_library(SPIRV_LIB NAMES SPIRV SPIRVd
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+find_library(SPVREMAPPER_LIB NAMES SPVRemapper SPVRemapperd
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools SPIRV-Toolsd
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt SPIRV-Tools-optd
+            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
+
+set(GLSLANG_LIBS
+    ${GENERIC_CODE_GEN_LIB}
+    ${GLSLANG_LIB}
+    ${GLSLANG_DEFAULT_RESOURCE_LIMITS_LIB}
+    ${MACHINE_INDEPENDENT_LIB}
+    ${OS_DEPENDENT_LIB}
+    ${SPIRV_LIB}
+    ${SPVREMAPPER_LIB}
+    ${SPIRV_TOOLS_LIB}
+    ${SPIRV_TOOLS_OPT_LIB}
+)
+
+# ---- Sumire Binary ----------------------------------------------------------------------------------------------
+SET(OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release") # VS uses no configuration suffix for releases
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}/Release")         #  But I've included it anyhow just in case.
@@ -104,7 +152,8 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${IMGUI_SOURCES} ${MIKKTSPACE_SOURCES}
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # c++ 17 standard
  
 # set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
- 
+
+# ---- Includes and Linking ---------------------------------------------------------------------------------------
 if (WIN32)
     message(STATUS "CREATING BUILD FOR WINDOWS")
 
@@ -136,21 +185,7 @@ if (WIN32)
     target_link_directories(${PROJECT_NAME} PUBLIC
         ${Vulkan_LIBRARIES}
         ${GLFW_LIB}
-    )
-
-    # TODO: glslang should probably *not* be linked in a release distribution 
-    #       as shaders should be precompiled only - this link is pretty heavy.
-    set(GLSLANG_LIBS
-        GenericCodeGen
-        glslang
-        glslang-default-resource-limits
-        MachineIndependent
-        OSDependent
-        OGLCompiler
-        SPIRV
-        SPIRV-Tools
-        SPIRV-Tools-opt
-        SPVRemapper
+        ${GLSLANG_LIB_DIR}
     )
 
     target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -158,7 +193,6 @@ if (WIN32)
         vulkan-1
         ${GLSLANG_LIBS}
     )
-
 
 elseif (UNIX)
     message(STATUS "CREATING BUILD FOR UNIX")
@@ -176,8 +210,7 @@ elseif (UNIX)
 
 endif()
  
-############## Custom Target SHADERS #######################
- 
+# ---- Custom Target SHADERS --------------------------------------------------------------------------------------
 message(STATUS "CREATING SHADERS TARGET")
 # Find all shader sources within shaders directory
 # taken from VBlancos vulkan tutorial

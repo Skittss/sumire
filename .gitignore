@@ -14,9 +14,4 @@ assets/textures/*
 
 config/config.json
 
-external/*
-!external/tinygltf
-!external/tinyobjloader
-!external/imgui
-!external/mikktspace
-!external/rapidjson
+external/glslang
