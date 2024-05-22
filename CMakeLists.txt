@@ -69,11 +69,8 @@ endif()
 # IMGUI
 set(IMGUI_PATH external/imgui)
 set(IMGUI_BACKEND_PATH external/imgui/backends)
-
-if (NOT MIKKTSPACE_PATH)
-    message(STATUS "MIKKTSPACE_PATH not specified in .env.cmake, using external/mikktspace")
-    set(MIKKTSPACE_PATH external/mikktspace)
-endif()
+# MIKKTSPACE
+set(MIKKTSPACE_PATH external/MikkTSpace)
 
 if (NOT RAPIDJSON_PATH)
     message(STATUS "RAPIDJSON_PATH not specified in .env.cmake, using external/rapidjson")
