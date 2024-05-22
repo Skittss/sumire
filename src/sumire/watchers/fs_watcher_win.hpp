@@ -5,6 +5,9 @@
 #include <sumire/watchers/fs_watch_listener.hpp>
 #include <sumire/watchers/fs_watch_action.hpp>
 
+// GLFW defines this macro and spams the console if redefined in Windows.h
+#undef APIENTRY
+
 // Windows includes, excluding some annoying macros.
 #define NOMINMAX
 #include <Windows.h>
