@@ -21,14 +21,19 @@ Currently, Sumire is only supported on windows.
 ```sh
 git clone --recurse-submodules https://github.com/Skittss/sumire.git
 ```
-**2. Run `setup.py`, specifying paths to your Vulkan and GLFW installations:**
+**2. Install python requirements: (Currently just `requests`):**
+```sh
+python -m pip install -r requirements.txt
+```
+
+**3. Run `setup.py`, specifying paths to your Vulkan and GLFW installations:**
 ```sh
 python setup.py --vulkan <VK_PATH> --glfw <GLFW_PATH>
 ```
 This script installs required binaries from [glslang](https://github.com/KhronosGroup/glslang), 
 generates required build directories, and sets up a local cmake environment `.env.cmake`.
 
-**3. Open the repository root with MSVC in CMake view**
+**4. Open the repository root with Visual Studio in CMake view**
 
 
 ## Building
