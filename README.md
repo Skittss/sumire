@@ -5,42 +5,42 @@ A lightweight graphics development engine built in vulkan.
 ---
 
 # Building and Running
+You can build Sumire using the provided build scripts and CMake, through the MSVC compiler.
+
+Currently, Sumire is only supported on windows.
 
 ## Prerequisites
-
-- Use the provided CMake template `env_template_win.cmake` (Windows) / `env_template_unix.cmake` (Linux) to create a CMake environment: `.env.cmake`.
-
-- Install:
+- Build and setup requirements:
+    - [Python 3.0+](https://www.python.org/downloads/), for running setup scripts. (Latest tested: 3.10.6)
+    - [Visual Studio]() (Latest tested: MSVS 2022)
     - [Vulkan](https://vulkan.lunarg.com/sdk/home) (Latest tested: v1.3.250.1)
     - [GLFW](https://www.glfw.org/download) (Latest tested: v3.4)
-    - [GLM](https://github.com/g-truc/glm) (Latest tested v3.3.1)
-  
-  to directories of your choice, and specify their paths in `.env.cmake`. E.g:
-  ```cmake
-  set(GLFW_PATH       "~/glfw-<version>.bin.<dist>")
-  set(GLM_PATH        "~/glm")
-  set(VULKAN_SDK_PATH "~/VulkanSDK/<version>")
-  ```
-- If you are using a standalone C++ compiler (e.g. MinGW) you must also specify its path in `.env.cmake`. E.g.:
-  ```cmake
-  set(MINGW_PATH "<YOUR PATH HERE>")
-  ```
+
+## Setup
+**1. Clone the repository including submodules:**
+```sh
+git clone --recurse-submodules https://github.com/Skittss/sumire.git
+```
+**2. Run `setup.py`, specifying paths to your Vulkan and GLFW installations:**
+```sh
+python setup.py --vulkan <VK_PATH> --glfw <GLFW_PATH>
+```
+This script installs required binaries from [glslang](https://github.com/KhronosGroup/glslang), 
+generates required build directories, and sets up a local cmake environment `.env.cmake`.
+
+**3. Open the repository root with MSVC in CMake view**
+
 
 ## Building
-A number of build scripts are provided which build the project via CMake. 
-
-Building to a MSVC solution is recommended via running `build_win_msvc`. Sumire is tested primarily using the MSVC compiler then building the provided CMake targets (Sumire executable, and Shaders custom target).
-Other build methods are untested and may have issues.
-
-You may also build with a standalone compiler 
-via `build_win [--debug] [--release]` (Windows) or `build_unix` (Linux).
+- Use the CMake build system in MSVS with the provided targets (Debug, Release).
+- CMakeLists are provided so there is the option of building without Visual Studio if you wish.
 
 ## Running
 - Run the generated binary in the directory `sumire/bin/Debug` or `sumire/bin/Release`.
 
 ---
 
-# Partial Feature List and Todos
+# Feature List and Todos
 
 ## GLTF support
 - [X] faster glTF skinned animation updating
