@@ -5,18 +5,10 @@ project(${NAME} VERSION 0.1.0)
 option(ENABLE_BUILD_ERRORS "Enable build warnings and errors." ON)
 
 include(./.env.cmake OPTIONAL RESULT_VARIABLE LOCAL_ENV)
-message(STATUS "Local .env.cmake: ${LOCAL_ENV}")
+message(STATUS "Using local .env.cmake at: ${LOCAL_ENV}")
  
 # Compiler choice
-message(STATUS "using ${CMAKE_GENERATOR}")
-if (CMAKE_GENERATOR STREQUAL "MinGW Makefiles")
-    if (NOT MINGW_PATH) 
-        message(FATAL_ERROR "MINGW_PATH not set in .env.cmake")
-    endif()
-    set(USE_MINGW "True")
-    set(CMAKE_C_COMPILER ${MINGW_PATH}/bin/gcc.exe)
-    set(CMAKE_CXX_COMPILER  ${MINGW_PATH}/bin/g++.exe)
-endif()
+message(STATUS "Using ${CMAKE_GENERATOR}")
  
 # Target vulkan
 if (DEFINED VULKAN_SDK_PATH)
@@ -35,7 +27,6 @@ endif()
  
 # Target GLFW
 if (DEFINED GLFW_PATH)
-    message(STATUS "Using GLFW path specified in .env")
     set(GLFW_INCLUDE_DIRS "${GLFW_PATH}/include")
     if (MSVC)
         set(GLFW_LIB "${GLFW_PATH}/lib-vc2022") # Make sure this matches MSVC version
@@ -153,7 +144,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # c++ 17 standard
 
 # ---- Includes and Linking ---------------------------------------------------------------------------------------
 if (WIN32)
-    message(STATUS "CREATING BUILD FOR WINDOWS")
+    message(STATUS "Creating target Sumire (Windows)")
 
     if (USE_MINGW)
     target_include_directories(${PROJECT_NAME} PUBLIC
@@ -198,7 +189,7 @@ elseif (UNIX)
 endif()
  
 # ---- Custom Target SHADERS --------------------------------------------------------------------------------------
-message(STATUS "CREATING SHADERS TARGET")
+message(STATUS "Creating target Shaders")
 # Find all shader sources within shaders directory
 # taken from VBlancos vulkan tutorial
 # https://github.com/vblanco20-1/vulkan-guide/blob/all-chapters/CMakeLists.txt

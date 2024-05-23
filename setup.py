@@ -19,6 +19,9 @@ GLSLANG_BUILD_PATH_DEBUG = f"{GLSLANG_BUILD_PATH}/Debug"
 GLSLANG_BUILD_PATH_RELEASE = f"{GLSLANG_BUILD_PATH}/Release"
 GLSLANG_GITHUB_API_DIST_URL = "https://api.github.com/repos/KhronosGroup/glslang/releases/tags/main-tot"
 
+ENV_CMAKE_PATH = ".env.cmake"
+ENV_CMAKE_META_STR = "# SUMIRE .env.cmake  -  Do not modify this comment and the next two lines."
+
 # ---------------------------------------------------------------------------------------------------------------
 
 def command_output(cmd, directory, fail_ok=False):
@@ -163,7 +166,56 @@ def downloadGlslangBinaries(getDebug = True, getRelease = True):
             downloadArchive(releaseAssetURL, GLSLANG_BUILD_PATH_RELEASE)
             print("    Downloaded glslang Release binaries.")
 
+def initEnvCmake():
+    with open(ENV_CMAKE_PATH, 'w') as f:
+        f.seek(0, 0)
+        f.write(f"{ENV_CMAKE_META_STR}\n") # meta
+        f.write('#set(VULKAN_SDK_PATH <YOUR PATH HERE>)\n') # vkPth
+        f.write('#set(GLFW_PATH <YOUR PATH HERE>)\n') # vkPth
+        f.write("#---------------------------------------------------------------------")
+
+def writeEnvCmake(vkPth, glfwPth):
+    with open(ENV_CMAKE_PATH, 'r') as fr:
+        lines = fr.readlines()
+
+    nLines = len(lines)
+    for i in range(0, 3 - nLines):
+        line = nLines + i
+        if line == 0:
+            lines.append(f"{ENV_CMAKE_META_STR}\n")
+        elif line == 1:
+            lines.append('#set(VULKAN_SDK_PATH <YOUR PATH HERE>)\n')
+        elif line == 2:
+            lines.append('#set(GLFW_PATH <YOUR PATH HERE>)\n')
+        else:
+            lines.append("")
+
+    lines[0] = f"{ENV_CMAKE_META_STR}\n"
+    if vkPth:
+        lines[1] = f'set(VULKAN_SDK_PATH "{vkPth}")\n'
+    if glfwPth:
+        lines[2] = f'set(GLFW_PATH "{glfwPth}")\n'
+
+    with open(ENV_CMAKE_PATH, 'r+') as fw:
+        fw.seek(0, 0)
+        fw.writelines(lines)
+
+def setupEnvCmake(vkPth, glfwPth):
+    if not os.path.exists(ENV_CMAKE_PATH):
+        initEnvCmake()
+        print(f"Created cmake environment {ENV_CMAKE_PATH}")
+
+    if vkPth or glfwPth:
+        if vkPth:
+            print(f"Using Vulkan library at {vkPth}")
+        if glfwPth:
+            print(f"using GLFW library at {glfwPth}")
+        writeEnvCmake(vkPth, glfwPth)
+    else:
+        print(".env.cmake OK.")
+
 def setupGlslang():
+    # TODO: An option to update binaries would be nice here
     # Create build dirs
     if not os.path.exists(GLSLANG_BUILD_PATH_DEBUG):
         print(f"Creating glslang Debug build folder at '{GLSLANG_BUILD_PATH_DEBUG}'")
@@ -203,9 +255,24 @@ def setupSumire():
     else:
         print("Build folder OK.")
 
-if __name__ == "__main__":
+def main(vkPth, glfwPth, updateGlslang):
+    print("----- Setting Up .env.cmake -----------------------")
+    setupEnvCmake(vkPth, glfwPth)
+    print()
     print("----- Setting Up glslang --------------------------")
     setupGlslang()
     print()
     print("----- Setting Up Sumire ---------------------------")
     setupSumire()
+    pass
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="Sumire Setup")
+    parser.add_argument('--vulkan',         type=str, required=False, default=None)
+    parser.add_argument('--glfw',           type=str, required=False, default=None)
+    #TODO
+    #parser.add_argument('--update-glslang', type=str, required=False, action='store_true')
+
+    args = parser.parse_args()
+
+    main(args.vulkan, args.glfw, False)
