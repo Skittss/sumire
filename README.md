@@ -11,27 +11,33 @@ Currently, Sumire is only supported on windows.
 
 ## Prerequisites
 - Build and setup requirements:
-    - [Python 3.0+](https://www.python.org/downloads/), for running setup scripts. (Latest tested: 3.10.6)
-    - [Visual Studio]() (Latest tested: MSVS 2022)
-    - [Vulkan](https://vulkan.lunarg.com/sdk/home) (Latest tested: v1.3.250.1)
+    - [Python 3](https://www.python.org/downloads/), for running setup scripts. (Latest tested: 3.10.6)
+    - [Visual Studio](https://visualstudio.microsoft.com/downloads/) (Latest tested: MSVS 2022)
+    - [Vulkan](https://vulkan.lunarg.com/sdk/home) (Latest tested: v1.3.283.0)
     - [GLFW](https://www.glfw.org/download) (Latest tested: v3.4)
 
 ## Setup
-**1. Clone the repository including submodules:**
+**1. Download the Vulkan SDK and GLFW to directories of your choice**
+
+If you want to build a *debug* build of Sumire, make sure to install the component `Shader Toolchain Debug Symbols` alongside the Vulkan SDK core.
+
+**2. Clone the repository including submodules:**
 ```sh
 git clone --recurse-submodules https://github.com/Skittss/sumire.git
 ```
+
+<!---
 **2. Install python requirements: (Currently just `requests`):**
 ```sh
 python -m pip install -r requirements.txt
 ```
+-->
 
 **3. Run `setup.py`, specifying paths to your Vulkan and GLFW installations:**
 ```sh
 python setup.py --vulkan <VK_PATH> --glfw <GLFW_PATH>
 ```
-This script installs required binaries from [glslang](https://github.com/KhronosGroup/glslang), 
-generates required build directories, and sets up a local cmake environment `.env.cmake`.
+This script generates required build directories, and sets up a local cmake environment `.env.cmake`.
 
 **4. Open the repository root with Visual Studio in CMake view**
 

@@ -10,7 +10,7 @@ message(STATUS "Using local .env.cmake at: ${LOCAL_ENV}")
 # Compiler choice
 message(STATUS "Using ${CMAKE_GENERATOR}")
  
-# Target vulkan
+# ---- Vulkan Package --------------------------------------------------------------------------------------------
 if (DEFINED VULKAN_SDK_PATH)
     set(Vulkan_INCLUDE_DIRS "${VULKAN_SDK_PATH}/Include")
     set(Vulkan_LIBRARIES "${VULKAN_SDK_PATH}/Lib")
@@ -25,7 +25,7 @@ else()
     message(STATUS "Using vulkan lib at: ${Vulkan_LIBRARIES}")
 endif()
  
-# Target GLFW
+# ---- GLFW Package ----------------------------------------------------------------------------------------------
 if (DEFINED GLFW_PATH)
     set(GLFW_INCLUDE_DIRS "${GLFW_PATH}/include")
     if (MSVC)
@@ -45,7 +45,7 @@ else()
     message(STATUS "Using glfw lib at: ${GLFW_LIB}")
 endif()
   
-# ---- External Lib Paths -----------------------------------------------------------------------------------------
+# ---- External Lib Paths ----------------------------------------------------------------------------------------
 # TINY OBJ LOADER
 set(TINYOBJ_PATH external/tinyobjloader)
 # TINY GLTF LOADER
@@ -60,56 +60,15 @@ set(RAPIDJSON_PATH external/rapidjson)
 # GLM
 set(GLM_PATH external/glm)
 
-# ---- Glslang libs ---------------------------------------------------------------------------------------------
-# NOTE: Vulkan installation provides includes.
-# TODO: glslang should probably *not* be linked in a release binary 
-#       as shaders should be precompiled only - this link is pretty heavy.
-
+# ---- Shader libs -----------------------------------------------------------------------------------------------
+# Vulkan provides shader libs, so no need to find_library here.
 if (CMAKE_BUILD_TYPE STREQUAL Debug)
-    set(GLSLANG_LIB_DIR "external/glslang/build/Windows/Debug/lib")
+    set(SHADERC_LIBS shaderc_combinedd)
 else()
-    set(GLSLANG_LIB_DIR "external/glslang/build/Windows/Release/lib")
+    set(SHADERC_LIBS shaderc_combined)
 endif()
 
-#if (NOT EXISTS ${GLSLANG_LIB_DIR})
-#    message(FATAL_ERROR 
-#        "Glslang libs not found at ${GLSLANG_LIB_DIR}. "
-#        "Ensure setup.py was run, or manually download the libs manually otherwise."
-#    )
-#endif()
-
-find_library(GENERIC_CODE_GEN_LIB NAMES GenericCodeGen GenericCodeGend
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-find_library(GLSLANG_LIB NAMES glslang glslangd
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-find_library(GLSLANG_DEFAULT_RESOURCE_LIMITS_LIB NAMES glslang-default-resource-limits glslang-default-resource-limitsd
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-find_library(MACHINE_INDEPENDENT_LIB NAMES MachineIndependent MachineIndependentd
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-find_library(OS_DEPENDENT_LIB NAMES OSDependent OSDependentd
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-find_library(SPIRV_LIB NAMES SPIRV SPIRVd
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-find_library(SPVREMAPPER_LIB NAMES SPVRemapper SPVRemapperd
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools SPIRV-Toolsd
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt SPIRV-Tools-optd
-            PATHS ${GLSLANG_LIB_DIR} NO_DEFAULT_PATH)
-
-set(GLSLANG_LIBS
-    ${GENERIC_CODE_GEN_LIB}
-    ${GLSLANG_LIB}
-    ${GLSLANG_DEFAULT_RESOURCE_LIMITS_LIB}
-    ${MACHINE_INDEPENDENT_LIB}
-    ${OS_DEPENDENT_LIB}
-    ${SPIRV_LIB}
-    ${SPVREMAPPER_LIB}
-    ${SPIRV_TOOLS_LIB}
-    ${SPIRV_TOOLS_OPT_LIB}
-)
-
-# ---- Sumire Binary ----------------------------------------------------------------------------------------------
+# ---- Sumire Binary ---------------------------------------------------------------------------------------------
 # Binary Output Dirs
 SET(OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
@@ -142,7 +101,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # c++ 17 standard
  
 # set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
 
-# ---- Includes and Linking ---------------------------------------------------------------------------------------
+# ---- Includes and Linking --------------------------------------------------------------------------------------
 if (WIN32)
     message(STATUS "Creating target Sumire (Windows)")
 
@@ -175,20 +134,19 @@ if (WIN32)
     target_link_directories(${PROJECT_NAME} PUBLIC
         ${Vulkan_LIBRARIES}
         ${GLFW_LIB}
-        ${GLSLANG_LIB_DIR}
     )
 
     target_link_libraries(${PROJECT_NAME} PUBLIC
         glfw3 
         vulkan-1
-        ${GLSLANG_LIBS}
+        ${SHADERC_LIBS}
     )
 
 elseif (UNIX)
     message(FATAL_ERROR "Building for UNIX is currently unsupported.")
 endif()
  
-# ---- Custom Target SHADERS --------------------------------------------------------------------------------------
+# ---- Custom Target SHADERS -------------------------------------------------------------------------------------
 message(STATUS "Creating target Shaders")
 # Find all shader sources within shaders directory
 # taken from VBlancos vulkan tutorial
