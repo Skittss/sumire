@@ -4,22 +4,22 @@
 #extension GL_KHR_shader_subgroup_arithmetic : enable
 #extension GL_KHR_shader_subgroup_ballot : enable
 
-/*
- Phase 2 of High Quality Shadow Mapping.
-
- Two Main Goals here:
- - Find potentially valid lights per shadow tile
-    -> Tile Group Light Mask Buffer
- - Reserve memory for storage of light lists built in the following phases
-    -> Tile Shadow Slot IDs Buffer (& Slot Counters Buffer)
-  
-We only evaluate 1 shadow tile per thread instead of per-pixel
-  and process groups of 8x8 shadow tiles for the entire workgroup.
-
-Notes:
- - The original paper was designed with subgroup sizes of 64 in mind
-   whereas many desktop GPUs (esp. NVIDIA) have subgroup sizes of 32.
-   In some cases we may have to do an extra atomic write to compensate.
+/* 
+ * Phase 2 of High Quality Shadow Mapping.
+ *
+ * Two Main Goals here:
+ *   - Find potentially valid lights per shadow tile
+ *       -> Tile Group Light Mask Buffer
+ *   - Reserve memory for storage of light lists built in the following phases
+ *       -> Tile Shadow Slot IDs Buffer (& Slot Counters Buffer)
+ * 
+ * We only evaluate 1 shadow tile per thread instead of per-pixel
+ *   and process groups of 8x8 shadow tiles for the entire workgroup.
+ *
+ * Notes:
+ *   - The original paper was designed with subgroup sizes of 64 in mind
+ *     whereas many desktop GPUs (esp. NVIDIA) have subgroup sizes of 32.
+ *     In some cases we may have to do an extra atomic write to compensate.
 */
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
