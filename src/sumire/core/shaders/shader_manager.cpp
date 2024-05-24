@@ -1,5 +1,7 @@
 #include <sumire/core/shaders/shader_manager.hpp>
 
+#include <sumire/util/relative_engine_filepath.hpp>
+
 #include <iostream>
 #include <cassert>
 
@@ -178,13 +180,15 @@ namespace sumire {
     }
 
     void ShaderManager::updatePipelines() {
+        // TODO: Only recreate pipelines for shaders which compilation was successful
+
         for (auto& pipeline : graphicsPipelinesPendingUpdate) {
-            std::cout << "[Sumire::ShaderSource] Recreating graphics pipeline " << pipeline << std::endl;
+            std::cout << "[Sumire::ShaderSource] Recreating graphics pipeline 0x" << pipeline << std::endl;
             // TODO: recreate pipelines with new ShaderSource VkShaderModule
         }
 
         for (auto& pipeline : computePipelinesPendingUpdate) {
-            std::cout << "[Sumire::ShaderSource] Recreating compute pipeline " << pipeline << std::endl;
+            std::cout << "[Sumire::ShaderSource] Recreating compute pipeline 0x" << pipeline << std::endl;
         }
 
         graphicsPipelinesPendingUpdate.clear();
@@ -194,12 +198,10 @@ namespace sumire {
     void ShaderManager::resolveSourceParents(ShaderSource* source, SumiPipeline* dependency) {
         std::vector<std::string> includes = source->getSourceIncludes();
         for (std::string& inc : includes) {
-            std::filesystem::path sourcePath{ source->getSourcePath() };
-            std::filesystem::path incPath{ inc };
-            std::filesystem::path combinedPath = std::filesystem::canonical(sourcePath.parent_path() / incPath);
-            std::filesystem::path cleanedPath = combinedPath.make_preferred();
-            std::filesystem::path enginePath = std::filesystem::relative(cleanedPath);
-            ShaderSource* parent = requestShaderSource(enginePath.u8string(), dependency);
+            std::string parentPath = 
+                util::relativeEngineFilepath(source->getSourcePath(), inc);
+
+            ShaderSource* parent = requestShaderSource(parentPath, dependency);
             source->addParent(parent);
             parent->addChild(source);
         }
@@ -208,12 +210,10 @@ namespace sumire {
     void ShaderManager::resolveSourceParents(ShaderSource* source, SumiComputePipeline* dependency) {
         std::vector<std::string> includes = source->getSourceIncludes();
         for (std::string& inc : includes) {
-            std::filesystem::path sourcePath{ source->getSourcePath() };
-            std::filesystem::path incPath{ inc };
-            std::filesystem::path combinedPath = std::filesystem::canonical(sourcePath.parent_path() / incPath);
-            std::filesystem::path cleanedPath = combinedPath.make_preferred();
-            std::filesystem::path enginePath = std::filesystem::relative(cleanedPath);
-            ShaderSource* parent = requestShaderSource(enginePath.u8string(), dependency);
+            std::string parentPath = 
+                util::relativeEngineFilepath(source->getSourcePath(), inc);
+
+            ShaderSource* parent = requestShaderSource(parentPath, dependency);
             source->addParent(parent);
             parent->addChild(source);
         }
@@ -234,7 +234,7 @@ namespace sumire {
     
     // ---- Hot Reloading ----------------------------------------------------------------------------------------
     void ShaderManager::initShaderCompiler() {
-        compiler = std::make_unique<ShaderGlslangCompiler>(sources);
+        compiler = std::make_unique<ShaderCompiler>();
     }
 
     void ShaderManager::initShaderDirWatcher() {

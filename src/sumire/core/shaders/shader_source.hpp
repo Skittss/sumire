@@ -1,14 +1,14 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include <sumire/core/shaders/shader_glslang_compiler.hpp>
+#include <sumire/core/shaders/shader_compiler.hpp>
 
 #include <string>
 #include <vector>
 
 namespace sumire {
 
-    class ShaderGlslangCompiler;
+    class ShaderCompiler;
 
     class ShaderSource {
     public:
@@ -16,7 +16,7 @@ namespace sumire {
         ~ShaderSource();
 
         void invalidate();
-        std::vector<ShaderSource*> revalidate(ShaderGlslangCompiler* compiler);
+        std::vector<ShaderSource*> revalidate(ShaderCompiler* compiler);
 
         enum SourceType {
             GRAPHICS,
@@ -34,9 +34,9 @@ namespace sumire {
 
     private:
         void initShaderSource();
-        void hotReloadShaderSource(ShaderGlslangCompiler* compiler);
+        void hotReloadShaderSource(ShaderCompiler* compiler);
         std::vector<char> readFile(const std::string& filepath);
-        void recompile(ShaderGlslangCompiler* compiler);
+        void recompile(ShaderCompiler* compiler);
         void createShaderModule(const std::vector<char>& spvCode);
         void destroyShaderModule();
 

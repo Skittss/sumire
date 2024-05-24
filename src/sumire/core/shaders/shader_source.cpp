@@ -28,7 +28,7 @@ namespace sumire {
     }
 
     // Returns a vector to all sources updated (i.e. including parents) from this call
-    std::vector<ShaderSource*> ShaderSource::revalidate(ShaderGlslangCompiler* compiler) {
+    std::vector<ShaderSource*> ShaderSource::revalidate(ShaderCompiler* compiler) {
         // Ensure all parents are validated before recompiling
         std::vector<ShaderSource*> updatedSources{};
 
@@ -58,7 +58,7 @@ namespace sumire {
         }
     }
 
-    void ShaderSource::hotReloadShaderSource(ShaderGlslangCompiler* compiler) {
+    void ShaderSource::hotReloadShaderSource(ShaderCompiler* compiler) {
         if (sourceType != SourceType::INCLUDE) {
             recompile(compiler);
             std::vector<char> newSpvCode = readFile(sourcePath + ".spv");
@@ -72,7 +72,7 @@ namespace sumire {
 
         if (!success) {
             throw std::runtime_error(
-                "[Sumire::ShaderSource] Could not open file: " 
+                "[Sumire::ShaderSource] Could not open file: "
                 + filepath + ". (SPIR-V needs to be compiled before startup)."
             );
         }
@@ -129,7 +129,7 @@ namespace sumire {
         return includes;
     }
 
-    void ShaderSource::recompile(ShaderGlslangCompiler* compiler) {
+    void ShaderSource::recompile(ShaderCompiler* compiler) {
         std::cout << "[Sumire::ShaderSource] Recompiling Shader Source: " << sourcePath << std::endl;
 
         // Async compile with glslang

@@ -12,7 +12,7 @@
 #endif
 
 // Shader compiling
-#include <sumire/core/shaders/shader_glslang_compiler.hpp>
+#include <sumire/core/shaders/shader_compiler.hpp>
 
 #include <unordered_map>
 #include <memory>
@@ -66,7 +66,7 @@ namespace sumire {
 
         // ---- Hot reloading ------------------------------------------------------------------------------------
         std::unique_ptr<ShaderUpdateListener> listener; 
-        std::unique_ptr<ShaderGlslangCompiler> compiler;
+        std::unique_ptr<ShaderCompiler> compiler;
         void initShaderCompiler();
 
         static constexpr char* shaderDir = SUMIRE_ENGINE_PATH("shaders/");
