@@ -78,7 +78,7 @@ namespace sumire {
         ImGui::CreateContext();
         ImGui::StyleColorsDark();
 
-        auto io = getIO();
+        ImGuiIO& io = getIO();
         //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
