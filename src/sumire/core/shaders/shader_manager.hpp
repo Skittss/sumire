@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 
 #include <sumire/core/shaders/shader_source.hpp>
+#include <sumire/core/graphics_pipeline/impl_pipeline.hpp>
 #include <sumire/util/sumire_engine_path.hpp>
 
 // File watchers
@@ -22,9 +23,6 @@
 
 namespace sumire {
 
-    class SumiPipeline;
-    class SumiComputePipeline;
-
     class ShaderManager {
 
         friend class ShaderUpdateListener;
@@ -33,32 +31,25 @@ namespace sumire {
         ShaderManager(VkDevice device, bool hotReloadingEnabled);
         ~ShaderManager();
 
-        ShaderSource* requestShaderSource(std::string shaderPath, SumiPipeline* requester);
-        ShaderSource* requestShaderSource(std::string shaderPath, SumiComputePipeline* requester);
+        ShaderSource* requestShaderSource(std::string shaderPath, ImplPipeline* requester);
 
     private:
-        void addGraphicsSource(
-            VkDevice device, const std::string& sourcePath, SumiPipeline* dependency);
-        void addGraphicsDependency(const std::string& sourcePath, SumiPipeline* dependency);
-        void addComputeSource(
-            VkDevice device, const std::string& sourcePath, SumiComputePipeline* dependency);
-        void addComputeDependency(const std::string& sourcePath, SumiComputePipeline* dependency);
+        void addSource(
+            VkDevice device, const std::string& sourcePath, ImplPipeline* dependency);
+        void addDependency(const std::string& sourcePath, ImplPipeline* dependency);
         void hotReload(const std::string& sourcePath);
         void invalidateSourceAndChildren(const std::string& sourcePath);
         void revalidateSources();
         void updatePipelines();
-        void resolveSourceParents(ShaderSource* source, SumiPipeline* dependency);
-        void resolveSourceParents(ShaderSource* source, SumiComputePipeline* dependency);
+        void resolveSourceParents(ShaderSource* source, ImplPipeline* dependency);
         bool sourceExists(const std::string& sourcePath) const;
         ShaderSource* getSource(const std::string& sourcePath) const;
 
         std::string formatPath(const std::string& path) const;
 
         std::unordered_map<std::string, std::unique_ptr<ShaderSource>> sources;
-        std::unordered_map<std::string, std::vector<SumiPipeline*>> graphicsDependencies;
-        std::unordered_map<std::string, std::vector<SumiComputePipeline*>> computeDependencies;
-        std::set<SumiPipeline*> graphicsPipelinesPendingUpdate;
-        std::set<SumiComputePipeline*> computePipelinesPendingUpdate;
+        std::unordered_map<std::string, std::vector<ImplPipeline*>> dependencies;
+        std::set<ImplPipeline*> pipelinesPendingUpdate;
 
         const bool hotReloadingEnabled;
 
