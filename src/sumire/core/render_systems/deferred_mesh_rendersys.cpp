@@ -249,7 +249,18 @@ namespace sumire {
 
         // Modify color blending for 5 channels as we have 5 colour outputs for deferred rendering.
         // All non-color channels should not alpha blend, but we should enable it for color channels.
-        VkPipelineColorBlendAttachmentState noAlphaBlend = defaultConfig.colorBlendAttachment;
+        VkPipelineColorBlendAttachmentState noAlphaBlend{};
+        noAlphaBlend.colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
+            VK_COLOR_COMPONENT_A_BIT;
+        noAlphaBlend.blendEnable = VK_FALSE;
+        noAlphaBlend.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+        noAlphaBlend.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+        noAlphaBlend.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
+        noAlphaBlend.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+        noAlphaBlend.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+        noAlphaBlend.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
+
         VkPipelineColorBlendAttachmentState alphaBlend{};
         alphaBlend.colorWriteMask = 
             VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
@@ -262,16 +273,24 @@ namespace sumire {
         alphaBlend.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
         alphaBlend.alphaBlendOp = VK_BLEND_OP_ADD;
 
-        std::array<VkPipelineColorBlendAttachmentState, 5> colorBlendAttachments{
+        defaultConfig.colorBlendAttachments.clear();
+        defaultConfig.colorBlendAttachments = {
             alphaBlend,   // Swapchain Col
             noAlphaBlend, // Position
             noAlphaBlend, // Normal
             alphaBlend,   // Albedo
             noAlphaBlend  // Depth
         };
+        //std::array<VkPipelineColorBlendAttachmentState, 5> colorBlendAttachments{
+        //    alphaBlend,   // Swapchain Col
+        //    noAlphaBlend, // Position
+        //    noAlphaBlend, // Normal
+        //    alphaBlend,   // Albedo
+        //    noAlphaBlend  // Depth
+        //};
 
-        defaultConfig.colorBlendInfo.pAttachments = colorBlendAttachments.data();
-        defaultConfig.colorBlendInfo.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
+        //defaultConfig.colorBlendInfo.pAttachments = colorBlendAttachments.data();
+        //defaultConfig.colorBlendInfo.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
 
         std::string defaultVertShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill.vert");
         std::string defaultFragShader = SUMIRE_ENGINE_PATH("shaders/deferred/mesh_gbuffer_fill.frag");
