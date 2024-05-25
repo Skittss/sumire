@@ -325,6 +325,9 @@ namespace sumire {
             if (frameCommandBuffers.validFrame()) {
 
                 int frameIdx = sumiRenderer.getFrameIdx();
+                // Reset bound pipeline caches
+                SumiComputePipeline::resetBoundPipelineCache();
+                SumiPipeline::resetBoundPipelineCache();
 
                 // Fill in rest of frame-specific frameinfo props
                 frameInfo.frameIdx = frameIdx;
