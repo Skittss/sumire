@@ -47,7 +47,7 @@ namespace sumire {
         ShaderCompiler();
         ~ShaderCompiler();
 
-        void compile(const std::string& sourcePath);
+        bool compile(const std::string& sourcePath, std::vector<char>& spvOut);
 
     private:
         static constexpr shaderc_env_version targetVulkanApiVersion = shaderc_env_version_vulkan_1_3;

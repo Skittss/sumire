@@ -1,6 +1,6 @@
 #include <sumire/core/shaders/shader_compiler.hpp>
 
-#include <sumire/util/read_file_binary.hpp>
+#include <sumire/util/rw_file_binary.hpp>
 #include <sumire/util/relative_engine_filepath.hpp>
 
 #include <filesystem>
@@ -65,7 +65,7 @@ namespace sumire {
     ShaderCompiler::ShaderCompiler() {}
     ShaderCompiler::~ShaderCompiler() {}
 
-    void ShaderCompiler::compile(const std::string& sourcePath) {
+    bool ShaderCompiler::compile(const std::string& sourcePath, std::vector<char>& spvOut) {
         std::vector<char> sourceBuffer = readSource(sourcePath);
         const std::string sourceCode{ sourceBuffer.begin(), sourceBuffer.end() };
 
@@ -83,19 +83,26 @@ namespace sumire {
         if (preprocessResult.GetCompilationStatus() != shaderc_compilation_status_success) {
             std::cout << "[Sumire::ShaderCompiler] Failed to preprocess shader "
                 << sourcePath << ":\n\n" << preprocessResult.GetErrorMessage() << std::endl;
-            return;
+            return false;
         }
+        const std::string preprocessedCode{ preprocessResult.begin(), preprocessResult.end() };
 
         // Compile
-        const std::string preprocessedCode{ preprocessResult.begin(), preprocessResult.end() };
         auto compileResult = compiler.CompileGlslToSpv(preprocessedCode, shaderType, sourcePath.c_str(), options);
         if (compileResult.GetCompilationStatus() != shaderc_compilation_status_success) {
             std::cout << "[Sumire::ShaderCompiler] Failed to compile shader "
                 << sourcePath << ":\n\n" << compileResult.GetErrorMessage() << std::endl;
-            return;
+            return false;
         }
 
         // Write SPIRV
+        auto spv = std::vector<uint32_t>(compileResult.cbegin(), compileResult.cend());
+        const char* binSpv = reinterpret_cast<const char*>(spv.data());
+        spvOut = std::vector<char>{ binSpv, binSpv + spv.size() * sizeof(uint32_t) };
+
+        util::writeFileBinary(sourcePath + ".spv", spvOut);
+
+        return true;
     }
 
     std::vector<char> ShaderCompiler::readSource(const std::string& sourcePath) {
