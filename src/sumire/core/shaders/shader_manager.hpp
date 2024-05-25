@@ -56,6 +56,7 @@ namespace sumire {
         VkDevice device_;
 
         // ---- Hot reloading ------------------------------------------------------------------------------------
+        static constexpr char* VERBOSE_HOTRELOAD = false;
         std::unique_ptr<ShaderUpdateListener> listener; 
         std::unique_ptr<ShaderCompiler> compiler;
         void initShaderCompiler();

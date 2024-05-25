@@ -115,7 +115,9 @@ namespace sumire {
     void ShaderManager::updatePipelines() {
         // recreate pipelines
         for (auto& pipeline : pipelinesPendingUpdate) {
-            std::cout << "[Sumire::ShaderSource] Recreating graphics pipeline 0x" << pipeline << std::endl;
+            if (VERBOSE_HOTRELOAD) {
+                std::cout << "[Sumire::ShaderSource] Recreating pipeline 0x" << pipeline << std::endl;
+            }
             pipeline->queuePipelineRecreation();
         }
 
