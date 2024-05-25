@@ -14,6 +14,8 @@ namespace sumire {
         const std::string& filename
     ) {
         switch (action) {
+        // Code generating actions
+        case watchers::FsWatchAction::FS_RENAME_NEW:
         case watchers::FsWatchAction::FS_MODIFIED: {
             std::filesystem::path filePath{ filename };
             std::filesystem::path ext{ filePath.extension()};
@@ -27,17 +29,18 @@ namespace sumire {
             }
 
         } break;
-        case watchers::FsWatchAction::FS_MOVED: {
-            std::cout << "[Sumire::ShaderManager] INFO: File move in <" + filename + ">." << std::endl;
-        } break;
-        case watchers::FsWatchAction::FS_ADD: {
-            std::cout << "[Sumire::ShaderManager] INFO: File added in <" + filename + ">." << std::endl;
-        } break;
-        case watchers::FsWatchAction::FS_DELETE: {
-            std::cout << "[Sumire::ShaderManager] INFO: File deleted in <" + filename + ">." << std::endl;
-        } break;
+        // Others for debug logging
+        //case watchers::FsWatchAction::FS_RENAME_OLD: {
+        //    std::cout << "[Sumire::ShaderManager] INFO: File renamed from: <" + filename + ">." << std::endl;
+        //} break;
+        //case watchers::FsWatchAction::FS_ADD: {
+        //    std::cout << "[Sumire::ShaderManager] INFO: File added: <" + filename + ">." << std::endl;
+        //} break;
+        //case watchers::FsWatchAction::FS_DELETE: {
+        //    std::cout << "[Sumire::ShaderManager] INFO: File deleted: <" + filename + ">." << std::endl;
+        //} break;
         default:
-            throw std::runtime_error("[Sumire::ShaderManager] Received invalid FsWatchAction.");
+        break;
         }
     }
 
