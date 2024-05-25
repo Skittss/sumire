@@ -93,7 +93,7 @@ Shadow pass (Compute) -> [Deferred Fill, Deferred Resolve, Forward subpass] (Gra
 - [ ] Pre-draw compute needs to be ring-buffered or better synchroinzed.
 - [X] Light buffers should be ring-buffered also as start of frame sort can cause discontinuities for in flight frames
 - [ ] High quality deferred shadows (modification on cascaded shadow maps) via compute.
-- [ ] Shader Hot-reloading
+- [X] Shader Hot-reloading
 - [ ] Proper logging system via lib such as spdlog
 - [ ] Pipeline caching (if pipeline initialisation becomes slow - currently non-issue)
 
