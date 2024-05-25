@@ -15,16 +15,21 @@ namespace sumire {
         SumiDevice& device,
         const std::string& compFilepath,
         VkPipelineLayout pipelineLayout
-    ) : sumiDevice{ device }, compFilePath{ compFilepath } {
+    ) : sumiDevice{ device }, 
+        compFilePath{ compFilepath }, 
+        computePipelineLayout{ pipelineLayout }
+    {
         getShaderSources(compFilepath);
-        createComputePipeline(pipelineLayout);
+        createComputePipeline(&computePipeline);
     }
 
     SumiComputePipeline::~SumiComputePipeline() {
-        vkDestroyPipeline(sumiDevice.device(), computePipeline, nullptr);
+        destroyComputePipeline();
+
+        if (boundPipeline = this) resetBoundPipelineCache;
     }
 
-    void SumiComputePipeline::createComputePipeline(VkPipelineLayout pipelineLayout) {
+    void SumiComputePipeline::createComputePipeline(VkPipeline* pipeline) {
         VkPipelineShaderStageCreateInfo shaderStageInfo{};
         shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -34,13 +39,26 @@ namespace sumire {
         VkComputePipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
         pipelineInfo.stage = shaderStageInfo;
-        pipelineInfo.layout = pipelineLayout;
+        pipelineInfo.layout = computePipelineLayout;
 
         VK_CHECK_SUCCESS(
             vkCreateComputePipelines(
-                sumiDevice.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline),
+                sumiDevice.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, pipeline),
             "[Sumire::SumiComputePipeline] Failed to create compute pipeline."
         );
+    }
+
+    void SumiComputePipeline::destroyComputePipeline() {
+        vkDestroyPipeline(sumiDevice.device(), computePipeline, nullptr);
+    }
+
+    void SumiComputePipeline::swapNewComputePipeline() {
+        assert(newComputePipeline != VK_NULL_HANDLE && "New compute pipeline not available.");
+
+        destroyComputePipeline();
+        computePipeline = newComputePipeline;
+        newComputePipeline = VK_NULL_HANDLE;
+        needsNewPipelineSwap = false;
     }
 
     void SumiComputePipeline::getShaderSources(const std::string& compFilepath) {
@@ -48,9 +66,17 @@ namespace sumire {
     }
 
     void SumiComputePipeline::bind(VkCommandBuffer commandBuffer) {
-        //if (boundPipeline != this) {
+        if (needsNewPipelineSwap) swapNewComputePipeline();
+
+        if (boundPipeline != this) {
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-        //	boundPipeline = this;
-        //}
+            boundPipeline = this;
+        }
+    }
+
+    // TODO: This needs to be thread safe.
+    void SumiComputePipeline::queuePipelineRecreation() {
+        createComputePipeline(&newComputePipeline);
+        needsNewPipelineSwap = true;
     }
 }

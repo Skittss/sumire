@@ -1,5 +1,6 @@
 #include <sumire/core/graphics_pipeline/sumi_pipeline.hpp>
 
+#include <sumire/core/shaders/shader_manager.hpp>
 #include <sumire/core/models/vertex.hpp>
 #include <sumire/util/vk_check_success.hpp>
 
@@ -17,20 +18,24 @@ namespace sumire {
         SumiDevice& device,
         const std::string& vertFilepath,
         const std::string& fragFilepath,
-        const PipelineConfigInfo& configInfo
-    ) : sumiDevice{ device }, vertFilePath{ vertFilePath }, fragFilePath{fragFilepath} {
+        PipelineConfigInfo configInfo
+    ) : sumiDevice{ device }, 
+        vertFilePath{ vertFilePath }, 
+        fragFilePath{fragFilepath},
+        configInfo{ configInfo }
+    {
         getShaderSources(vertFilepath, fragFilepath);
-        createGraphicsPipeline(configInfo);
+        createGraphicsPipeline(&graphicsPipeline);
     }
 
     SumiPipeline::~SumiPipeline() {
-        vkDestroyPipeline(sumiDevice.device(), graphicsPipeline, nullptr);
+        destroyGraphicsPipeline();
 
         // nullify binding reference if this pipeline is currently bound.
-        if (boundPipeline == this) boundPipeline = nullptr;
+        if (boundPipeline == this) resetBoundPipelineCache();
     }
 
-    void SumiPipeline::createGraphicsPipeline(const PipelineConfigInfo& configInfo) {
+    void SumiPipeline::createGraphicsPipeline(VkPipeline* pipeline) {
         assert(configInfo.pipelineLayout != VK_NULL_HANDLE
             && "Cannot create graphics pipeline: pipelineLayout is not provided in configInfo");
         assert(configInfo.renderPass != VK_NULL_HANDLE
@@ -89,9 +94,22 @@ namespace sumire {
 
         VK_CHECK_SUCCESS(
             vkCreateGraphicsPipelines(
-                sumiDevice.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline),
+                sumiDevice.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, pipeline),
             "[Sumire::SumiPipeline] Failed to create graphics pipeline."
         );
+    }
+
+    void SumiPipeline::destroyGraphicsPipeline() {
+        vkDestroyPipeline(sumiDevice.device(), graphicsPipeline, nullptr);
+    }
+
+    void SumiPipeline::swapNewGraphicsPipeline() {
+        assert(newGraphicsPipeline != VK_NULL_HANDLE && "New graphics pipeline not available");
+
+        destroyGraphicsPipeline();
+        graphicsPipeline = newGraphicsPipeline;
+        newGraphicsPipeline = VK_NULL_HANDLE;
+        needsNewPipelineSwap = false;
     }
 
     void SumiPipeline::getShaderSources(
@@ -104,18 +122,22 @@ namespace sumire {
     }
 
     void SumiPipeline::bind(VkCommandBuffer commandBuffer) {
+        if (needsNewPipelineSwap) swapNewGraphicsPipeline();
         // TODO: This pipeline switching optimization is not perfect -
         //       We currently don't check if pipelines are semantically the same but under different objects.
         //       This mean pipelines will always switch between render systems, etc.
         //		 This could be fixed by comparing a hash of the pipeline state instead of a reference.
-        // TODO: It would also be beneficial to organise drawing code such that minimal pipeline
-        //		 switching is required in the first place.
-        // TODO: bound pipeline should be reset between frames.
         if (boundPipeline != this) {
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
             boundPipeline = this;
         }
     }
+
+    void SumiPipeline::queuePipelineRecreation() {
+        createGraphicsPipeline(&newGraphicsPipeline);
+        needsNewPipelineSwap = true;
+    }
+
     void SumiPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
 
         // Triangle list input assembly.

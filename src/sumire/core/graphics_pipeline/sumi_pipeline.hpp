@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sumire/core/graphics_pipeline/impl_pipeline.hpp>
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 
 #include <string>
@@ -24,26 +25,31 @@ namespace sumire {
         uint32_t subpass = 0;
     };
 
-    class SumiPipeline {
+    class SumiPipeline : public ImplPipeline {
     public:
         SumiPipeline() = default;
         SumiPipeline(
             SumiDevice& device, 
             const std::string& vertFilepath, 
             const std::string& fragFilepath, 
-            const PipelineConfigInfo& configInfo
+            PipelineConfigInfo configInfo
         );
         ~SumiPipeline();
 
         SumiPipeline(const SumiPipeline&) = delete;
         SumiPipeline& operator=(const SumiPipeline&) = delete;
 
-        void bind(VkCommandBuffer commandBuffer);
+        void bind(VkCommandBuffer commandBuffer) override;
+        void queuePipelineRecreation() override;
         static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
         static void enableAlphaBlending(PipelineConfigInfo& configInfo);
 
+        static void resetBoundPipelineCache() { boundPipeline = nullptr; }
+
     private:
-        void createGraphicsPipeline(const PipelineConfigInfo& configInfo);
+        void createGraphicsPipeline(VkPipeline* pipeline);
+        void destroyGraphicsPipeline();
+        void swapNewGraphicsPipeline();
         void getShaderSources(const std::string& vertFilepath, const std::string& fragFilepath);
 
         std::string vertFilePath = "Undefined";
@@ -51,9 +57,12 @@ namespace sumire {
 
         ShaderSource* vertShaderSource = nullptr;
         ShaderSource* fragShaderSource = nullptr;
+        bool needsNewPipelineSwap = false;
 
         SumiDevice& sumiDevice;
-        VkPipeline graphicsPipeline     = VK_NULL_HANDLE;
+        VkPipeline graphicsPipeline    = VK_NULL_HANDLE;
+        VkPipeline newGraphicsPipeline = VK_NULL_HANDLE;
+        PipelineConfigInfo configInfo;
 
         static SumiPipeline* boundPipeline;
 
