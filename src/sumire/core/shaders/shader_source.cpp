@@ -130,8 +130,10 @@ namespace sumire {
         bool recompileSuccess = compiler->compile(sourcePath, newSpv);
 
         // Recreate shader module
-        destroyShaderModule();
-        createShaderModule(newSpv);
+        if (recompileSuccess) {
+            destroyShaderModule();
+            createShaderModule(newSpv);
+        }
 
         return recompileSuccess;
     }
