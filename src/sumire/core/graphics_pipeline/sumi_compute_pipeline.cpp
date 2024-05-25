@@ -55,6 +55,8 @@ namespace sumire {
     void SumiComputePipeline::swapNewComputePipeline() {
         assert(newComputePipeline != VK_NULL_HANDLE && "New compute pipeline not available.");
 
+        // Don't like this wait idle but not the biggest deal at the moment
+        vkDeviceWaitIdle(sumiDevice.device());
         destroyComputePipeline();
         computePipeline = newComputePipeline;
         newComputePipeline = VK_NULL_HANDLE;
