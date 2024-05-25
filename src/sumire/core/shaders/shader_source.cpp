@@ -1,6 +1,6 @@
 #include <sumire/core/shaders/shader_source.hpp>
 #include <sumire/util/vk_check_success.hpp>
-#include <sumire/util/read_file_binary.hpp>
+#include <sumire/util/rw_file_binary.hpp>
 
 #include <fstream>
 #include <filesystem>
@@ -39,11 +39,12 @@ namespace sumire {
         }
 
         if (invalid) {
+            // Includes do not need compiling nor are directly responsible for 
+            // pipeline recreation - any errors are propagated to their dependencies
             if (sourceType != SourceType::INCLUDE) {
-                // Includes do not need compiling
-                recompile(compiler);
+                bool success = recompile(compiler);
+                if (success) updatedSources.push_back(this);
             }
-            updatedSources.push_back(this);
         }
 
         invalid = false;
@@ -55,14 +56,6 @@ namespace sumire {
         if (sourceType != SourceType::INCLUDE) {
             std::vector<char> spvCode = readFile(sourcePath + ".spv");
             createShaderModule(spvCode);
-        }
-    }
-
-    void ShaderSource::hotReloadShaderSource(ShaderCompiler* compiler) {
-        if (sourceType != SourceType::INCLUDE) {
-            recompile(compiler);
-            std::vector<char> newSpvCode = readFile(sourcePath + ".spv");
-            createShaderModule(newSpvCode);
         }
     }
 
@@ -129,13 +122,18 @@ namespace sumire {
         return includes;
     }
 
-    void ShaderSource::recompile(ShaderCompiler* compiler) {
+    bool ShaderSource::recompile(ShaderCompiler* compiler) {
         std::cout << "[Sumire::ShaderSource] Recompiling Shader Source: " << sourcePath << std::endl;
 
         // Async compile with glslang
-        compiler->compile(sourcePath);
+        std::vector<char> newSpv;
+        bool recompileSuccess = compiler->compile(sourcePath, newSpv);
 
         // Recreate shader module
+        destroyShaderModule();
+        createShaderModule(newSpv);
+
+        return recompileSuccess;
     }
 
     void ShaderSource::createShaderModule(const std::vector<char>& spvCode) {

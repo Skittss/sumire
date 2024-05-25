@@ -34,9 +34,8 @@ namespace sumire {
 
     private:
         void initShaderSource();
-        void hotReloadShaderSource(ShaderCompiler* compiler);
         std::vector<char> readFile(const std::string& filepath);
-        void recompile(ShaderCompiler* compiler);
+        bool recompile(ShaderCompiler* compiler);
         void createShaderModule(const std::vector<char>& spvCode);
         void destroyShaderModule();
 
