@@ -8,6 +8,7 @@
 #include <iostream>
 #include <locale>
 #include <codecvt>
+#include <set>
 
 namespace sumire::watchers {
 
@@ -33,6 +34,11 @@ namespace sumire::watchers {
     }
     
     void FsWatcherWin::asyncWatch() {
+        std::set<std::string> modifiedFiles;
+        // ~Human reaction time. Not the best solution and may cause a missed update
+        //   But quite frankly if a pipeline recreates in less than 200ms, updating it twice is fine. 
+        constexpr float MIN_WAIT_INTERVAL_MS = 200.0f;
+
         auto start = std::chrono::steady_clock::now();
 
         while (watching) {
@@ -42,7 +48,7 @@ namespace sumire::watchers {
                 watchHandle.buffer.data(),
                 NOTIF_BUFFER_ALLOC_SIZE,
                 recursive,
-                FILE_NOTIFY_CHANGE_LAST_WRITE, // For now, only interested in modified files.
+                FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME,
                 &bytesReturned,
                 NULL,
                 NULL
@@ -59,12 +65,18 @@ namespace sumire::watchers {
                     std::wstring w_Filename{ info->FileName, info->FileNameLength / sizeof(wchar_t) };
                     std::string filename = toString(w_Filename);
 
-                    // Handle action
-                    listener->handleFileAction(
-                        action,
-                        watchDir,
-                        filename
-                    );
+                    // Handle action immediately if it is not a modification
+                    // Modification handling is deferred a few ms to prevent double notifications from Windows.
+                    if (action != FsWatchAction::FS_MODIFIED) {
+                        listener->handleFileAction(
+                            action,
+                            watchDir,
+                            filename
+                        );
+                    }
+                    else {
+                        modifiedFiles.insert(filename);
+                    }
 
                     // Next notif
                     info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(
@@ -74,10 +86,25 @@ namespace sumire::watchers {
                 } while (info->NextEntryOffset > 0);
             }
 
-            // TODO: Deal with double modification notifications
+            // Deferred handling of double modification notifications
             auto now = std::chrono::steady_clock::now();
             size_t elapsed = static_cast<size_t>(
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count());
+
+            if (elapsed > MIN_WAIT_INTERVAL_MS && !modifiedFiles.empty()) {
+                for (auto& filename : modifiedFiles) {
+                    listener->handleFileAction(
+                        FsWatchAction::FS_MODIFIED,
+                        watchDir,
+                        filename
+                    );
+                }
+                modifiedFiles.clear();
+                start = now;
+            }
+            else {
+                modifiedFiles.clear();
+            }
         }
     }
 
@@ -112,8 +139,8 @@ namespace sumire::watchers {
         case FILE_ACTION_ADDED:            return FsWatchAction::FS_ADD;
         case FILE_ACTION_MODIFIED:         return FsWatchAction::FS_MODIFIED;
         case FILE_ACTION_REMOVED:          return FsWatchAction::FS_DELETE;
-        case FILE_ACTION_RENAMED_NEW_NAME: return FsWatchAction::FS_MOVED;
-        case FILE_ACTION_RENAMED_OLD_NAME: return FsWatchAction::FS_MOVED;
+        case FILE_ACTION_RENAMED_NEW_NAME: return FsWatchAction::FS_RENAME_NEW;
+        case FILE_ACTION_RENAMED_OLD_NAME: return FsWatchAction::FS_RENAME_OLD;
         default:
             throw std::runtime_error("[Sumire::FsWatcherWin] Tried to convert invalid FILE_ACTION.");
         }
