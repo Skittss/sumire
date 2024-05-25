@@ -6,7 +6,8 @@ namespace sumire::watchers {
         FS_ADD,
         FS_DELETE,
         FS_MODIFIED,
-        FS_MOVED
+        FS_RENAME_OLD,
+        FS_RENAME_NEW
     };
 
 }
