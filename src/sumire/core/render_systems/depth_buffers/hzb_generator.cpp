@@ -1,5 +1,5 @@
-#include <sumire/core/render_systems/hzb_generator.hpp>
-#include <sumire/core/render_systems/data_structs/hzb_generator_structs.hpp>
+#include <sumire/core/render_systems/depth_buffers/hzb_generator.hpp>
+#include <sumire/core/render_systems/depth_buffers/hzb_generator_structs.hpp>
 
 #include <sumire/util/vk_check_success.hpp>
 

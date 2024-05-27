@@ -11,13 +11,13 @@
 #include <sumire/core/rendering/sumi_renderer.hpp>
 
 // Render systems
-#include <sumire/core/render_systems/mesh_rendersys.hpp>
-#include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
-#include <sumire/core/render_systems/hzb_generator.hpp>
+#include <sumire/core/render_systems/forward/mesh_rendersys.hpp>
+#include <sumire/core/render_systems/deferred/deferred_mesh_rendersys.hpp>
+#include <sumire/core/render_systems/depth_buffers/hzb_generator.hpp>
 #include <sumire/core/render_systems/high_quality_shadow_mapping/high_quality_shadow_mapper.hpp>
-#include <sumire/core/render_systems/post_processor.hpp>
-#include <sumire/core/render_systems/point_light_rendersys.hpp>
-#include <sumire/core/render_systems/grid_rendersys.hpp>
+#include <sumire/core/render_systems/post/post_processor.hpp>
+#include <sumire/core/render_systems/world_ui/point_light_rendersys.hpp>
+#include <sumire/core/render_systems/world_ui/grid_rendersys.hpp>
 
 #include <memory>
 #include <vector>

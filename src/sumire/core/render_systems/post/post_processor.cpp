@@ -1,5 +1,5 @@
-#include <sumire/core/render_systems/post_processor.hpp>
-#include <sumire/core/render_systems/data_structs/post_processor_structs.hpp>
+#include <sumire/core/render_systems/post/post_processor.hpp>
+#include <sumire/core/render_systems/post/post_processor_structs.hpp>
 
 #include <sumire/util/vk_check_success.hpp>
 #include <sumire/util/sumire_engine_path.hpp>

@@ -10,7 +10,7 @@
 #include <sumire/core/rendering/sumi_renderer.hpp>
 #include <sumire/core/rendering/general/sumi_frame_info.hpp>
 #include <sumire/core/rendering/general/sumi_object.hpp>
-#include <sumire/core/render_systems/grid_rendersys.hpp>
+#include <sumire/core/render_systems/world_ui/grid_rendersys.hpp>
 #include <sumire/core/profiling/gpu_profiler.hpp>
 #include <sumire/core/profiling/cpu_profiler.hpp>
 

@@ -1,5 +1,5 @@
-#include <sumire/core/render_systems/grid_rendersys.hpp>
-#include <sumire/core/render_systems/data_structs/grid_rendersys_structs.hpp>
+#include <sumire/core/render_systems/world_ui/grid_rendersys.hpp>
+#include <sumire/core/render_systems/world_ui/grid_rendersys_structs.hpp>
 
 #include <sumire/util/sumire_engine_path.hpp>
 #include <sumire/util/vk_check_success.hpp>

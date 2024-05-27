@@ -1,6 +1,8 @@
 #include <sumire/core/models/sumi_model.hpp>
 #include <sumire/util/sumire_engine_path.hpp>
-#include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
+
+// TODO: These structs should be unified between deferred and forward
+#include <sumire/core/render_systems/forward/mesh_rendersys_structs.hpp>
 
 #include <sumire/core/graphics_pipeline/sumi_swap_chain.hpp>
 

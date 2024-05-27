@@ -1,5 +1,5 @@
-#include <sumire/core/render_systems/deferred_mesh_rendersys.hpp>
-#include <sumire/core/render_systems/data_structs/deferred_mesh_rendersys_structs.hpp>
+#include <sumire/core/render_systems/deferred/deferred_mesh_rendersys.hpp>
+#include <sumire/core/render_systems/deferred/deferred_mesh_rendersys_structs.hpp>
 
 #include <sumire/util/sumire_engine_path.hpp>
 #include <sumire/util/vk_check_success.hpp>

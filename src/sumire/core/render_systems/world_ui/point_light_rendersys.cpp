@@ -1,5 +1,5 @@
-#include <sumire/core/render_systems/point_light_rendersys.hpp>
-#include <sumire/core/render_systems/data_structs/point_light_rendersys_structs.hpp>
+#include <sumire/core/render_systems/world_ui/point_light_rendersys.hpp>
+#include <sumire/core/render_systems/world_ui/point_light_rendersys_structs.hpp>
 
 #include <sumire/util/sumire_engine_path.hpp>
 #include <sumire/util/vk_check_success.hpp>
