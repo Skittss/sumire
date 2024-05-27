@@ -2,7 +2,7 @@
 #include <sumire/util/sumire_engine_path.hpp>
 #include <sumire/core/render_systems/data_structs/mesh_rendersys_structs.hpp>
 
-#include <sumire/core/rendering/sumi_swap_chain.hpp>
+#include <sumire/core/graphics_pipeline/sumi_swap_chain.hpp>
 
 // TODO: Could we find a way around using experimental GLM hashing? (though it seems stable)
 #define GLM_ENABLE_EXPERIMENTAL

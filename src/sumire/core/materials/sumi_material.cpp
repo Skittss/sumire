@@ -1,6 +1,6 @@
 #include <sumire/core/materials/sumi_material.hpp>
 
-#include <sumire/core/rendering/sumi_swap_chain.hpp>
+#include <sumire/core/graphics_pipeline/sumi_swap_chain.hpp>
 
 namespace sumire {
 

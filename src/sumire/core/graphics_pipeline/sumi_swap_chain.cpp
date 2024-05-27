@@ -1,4 +1,4 @@
-#include <sumire/core/rendering/sumi_swap_chain.hpp>
+#include <sumire/core/graphics_pipeline/sumi_swap_chain.hpp>
 
 #include <sumire/util/vk_check_success.hpp>
 
