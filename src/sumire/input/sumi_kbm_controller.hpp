@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sumire/core/rendering/sumi_object.hpp>
+#include <sumire/core/rendering/general/sumi_object.hpp>
 #include <sumire/core/windowing/sumi_window.hpp>
 
 // To make input values to a more sensible 0->1 sensitivity range;

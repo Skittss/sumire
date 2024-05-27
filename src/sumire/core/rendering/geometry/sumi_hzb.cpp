@@ -1,4 +1,4 @@
-#include <sumire/core/rendering/sumi_hzb.hpp>
+#include <sumire/core/rendering/geometry/sumi_hzb.hpp>
 
 #include <sumire/util/vk_check_success.hpp>
 

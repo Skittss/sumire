@@ -4,7 +4,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
-#include <sumire/core/rendering/sumi_object.hpp>
+#include <sumire/core/rendering/general/sumi_object.hpp>
 
 namespace sumire {
 

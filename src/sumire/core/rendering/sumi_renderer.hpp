@@ -1,8 +1,8 @@
 #pragma once
 
 #include <sumire/core/windowing/sumi_window.hpp>
-#include <sumire/core/rendering/sumi_gbuffer.hpp>
-#include <sumire/core/rendering/sumi_hzb.hpp>
+#include <sumire/core/rendering/geometry/sumi_gbuffer.hpp>
+#include <sumire/core/rendering/geometry/sumi_hzb.hpp>
 #include <sumire/core/graphics_pipeline/sumi_swap_chain.hpp>
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 #include <sumire/core/graphics_pipeline/sumi_attachment.hpp>

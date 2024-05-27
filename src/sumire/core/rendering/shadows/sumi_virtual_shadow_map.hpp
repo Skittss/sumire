@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
-#include <sumire/core/rendering/sumi_light.hpp>
+#include <sumire/core/rendering/lighting/sumi_light.hpp>
 
 /*
 * TODO: Implementation of Virtual Shadow Map (VSM).

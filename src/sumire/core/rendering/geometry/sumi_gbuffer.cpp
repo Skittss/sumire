@@ -1,4 +1,4 @@
-#include <sumire/core/rendering/sumi_gbuffer.hpp>
+#include <sumire/core/rendering/geometry/sumi_gbuffer.hpp>
 
 #include <sumire/util/vk_check_success.hpp>
 

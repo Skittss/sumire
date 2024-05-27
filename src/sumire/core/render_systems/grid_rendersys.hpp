@@ -4,9 +4,9 @@
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 #include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
 #include <sumire/core/models/sumi_model.hpp>
-#include <sumire/core/rendering/sumi_object.hpp>
-#include <sumire/core/rendering/sumi_camera.hpp>
-#include <sumire/core/rendering/sumi_frame_info.hpp>
+#include <sumire/core/rendering/general/sumi_object.hpp>
+#include <sumire/core/rendering/general/sumi_camera.hpp>
+#include <sumire/core/rendering/general/sumi_frame_info.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

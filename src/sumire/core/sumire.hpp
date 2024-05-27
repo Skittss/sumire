@@ -6,8 +6,8 @@
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 #include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
 #include <sumire/core/models/sumi_model.hpp>
-#include <sumire/core/rendering/sumi_object.hpp>
-#include <sumire/core/rendering/sumi_light.hpp>
+#include <sumire/core/rendering/general/sumi_object.hpp>
+#include <sumire/core/rendering/lighting/sumi_light.hpp>
 #include <sumire/core/rendering/sumi_renderer.hpp>
 
 // Render systems

@@ -4,7 +4,7 @@
 #include <sumire/core/graphics_pipeline/sumi_compute_pipeline.hpp>
 #include <sumire/core/graphics_pipeline/sumi_attachment.hpp>
 #include <sumire/core/graphics_pipeline/sumi_descriptors.hpp>
-#include <sumire/core/rendering/sumi_hzb.hpp>
+#include <sumire/core/rendering/geometry/sumi_hzb.hpp>
 
 #include <memory>
 

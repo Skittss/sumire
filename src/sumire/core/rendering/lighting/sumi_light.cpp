@@ -1,4 +1,4 @@
-#include <sumire/core/rendering/sumi_light.hpp>
+#include <sumire/core/rendering/lighting/sumi_light.hpp>
 
 #include <stdexcept>
 

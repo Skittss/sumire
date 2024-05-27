@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sumire/core/rendering/sumi_transform3d.hpp>
+#include <sumire/core/rendering/general/sumi_transform3d.hpp>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>

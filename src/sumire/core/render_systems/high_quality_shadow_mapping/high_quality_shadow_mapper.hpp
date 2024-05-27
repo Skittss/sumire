@@ -22,11 +22,11 @@
 
 #include <sumire/core/graphics_pipeline/sumi_buffer.hpp>
 #include <sumire/core/graphics_pipeline/sumi_compute_pipeline.hpp>
-#include <sumire/core/rendering/sumi_light.hpp>
-#include <sumire/core/rendering/sumi_camera.hpp>
-#include <sumire/core/rendering/sumi_hzb.hpp>
-#include <sumire/core/rendering/sumi_gbuffer.hpp>
-#include <sumire/core/rendering/sumi_frame_info.hpp>
+#include <sumire/core/rendering/lighting/sumi_light.hpp>
+#include <sumire/core/rendering/general/sumi_frame_info.hpp>
+#include <sumire/core/rendering/general/sumi_camera.hpp>
+#include <sumire/core/rendering/geometry/sumi_hzb.hpp>
+#include <sumire/core/rendering/geometry/sumi_gbuffer.hpp>
 
 #include <memory>
 

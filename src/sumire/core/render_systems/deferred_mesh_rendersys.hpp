@@ -3,10 +3,10 @@
 #include <sumire/core/graphics_pipeline/sumi_pipeline.hpp>
 #include <sumire/core/graphics_pipeline/sumi_device.hpp>
 #include <sumire/core/models/sumi_model.hpp>
-#include <sumire/core/rendering/sumi_object.hpp>
-#include <sumire/core/rendering/sumi_camera.hpp>
-#include <sumire/core/rendering/sumi_frame_info.hpp>
-#include <sumire/core/rendering/sumi_gbuffer.hpp>
+#include <sumire/core/rendering/general/sumi_object.hpp>
+#include <sumire/core/rendering/general/sumi_camera.hpp>
+#include <sumire/core/rendering/general/sumi_frame_info.hpp>
+#include <sumire/core/rendering/geometry/sumi_gbuffer.hpp>
 
 #include <memory>
 #include <vector>
