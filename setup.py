@@ -192,9 +192,11 @@ def writeEnvCmake(vkPth, glfwPth):
 
     lines[0] = f"{ENV_CMAKE_META_STR}\n"
     if vkPth:
-        lines[1] = f'set(VULKAN_SDK_PATH "{vkPth}")\n'
+        escapedVkPth = vkPth.replace("\\", "\\\\")
+        lines[1] = f'set(VULKAN_SDK_PATH "{escapedVkPth}")\n'
     if glfwPth:
-        lines[2] = f'set(GLFW_PATH "{glfwPth}")\n'
+        escapedGlfwPth = glfwPth.replace("\\", "\\\\")
+        lines[2] = f'set(GLFW_PATH "{escapedGlfwPth}")\n'
 
     with open(ENV_CMAKE_PATH, 'r+') as fw:
         fw.seek(0, 0)
