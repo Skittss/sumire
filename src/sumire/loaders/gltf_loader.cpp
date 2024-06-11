@@ -108,7 +108,7 @@ namespace sumire::loaders {
 
         // Load nodes
         for (uint32_t i = 0; i < scene.nodes.size(); i++) {
-            const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+            const tinygltf::Node& node = gltfModel.nodes[scene.nodes[i]];
             loadGLTFnode(device, nullptr, node, scene.nodes[i], gltfModel, data, genTangents);
         }
         
@@ -162,7 +162,7 @@ namespace sumire::loaders {
         SumiTexture::defaultSamplerCreateInfo(device, defaultSamplerInfo);
 
         for (tinygltf::Texture &texture : model.textures) {
-            tinygltf::Image image = model.images[texture.source];
+            tinygltf::Image& image = model.images[texture.source];
 
             VkSamplerCreateInfo samplerInfo{};
             // Sampler selection
@@ -374,7 +374,7 @@ namespace sumire::loaders {
                     }
                     break;
                     default: {
-                        std::runtime_error("Tried to Cast Unsupported Sampler Output Value Data Type (Supported: Vec3, Vec4)");
+                        throw std::runtime_error("Tried to Cast Unsupported Sampler Output Value Data Type (Supported: Vec3, Vec4)");
                     }
                 }
 
@@ -382,7 +382,7 @@ namespace sumire::loaders {
                 if (createSampler.interpolation != util::GLTFinterpolationType::INTERP_CUBIC_SPLINE && 
                     createSampler.inputs.size() != createSampler.outputs.size()
                 ) {
-                    std::runtime_error("Non cubic spline animation channel has non 1-to-1 mapping of animation inputs (time values) to outputs (morphing values)");
+                    throw std::runtime_error("Non cubic spline animation channel has non 1-to-1 mapping of animation inputs (time values) to outputs (morphing values)");
                 }
 
                 createAnimation->samplers.push_back(createSampler);
@@ -402,7 +402,7 @@ namespace sumire::loaders {
                     createChannel.path = AnimationChannel::PathType::SCALE;
                 }
                 if (channel.target_path == "weights") {
-                    std::runtime_error("TODO: Animation via weights & morph targets");
+                    throw std::runtime_error("TODO: Animation via weights & morph targets");
                     createChannel.path = AnimationChannel::PathType::WEIGHTS;
                 }
 
@@ -481,7 +481,7 @@ namespace sumire::loaders {
 
         // Load mesh if node has it
         if (node.mesh > -1) {
-            const tinygltf::Mesh mesh = model.meshes[node.mesh];
+            const tinygltf::Mesh& mesh = model.meshes[node.mesh];
             std::unique_ptr<Mesh> createMesh = std::make_unique<Mesh>(device, createNode->matrix);
             
             for (size_t i = 0; i < mesh.primitives.size(); i++) {
@@ -771,7 +771,7 @@ namespace sumire::loaders {
             if (indices.count(i) == 0) return i;
         }
 
-        std::runtime_error("Could not find unreserved glTF node idx in range 0 -> " + std::to_string(data.flatNodes.size() + 1));
+        throw std::runtime_error("Could not find unreserved glTF node idx in range 0 -> " + std::to_string(data.flatNodes.size() + 1));
         return 0;
     }
 
