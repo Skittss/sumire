@@ -8,12 +8,15 @@ namespace sumire {
     public:
         HQSMdebugger(
             SumiDevice& device,
+            uint32_t screenWidth,
+            uint32_t screenHeight,
             HighQualityShadowMapper* shadowMapper,
             VkRenderPass renderPass
         );
         ~HQSMdebugger() = default;
 
         void renderLightCountDebugInfo(VkCommandBuffer commandBuffer);
+        void updateScreenBounds(uint32_t screenWidth, uint32_t screenHeight);
 
     private:
         void initDescriptorLayouts();
@@ -27,6 +30,8 @@ namespace sumire {
 
         SumiDevice& sumiDevice;
         HighQualityShadowMapper* shadowMapper;
+        uint32_t screenWidth;
+        uint32_t screenHeight;
 
         std::unique_ptr<SumiPipeline> lightCountDebugPipeline;
         VkPipelineLayout lightCountDebugPipelineLayout = VK_NULL_HANDLE;
