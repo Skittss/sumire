@@ -88,6 +88,7 @@ uint getNextEarlyLight(in uint shadowSlotID, in uint entryIdx) {
 }
 
 float computeLightVisibility(in uint lightIdx, in vec3 worldPos) {
+    // PCSS. We need to read shadow maps per-light here.
     Light light = lights[lightIdx];
 
     return 0.0;
