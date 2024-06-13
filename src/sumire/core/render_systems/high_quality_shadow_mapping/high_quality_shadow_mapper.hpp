@@ -71,9 +71,11 @@ namespace sumire {
             VkCommandBuffer commandBuffer,
             float near, float far
         );
+        SumiBuffer* getLightCountEarlyBuffer() const { return tileLightCountEarlyBuffer.get(); }
 
         // ---- Phase 3: Find Lights Accurate --------------------------------------------------------------------
         void findLightsAccurate(VkCommandBuffer commandBuffer);
+        SumiBuffer* getLightCountFinalBuffer() const { return tileLightCountFinalBuffer.get(); }
 
         // ---- Phase 4: Generate Deferred Shadows ---------------------------------------------------------------
         void generateDeferredShadows(VkCommandBuffer commandBuffer, FrameInfo& frameInfo);
