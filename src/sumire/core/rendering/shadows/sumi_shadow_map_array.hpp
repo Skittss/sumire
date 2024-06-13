@@ -10,12 +10,22 @@
 * 
 */
 
+#include <sumire/core/graphics_pipeline/sumi_device.hpp>
+
 namespace sumire {
 
     class SumiShadowMapArray {
     public:
-        SumiShadowMapArray();
+        SumiShadowMapArray(
+            SumiDevice& device, 
+            uint32_t shadowmapWidth, 
+            uint32_t shadowmapHeight
+        );
     private:
+        SumiDevice& sumiDevice;
+
+        const uint32_t width;
+        const uint32_t height;
     };
 
 }
