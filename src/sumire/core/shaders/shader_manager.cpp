@@ -159,25 +159,25 @@ namespace sumire {
 
         listener = std::make_unique<ShaderUpdateListener>(this);
 
-#ifdef _WIN32
+#       ifdef _WIN32
         shaderDirWatcher = std::make_unique<watchers::FsWatcherWin>(
             dir,
             listener.get(),
             true
         );
-#endif
+#       endif
     }
 
     void ShaderManager::startShaderDirWatcher() {
-#ifdef _WIN32
+#       ifdef _WIN32
         shaderDirWatcher->watch();
-#endif
+#       endif
     }
 
     void ShaderManager::stopShaderDirWatcher() {
-#ifdef _WIN32
+#       ifdef _WIN32
         shaderDirWatcher->endWatch();
-#endif
+#       endif
     }
 
 }
