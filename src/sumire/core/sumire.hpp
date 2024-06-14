@@ -10,7 +10,7 @@
 #include <sumire/core/rendering/lighting/sumi_light.hpp>
 #include <sumire/core/rendering/sumi_renderer.hpp>
 
-// Render systems
+// Render Systems
 #include <sumire/core/render_systems/forward/mesh_rendersys.hpp>
 #include <sumire/core/render_systems/deferred/deferred_mesh_rendersys.hpp>
 #include <sumire/core/render_systems/depth_buffers/hzb_generator.hpp>
@@ -18,6 +18,9 @@
 #include <sumire/core/render_systems/post/post_processor.hpp>
 #include <sumire/core/render_systems/world_ui/point_light_rendersys.hpp>
 #include <sumire/core/render_systems/world_ui/grid_rendersys.hpp>
+
+// Debug Render Systems
+#include <sumire/core/render_systems/high_quality_shadow_mapping/hqsm_debugger.hpp>
 
 #include <memory>
 #include <vector>
@@ -42,6 +45,7 @@ namespace sumire {
         void initBuffers();
         void initDescriptors();
         void initRenderSystems();
+        void initDebugRenderSystems();
         void loadObjects();
         void loadLights(); 
 
@@ -54,7 +58,7 @@ namespace sumire {
         SumiDevice sumiDevice{ sumiWindow, &sumiConfig };
         SumiRenderer sumiRenderer{ sumiWindow, sumiDevice, sumiConfig };
         
-        // Render systems used
+        // Render Systems
         std::unique_ptr<MeshRenderSys>           meshRenderSystem;
         std::unique_ptr<DeferredMeshRenderSys>   deferredMeshRenderSystem;
         std::unique_ptr<HzbGenerator>            hzbGenerator;
@@ -63,10 +67,13 @@ namespace sumire {
         std::unique_ptr<PointLightRenderSys>     pointLightSystem;
         std::unique_ptr<GridRendersys>           gridRenderSystem;
 
+        // Debug Render Systems
+        std::unique_ptr<HQSMdebugger>            hqsmDebugger;
+
         // Global descriptors and buffers
-        std::unique_ptr<SumiDescriptorPool> globalDescriptorPool;
+        std::unique_ptr<SumiDescriptorPool>      globalDescriptorPool;
         std::unique_ptr<SumiDescriptorSetLayout> globalDescriptorSetLayout;
-        std::vector<VkDescriptorSet> globalDescriptorSets{};
+        std::vector<VkDescriptorSet>             globalDescriptorSets{};
 
         std::vector<std::unique_ptr<SumiBuffer>> globalUniformBuffers;
         std::vector<std::unique_ptr<SumiBuffer>> cameraUniformBuffers;

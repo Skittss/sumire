@@ -649,6 +649,22 @@ namespace sumire {
         structs::lightMask* lightMask
     ) {
         if (ImGui::CollapsingHeader("Debug")) {
+            ImGui::SeparatorText("Debug Shaders");
+            static bool debuggingShadersEnabled = sumiConfig.runtimeData.DEBUG_SHADERS;
+            ImGui::Checkbox("Enable Debug Shaders", &debuggingShadersEnabled);
+
+            if (debuggingShadersEnabled != sumiConfig.runtimeData.DEBUG_SHADERS) {
+                sumiConfig.runtimeData.DEBUG_SHADERS = debuggingShadersEnabled;
+                sumiConfig.writeConfig();
+            }
+
+            if (debuggingShadersEnabled != sumiConfig.startupData.DEBUG_SHADERS) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                ImGui::Text("A restart is required to change debug shader settings.");
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::SeparatorText("Systems");
             drawHighQualityShadowMappingSection(zBin, lightMask);
 
             ImGui::Spacing();
@@ -663,6 +679,7 @@ namespace sumire {
         if (ImGui::TreeNode("High Quality Shadow Mapping")) {
             drawZbinSubsection(zBin);
             drawLightMaskSubsection(lightMask);
+            drawHqsmDebugViewSubsection();
 
             ImGui::TreePop();
         }
@@ -815,6 +832,26 @@ namespace sumire {
                 ImGui::EndTable();
             }
             ImGui::TreePop();
+        }
+    }
+
+    void SumiImgui::drawHqsmDebugViewSubsection() {
+        if (ImGui::TreeNode("Debug Views")) {
+
+            if (sumiConfig.runtimeData.DEBUG_SHADERS) {
+                // Debug View Selection
+                const char* debugViews[] = { "None", "Light Count", "Light Culling" };
+                static int debugViewIdx = 0;
+                ImGui::Combo("Type", &debugViewIdx, debugViews, IM_ARRAYSIZE(debugViews));
+                HQSMdebugView = static_cast<HQSMdebuggerView>(debugViewIdx);
+
+            }
+            else {
+                ImGui::Text("Debug Shaders are disabled.");
+            }
+
+            ImGui::TreePop();
+
         }
     }
 

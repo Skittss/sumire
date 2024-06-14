@@ -16,6 +16,7 @@
 
 #include <sumire/core/render_systems/high_quality_shadow_mapping/zbin.hpp>
 #include <sumire/core/render_systems/high_quality_shadow_mapping/light_mask.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/hqsm_debugger_view.hpp>
 
 #include <sumire/input/sumi_kbm_controller.hpp>
 
@@ -71,6 +72,9 @@ namespace sumire {
             ImVec4 gridZaxisCol{0.2f, 0.2f, 1.0f, 1.0f};
             bool showGrid{true};
 
+            // Debug Views
+            HQSMdebuggerView HQSMdebugView = HQSMdebuggerView::HQSM_DEBUG_NONE;
+
         private:
             void initImgui(VkRenderPass renderPass, uint32_t subpassIdx, VkQueue workQueue);
 
@@ -94,6 +98,7 @@ namespace sumire {
                 const structs::zBin& zBin, structs::lightMask* lightMask);
             void drawZbinSubsection(const structs::zBin& zbin);
             void drawLightMaskSubsection(structs::lightMask* lightMask);
+            void drawHqsmDebugViewSubsection();
 
             SumiConfig& sumiConfig;
             SumiDevice& sumiDevice;

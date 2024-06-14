@@ -15,8 +15,27 @@ namespace sumire {
         screenWidth{ screenWidth },
         screenHeight{ screenHeight}, 
         shadowMapper{ shadowMapper } {
+        initDescriptorLayouts();
+        initDescriptors();
         createPipelineLayouts();
         createPipelines(renderPass);
+    }
+
+    HQSMdebugger::~HQSMdebugger() {
+        vkDestroyPipelineLayout(sumiDevice.device(), lightCountDebugPipelineLayout, nullptr);
+    }
+
+    void HQSMdebugger::renderDebugView(VkCommandBuffer commandBuffer, HQSMdebuggerView debuggerView) {
+        switch (debuggerView) {
+        case HQSMdebuggerView::HQSM_DEBUG_LIGHT_COUNT:
+            renderLightCountDebugInfo(commandBuffer);
+            break;
+        case HQSMdebuggerView::HQSM_DEBUG_LIGHT_CULLING:
+            break;
+        case HQSMdebuggerView::HQSM_DEBUG_NONE:
+        default:
+            break;
+        }
     }
 
     void HQSMdebugger::renderLightCountDebugInfo(VkCommandBuffer commandBuffer) {
@@ -67,6 +86,10 @@ namespace sumire {
             .addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT) // Light count early buffer
             .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT) // Light count final buffer
             .build();
+    }
+
+    void HQSMdebugger::initDescriptors() {
+        initLightCountDebugDescriptorSet();
     }
 
     void HQSMdebugger::initLightCountDebugDescriptorSet() {

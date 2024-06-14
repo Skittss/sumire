@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sumire/core/render_systems/high_quality_shadow_mapping/high_quality_shadow_mapper.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/hqsm_debugger_view.hpp>
 
 namespace sumire {
 
@@ -13,13 +14,15 @@ namespace sumire {
             HighQualityShadowMapper* shadowMapper,
             VkRenderPass renderPass
         );
-        ~HQSMdebugger() = default;
+        ~HQSMdebugger();
 
+        void renderDebugView(VkCommandBuffer commandBuffer, HQSMdebuggerView debuggerView);
         void renderLightCountDebugInfo(VkCommandBuffer commandBuffer);
         void updateScreenBounds(uint32_t screenWidth, uint32_t screenHeight);
 
     private:
         void initDescriptorLayouts();
+        void initDescriptors();
         void initLightCountDebugDescriptorSet();
         void updateDescriptors();
         void updateLightCountDebugDescriptorSet();

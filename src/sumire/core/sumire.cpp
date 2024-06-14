@@ -36,10 +36,10 @@ namespace sumire {
     };
 
     struct CameraUBO {
-        glm::mat4 projectionMatrix{1.0f};
-        glm::mat4 viewMatrix{1.0f};
-        glm::mat4 projectionViewMatrix{1.0f};
-        glm::vec3 cameraPosition{0.0f};
+        glm::mat4 projectionMatrix{ 1.0f };
+        glm::mat4 viewMatrix{ 1.0f };
+        glm::mat4 projectionViewMatrix{ 1.0f };
+        glm::vec3 cameraPosition{ 0.0f };
     };
 
     Sumire::Sumire() {
@@ -56,6 +56,10 @@ namespace sumire {
         initBuffers();
         initDescriptors();
         initRenderSystems();
+
+        if (sumiConfig.runtimeData.DEBUG_SHADERS) {
+            initDebugRenderSystems();
+        }
     }
 
     void Sumire::initBuffers() {
@@ -119,7 +123,7 @@ namespace sumire {
         for (int i = 0; i < globalDescriptorSets.size(); i++) {
             auto globalBufferInfo = globalUniformBuffers[i]->descriptorInfo();
             auto cameraBufferInfo = cameraUniformBuffers[i]->descriptorInfo();
-            auto lightSSBOinfo    = lightSSBOs[i]->descriptorInfo();
+            auto lightSSBOinfo = lightSSBOs[i]->descriptorInfo();
             SumiDescriptorWriter(*globalDescriptorSetLayout, *globalDescriptorPool)
                 .writeBuffer(0, &globalBufferInfo)
                 .writeBuffer(1, &cameraBufferInfo)
@@ -180,6 +184,15 @@ namespace sumire {
             sumiRenderer.getLateGraphicsRenderPass(),
             sumiRenderer.forwardRenderSubpassIdx(),
             globalDescriptorSetLayout->getDescriptorSetLayout()
+        );
+    }
+
+    void Sumire::initDebugRenderSystems() {
+        hqsmDebugger = std::make_unique<HQSMdebugger>(
+            sumiDevice,
+            screenWidth, screenHeight,
+            shadowMapper.get(),
+            sumiRenderer.getCompositionRenderPass()
         );
     }
 
@@ -471,6 +484,10 @@ namespace sumire {
                 sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
 
                 postProcessor->compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
+
+                if (hqsmDebugger) {
+                    hqsmDebugger->renderDebugView(frameCommandBuffers.present, gui.HQSMdebugView);
+                }
 
                 gui.beginFrame();
                 gui.drawSceneViewer(
