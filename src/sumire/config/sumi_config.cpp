@@ -1,4 +1,5 @@
 #include <sumire/config/sumi_config.hpp>
+#include <sumire/config/field_parsers.hpp>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
@@ -8,14 +9,6 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-
-#define FIELD_PARSE_WARNING_STR(field_name)										    \
-        "[Sumire::SumiConfig] WARNING: Failed to parse value of config field \""	\
-        field_name "\" - using default value."	
-
-#define OBJECT_PARSE_WARNING_STR(obj_name)										    \
-        "[Sumire::SumiConfig] WARNING: Failed to parse value of config object \""	\
-        obj_name "\" - using default value."	
 
 namespace sumire {
 
@@ -61,90 +54,41 @@ namespace sumire {
         if (config.HasMember("graphics_device") && config["graphics_device"].IsObject()) {
             const rapidjson::Value& graphicsDevice = config["graphics_device"];
 
-            // graphics_device.idx
-            if (graphicsDevice.HasMember("idx") && graphicsDevice["idx"].IsUint()) {
-                data.GRAPHICS_DEVICE.IDX = graphicsDevice["idx"].GetUint();
-            }
-            else {
-                std::cout << FIELD_PARSE_WARNING_STR("graphics_device.idx") << std::endl;
-            }
-
-            // graphics_device.name
-            if (graphicsDevice.HasMember("name") && graphicsDevice["name"].IsString()) {
-                data.GRAPHICS_DEVICE.NAME = graphicsDevice["name"].GetString();
-            }
-            else {
-                std::cout << FIELD_PARSE_WARNING_STR("graphics_device.name") << std::endl;
-            }
+            parseUint(graphicsDevice, "idx", "graphics_device.idx", &data.GRAPHICS_DEVICE.IDX);
+            parseString(graphicsDevice, "name", "graphics_device.name", &data.GRAPHICS_DEVICE.NAME);
         }
         else {
-            std::cout << OBJECT_PARSE_WARNING_STR("graphics_device") << std::endl;
+            std::cout << OBJECT_PARSE_WARNING("graphics_device") << std::endl;
         }
 
         // resolution
         if (config.HasMember("resolution") && config["resolution"].IsObject()) {
             const rapidjson::Value& resolution = config["resolution"];
 
-            // resolution.width
-            if (resolution.HasMember("width") && resolution["width"].IsUint()) {
-                data.RESOLUTION.WIDTH = resolution["width"].GetUint();
-            }
-            else {
-                std::cout << FIELD_PARSE_WARNING_STR("resolution.width") << std::endl;
-            }
-
-            // resolution.height
-            if (resolution.HasMember("height") && resolution["height"].IsUint()) {
-                data.RESOLUTION.HEIGHT = resolution["height"].GetUint();
-            }
-            else {
-                std::cout << FIELD_PARSE_WARNING_STR("resolution.height") << std::endl;
-            }
-
+            parseUint(resolution, "width", "resolution.width", &data.RESOLUTION.WIDTH);
+            parseUint(resolution, "height", "resolution.height", &data.RESOLUTION.HEIGHT);
         }
         else {
-            std::cout << OBJECT_PARSE_WARNING_STR("resolution") << std::endl;
+            std::cout << OBJECT_PARSE_WARNING("resolution") << std::endl;
         }
 
         // cpu_profiling
-        if (config.HasMember("cpu_profiling") && config["cpu_profiling"].IsBool()) {
-            data.CPU_PROFILING = config["cpu_profiling"].GetBool();
-        }
-        else {
-            std::cout << FIELD_PARSE_WARNING_STR("cpu_profiling") << std::endl;
-        }
+        parseBool(config, "cpu_profiling", "cpu_profiling", &data.CPU_PROFILING);
 
         // gpu_profiling
-        if (config.HasMember("gpu_profiling") && config["gpu_profiling"].IsBool()) {
-            data.GPU_PROFILING = config["gpu_profiling"].GetBool();
-        }
-        else {
-            std::cout << FIELD_PARSE_WARNING_STR("gpu_profiling") << std::endl;
-        }
+        parseBool(config, "gpu_profiling", "gpu_profiling.idx", &data.GPU_PROFILING);
+
+        // debug_shaders
+        parseBool(config, "debug_shaders", "debug_shaders", &data.DEBUG_SHADERS);
 
         // shader_hot_reloading
-        if (config.HasMember("shader_hot_reloading") && config["shader_hot_reloading"].IsBool()) {
-            data.SHADER_HOT_RELOADING = config["shader_hot_reloading"].GetBool();
-        }
-        else {
-            std::cout << FIELD_PARSE_WARNING_STR("shader_hot_reloading") << std::endl;
-        }
+        parseBool(config, "shader_hot_reloading", "shader_hot_reloading", &data.SHADER_HOT_RELOADING);
 
         // vsync
-        if (config.HasMember("vsync") && config["vsync"].IsBool()) {
-            data.VSYNC = config["vsync"].GetBool();
-        }
-        else {
-            std::cout << FIELD_PARSE_WARNING_STR("vsync") << std::endl;
-        }
+        parseBool(config, "vsync", "vsync", &data.VSYNC);
 
         // max_n_lights
-        if (config.HasMember("max_n_lights") && config["max_n_lights"].IsUint()) {
-            data.MAX_N_LIGHTS = config["max_n_lights"].GetUint();
-        }
-        else {
-            std::cout << FIELD_PARSE_WARNING_STR("max_n_lights") << std::endl;
-        }
+        parseUint(config, "max_n_lights", "max_n_lights", &data.MAX_N_LIGHTS);
 
         // Update config to fix any errors
         writeConfigData(data);
@@ -181,6 +125,9 @@ namespace sumire {
 
         writer.Key("gpu_profiling");
         writer.Bool(data.GPU_PROFILING);
+
+        writer.Key("debug_shaders");
+        writer.Bool(data.DEBUG_SHADERS);
 
         writer.Key("shader_hot_reloading");
         writer.Bool(data.SHADER_HOT_RELOADING);
