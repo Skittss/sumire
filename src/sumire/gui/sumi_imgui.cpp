@@ -842,8 +842,24 @@ namespace sumire {
                 // Debug View Selection
                 const char* debugViews[] = { "None", "Light Count", "Light Culling" };
                 static int debugViewIdx = 0;
-                ImGui::Combo("Type", &debugViewIdx, debugViews, IM_ARRAYSIZE(debugViews));
+                ImGui::Combo("View", &debugViewIdx, debugViews, IM_ARRAYSIZE(debugViews));
                 HQSMdebugView = static_cast<HQSMdebuggerView>(debugViewIdx);
+
+                ImGui::SeparatorText("View Config");
+                switch (HQSMdebugView) {
+                case HQSMdebuggerView::HQSM_DEBUG_LIGHT_COUNT: {
+                    const char* lightCountConfigs[] = { "Early", "Final", "Difference" };
+                    static int lightCountConfigIdx = 0;
+                    ImGui::Combo("Light List", &lightCountConfigIdx, lightCountConfigs, IM_ARRAYSIZE(lightCountConfigs));
+                } break;
+                case HQSMdebuggerView::HQSM_DEBUG_LIGHT_CULLING: {
+                    const char* lightCullingConfigs[] = { "Culling Step", "Light List" };
+                    static int lightCullingConfigIdx = 0;
+                    ImGui::Combo("Type", &lightCullingConfigIdx, lightCullingConfigs, IM_ARRAYSIZE(lightCullingConfigs));
+                } break;
+                default:
+                    ImGui::Text("No config settings avaiable for the selected view.");
+                }
 
             }
             else {

@@ -7,13 +7,9 @@ namespace sumire {
 
     HQSMdebugger::HQSMdebugger(
         SumiDevice& device,
-        uint32_t screenWidth,
-        uint32_t screenHeight,
         HighQualityShadowMapper* shadowMapper,
         VkRenderPass renderPass
     ) : sumiDevice{ device },
-        screenWidth{ screenWidth },
-        screenHeight{ screenHeight}, 
         shadowMapper{ shadowMapper } {
         initDescriptorLayouts();
         initDescriptors();
@@ -42,7 +38,8 @@ namespace sumire {
         lightCountDebugPipeline->bind(commandBuffer);
 
         structs::LightCountDebugPush push{};
-        push.screenResolution = glm::uvec2{ screenWidth, screenHeight };
+        push.screenResolution     = shadowMapper->getResolution();;
+        push.shadowTileResolution = shadowMapper->getShadowTileResolution();
         
         vkCmdPushConstants(
             commandBuffer,
@@ -69,10 +66,7 @@ namespace sumire {
         vkCmdDraw(commandBuffer, 3, 1, 0, 0);
     }
 
-    void HQSMdebugger::updateScreenBounds(uint32_t screenWidth, uint32_t screenHeight) {
-        this->screenWidth = screenWidth;
-        this->screenHeight = screenHeight;
-
+    void HQSMdebugger::updateScreenBounds() {
         updateDescriptors();
     }
 
@@ -156,6 +150,7 @@ namespace sumire {
 
         PipelineConfigInfo lightCullingDebugPipelineInfo{};
         SumiPipeline::defaultPipelineConfigInfo(lightCullingDebugPipelineInfo);
+        SumiPipeline::enableAlphaBlending(lightCullingDebugPipelineInfo);
         lightCullingDebugPipelineInfo.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
         lightCullingDebugPipelineInfo.attributeDescriptions.clear();
         lightCullingDebugPipelineInfo.bindingDescriptions.clear();
@@ -164,7 +159,7 @@ namespace sumire {
 
         lightCountDebugPipeline = std::make_unique<SumiPipeline>(
             sumiDevice,
-            SUMIRE_ENGINE_PATH("shaders/high_quality_shadow_mapping/debug/vis_light_count.vert"),
+            SUMIRE_ENGINE_PATH("shaders/high_quality_shadow_mapping/debug/vis_fs_triangle.vert"),
             SUMIRE_ENGINE_PATH("shaders/high_quality_shadow_mapping/debug/vis_light_count.frag"),
             lightCullingDebugPipelineInfo
         );

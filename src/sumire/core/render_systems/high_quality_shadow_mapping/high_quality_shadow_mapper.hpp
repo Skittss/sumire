@@ -60,6 +60,10 @@ namespace sumire {
             SumiAttachment* gWorldPos
         );
 
+        glm::uvec2 getResolution() const { return glm::uvec2{ screenWidth, screenHeight }; }
+        glm::uvec2 getShadowTileResolution() const { return glm::uvec2{ numShadowTilesX, numShadowTilesY }; }
+        glm::uvec2 getTileGroupResolution() const { return glm::uvec2{ numTileGroupsX, numTileGroupsY }; }
+
         // ---- Phase 1: Prepare ---------------------------------------------------------------------------------
         void prepare(
             const std::vector<structs::viewSpaceLight>& lights,

@@ -6,6 +6,7 @@ namespace sumire::structs {
 
     struct LightCountDebugPush {
         glm::uvec2 screenResolution;
+        glm::uvec2 shadowTileResolution;
     };
 
 }

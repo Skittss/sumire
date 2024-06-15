@@ -190,7 +190,6 @@ namespace sumire {
     void Sumire::initDebugRenderSystems() {
         hqsmDebugger = std::make_unique<HQSMdebugger>(
             sumiDevice,
-            screenWidth, screenHeight,
             shadowMapper.get(),
             sumiRenderer.getCompositionRenderPass()
         );
@@ -313,6 +312,8 @@ namespace sumire {
                     sumiRenderer.getSwapChain()->getDepthAttachment(),
                     sumiRenderer.getGbuffer()->positionAttachment()
                 );
+                if (hqsmDebugger) hqsmDebugger->updateScreenBounds();
+
                 sumiRenderer.resetScRecreatedFlag();
             }
 

@@ -932,6 +932,10 @@ namespace sumire {
             && "Cannot instantiate descriptor set with null tile light list early buffer");
         assert(tileLightCountEarlyBuffer != nullptr
             && "Cannot instantiate descriptor set with null tile light count early buffer");
+        assert(tileLightListFinalBuffer != nullptr
+            && "Cannot instantiate descriptor set with null tile light list final buffer");
+        assert(tileLightCountFinalBuffer != nullptr
+            && "Cannot instantiate descriptor set with null tile light count final buffer");
 
         VkDescriptorImageInfo zbufferInfo{};
         zbufferInfo.sampler     = attachmentSampler;
@@ -974,6 +978,10 @@ namespace sumire {
             && "Cannot update descriptor set with null tile light list early buffer");
         assert(tileLightCountEarlyBuffer != nullptr
             && "Cannot update descriptor set with null tile light count early buffer");
+        assert(tileLightListFinalBuffer != nullptr
+            && "Cannot update descriptor set with null tile light list final buffer");
+        assert(tileLightCountFinalBuffer != nullptr
+            && "Cannot update descriptor set with null tile light count final buffer");
 
         VkDescriptorImageInfo zbufferInfo{};
         zbufferInfo.sampler = attachmentSampler;
