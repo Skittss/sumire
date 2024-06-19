@@ -11,7 +11,6 @@ layout(push_constant) uniform Push {
     vec2 zbufferResolution;
 };
 
-// TODO: This can probably be made "coherent" to remove need for barriers below?
 shared uint s_workgroupMinDepthAsUint;
 shared uint s_workgroupMaxDepthAsUint;
 
@@ -28,7 +27,8 @@ void main() {
     memoryBarrierShared();
     barrier();
 
-    float threadDepth = texture(depthBuffer, gl_GlobalInvocationID.xy / zbufferResolution).r;
+    vec2 pixelCenter = gl_GlobalInvocationID.xy;
+    float threadDepth = texture(depthBuffer, pixelCenter / zbufferResolution).r;
     uint threadDepthAsUint = floatBitsToUint(threadDepth);
     atomicMin(s_workgroupMinDepthAsUint, threadDepthAsUint);
     atomicMax(s_workgroupMaxDepthAsUint, threadDepthAsUint);
