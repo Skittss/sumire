@@ -60,29 +60,33 @@ namespace sumire {
             SumiAttachment* gWorldPos
         );
 
+        VkSampler getAttachmentSampler() const { return attachmentSampler; }
         glm::uvec2 getResolution() const { return glm::uvec2{ screenWidth, screenHeight }; }
         glm::uvec2 getShadowTileResolution() const { return glm::uvec2{ numShadowTilesX, numShadowTilesY }; }
         glm::uvec2 getTileGroupResolution() const { return glm::uvec2{ numTileGroupsX, numTileGroupsY }; }
+        glm::uvec2 getLightMaskResolution() const { return glm::uvec2{ lightMask->numTilesX, lightMask->numTilesY }; }
 
         // ---- Phase 1: Prepare ---------------------------------------------------------------------------------
         void prepare(
             const std::vector<structs::viewSpaceLight>& lights,
             const SumiCamera& camera
         );
+        SumiBuffer* getLightMaskBuffer() const { return lightMaskBuffer.get(); }
 
         // ---- Phase 2: Find Lights Approx ----------------------------------------------------------------------
         void findLightsApproximate(
             VkCommandBuffer commandBuffer,
             float near, float far
         );
-        SumiBuffer* getLightCountEarlyBuffer() const { return tileLightCountEarlyBuffer.get(); }
+        SumiBuffer* getTileGroupLightMaskBuffer() const { return tileGroupLightMaskBuffer.get(); }
 
         // ---- Phase 3: Find Lights Accurate --------------------------------------------------------------------
         void findLightsAccurate(VkCommandBuffer commandBuffer);
-        SumiBuffer* getLightCountFinalBuffer() const { return tileLightCountFinalBuffer.get(); }
+        SumiBuffer* getLightCountEarlyBuffer() const { return tileLightCountEarlyBuffer.get(); }
 
         // ---- Phase 4: Generate Deferred Shadows ---------------------------------------------------------------
         void generateDeferredShadows(VkCommandBuffer commandBuffer, FrameInfo& frameInfo);
+        SumiBuffer* getLightCountFinalBuffer() const { return tileLightCountFinalBuffer.get(); }
 
         // ---- Phase 5: High Quality Shadows --------------------------------------------------------------------
         void compositeHighQualityShadows(VkCommandBuffer commandBuffer);

@@ -5,6 +5,7 @@
 namespace sumire::structs {
 
     struct findLightsApproxPush {
+        glm::uvec2   screenResolution;
         glm::uvec2   shadowTileResolution;
         glm::uvec2   tileGroupResolution;
         glm::uvec2   lightMaskResolution;

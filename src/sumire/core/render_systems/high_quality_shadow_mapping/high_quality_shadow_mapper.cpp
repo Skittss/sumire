@@ -151,10 +151,11 @@ namespace sumire {
         findLightsApproxPipeline->bind(commandBuffer);
 
         structs::findLightsApproxPush push{};
+        push.screenResolution     = glm::uvec2(screenWidth, screenHeight);
         push.shadowTileResolution = glm::uvec2(numShadowTilesX, numShadowTilesY);
         push.tileGroupResolution  = glm::uvec2(numTileGroupsX, numTileGroupsY);
         push.lightMaskResolution  = glm::uvec2(lightMask->numTilesX, lightMask->numTilesY);
-        push.numZbinSlices        = NUM_SLICES;
+        push.numZbinSlices        = glm::uint(NUM_SLICES);
         push.cameraNear           = glm::float32(near);
         push.cameraFar            = glm::float32(far);
 
