@@ -191,6 +191,7 @@ namespace sumire {
         hqsmDebugger = std::make_unique<HQSMdebugger>(
             sumiDevice,
             shadowMapper.get(),
+            sumiRenderer.getHZB(),
             sumiRenderer.getCompositionRenderPass()
         );
     }
@@ -312,7 +313,7 @@ namespace sumire {
                     sumiRenderer.getSwapChain()->getDepthAttachment(),
                     sumiRenderer.getGbuffer()->positionAttachment()
                 );
-                if (hqsmDebugger) hqsmDebugger->updateScreenBounds();
+                if (hqsmDebugger) hqsmDebugger->updateScreenBounds(sumiRenderer.getHZB());
 
                 sumiRenderer.resetScRecreatedFlag();
             }
@@ -496,6 +497,7 @@ namespace sumire {
                     cameraController,
                     shadowMapper->getZbin(),
                     shadowMapper->getLightMask(),
+                    hqsmDebugger.get(),
                     gpuProfiler.get(),
                     cpuProfiler.get()
                 );
