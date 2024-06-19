@@ -54,7 +54,7 @@ namespace sumire {
         static constexpr shaderc_spirv_version targetSpirvVersion = shaderc_spirv_version_1_3;
         static constexpr shaderc_optimization_level optLevel = shaderc_optimization_level_performance;
 
-        std::vector<char> readSource(const std::string& sourcePath);
+        bool readSource(const std::string& sourcePath, std::vector<char>& buffer);
         shaderc_shader_kind getShaderType(const std::string& sourcePath);
 
     };

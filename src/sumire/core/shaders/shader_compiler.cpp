@@ -66,7 +66,11 @@ namespace sumire {
     ShaderCompiler::~ShaderCompiler() {}
 
     bool ShaderCompiler::compile(const std::string& sourcePath, std::vector<char>& spvOut) {
-        std::vector<char> sourceBuffer = readSource(sourcePath);
+        std::vector<char> sourceBuffer;
+        bool readSuccess = readSource(sourcePath, sourceBuffer);
+
+        if (!readSuccess) return false;
+
         const std::string sourceCode{ sourceBuffer.begin(), sourceBuffer.end() };
 
         shaderc::Compiler compiler;
@@ -105,18 +109,15 @@ namespace sumire {
         return true;
     }
 
-    std::vector<char> ShaderCompiler::readSource(const std::string& sourcePath) {
-        std::vector<char> buffer;
+    bool ShaderCompiler::readSource(const std::string& sourcePath, std::vector<char>& buffer) {
         bool success = util::readFileBinary(sourcePath, buffer);
 
         if (!success) {
-            throw std::runtime_error(
-                "[Sumire::ShaderCompiler] Could not open shader source for compilation: "
-                + sourcePath
-            );
+            std::cout << "[Sumire::ShaderCompiler] WARNING: Could not open shader source for compilation: "
+                      << sourcePath << std::endl;
         }
 
-        return buffer;
+        return success;
     }
 
     shaderc_shader_kind ShaderCompiler::getShaderType(const std::string& sourcePath) {
