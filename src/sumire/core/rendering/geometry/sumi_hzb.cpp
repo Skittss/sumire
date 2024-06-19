@@ -43,6 +43,8 @@ namespace sumire {
     }
 
     void SumiHZB::createMippedHZBimage(VkImageUsageFlags usageFlags) {
+
+        // TODO: The mip here should be *conservative* i.e. ceiling
         baseExtent = VkExtent2D{ 
             zbufferResolution.width  >> 1,
             zbufferResolution.height >> 1
@@ -73,9 +75,13 @@ namespace sumire {
     }
 
     void SumiHZB::createShadowTileHZBimage(VkImageUsageFlags usageFlags) {
+
+        glm::uvec2 conservativeExtent = glm::ceil(
+            glm::vec2(zbufferResolution.width, zbufferResolution.height) / glm::vec2(8.0));
+
         baseExtent = VkExtent2D{ 
-            zbufferResolution.width  >> 3,
-            zbufferResolution.height >> 3
+            conservativeExtent.x,
+            conservativeExtent.y
         };
 
         VkImageCreateInfo imageInfo{};
