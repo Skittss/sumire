@@ -1,0 +1,126 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_vote : enable
+
+/*
+ * Phase 3 of High Quality Shadow Mapping.
+ * 
+ * The goal is to filter light indices from the Tile Group Light Mask Buffer
+ *   using more accurate per-pixel tests on each Shadow Tile.
+ *
+ * This shader is invoked once per shadow tile, and each thread processes pixels.
+*/
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+// ---- Inputs & outputs -----------------------------------------------------------------------------------------
+
+layout(push_constant) uniform Push {
+    uvec2 screenResolution;
+    uvec2 shadowTileResolution;
+    uvec2 tileGroupResolution;
+    uvec2 lightMaskResolution;
+    uint  numZbinSlices;
+} push;
+
+#include "../includes/inc_light_mask.glsl"
+
+layout(set = 0, binding = 0) uniform sampler2D zBuffer;
+layout(set = 0, binding = 1) uniform sampler2D g_WorldPos;
+
+layout(set = 0, binding = 2) restrict readonly buffer tileGroupLightMaskBuffer {
+    lightMask tileGroupLightMasks[];
+};
+
+layout(set = 0, binding = 3) restrict readonly buffer tileShadowSlotIDs {
+    uint shadowSlotIDs[];
+};
+
+layout(set = 0, binding = 4) restrict writeonly buffer tileLightListEarly {
+    uint lightListEarly[];
+};
+
+layout(set = 0, binding = 5) restrict writeonly buffer tileLightCountEarly {
+    uint earlyTileLightCounts[];
+};
+
+// ---------------------------------------------------------------------------------------------------------------
+
+uint getTileIdx(in uvec2 tileCoord) {
+    return tileCoord.x + tileCoord.y * push.shadowTileResolution.x;
+}
+
+uint getTileGroupIdx(in uvec2 tileGroupCoord) {
+    return tileGroupCoord.x + tileGroupCoord.y * push.tileGroupResolution.x;
+}
+
+float getDepth(in uvec2 pixelCoord) {
+    // Zbuffer Depth
+    return texture(zBuffer, pixelCoord / push.screenResolution).r;
+}
+
+vec3 getWorldPos(in uvec2 pixelCoord) {
+    // Read from Gbuffer
+    //   Alternatively we could reconstruct from view space depth if needed.
+    return texture(g_WorldPos, pixelCoord / push.screenResolution).rgb;
+}
+
+void main() {
+    const uvec2 tileCoord      = gl_WorkGroupID.xy;
+    const uvec2 pixelCoord     = gl_GlobalInvocationID.xy;
+    const uvec2 tileGroupCoord = tileCoord / 8;
+
+    const uint tileIdx      = getTileIdx(tileCoord);
+    const uint tileGroupIdx = getTileGroupIdx(tileGroupCoord);
+
+    const uint shadowSlotID = shadowSlotIDs[tileIdx];
+    const float depth       = getDepth(pixelCoord);
+    const vec3 worldPos     = getWorldPos(pixelCoord);
+    const bool isValidPixel = depth != 1.0 && all(lessThan(pixelCoord, push.screenResolution));
+
+    uint lightGroupMask     = tileGroupLightMasks[tileGroupIdx].bits[0];
+    uint lightCount         = 0; // N *valid* lights in tile
+    uint lightIdxPacked     = 0; // Pack multiple light indices per uint
+
+    // ---- Process Light Groups ---------------------------------------------------------------------------------
+    while (lightGroupMask != 0) {
+        uint lightGroupBit  = findLSB(lightGroupMask);
+        uint lightMask      = tileGroupLightMasks[tileGroupIdx].bits[lightGroupBit + 1];
+        lightGroupMask     ^= (1 << lightGroupBit); // remove processed group
+
+        // ---- Process Valid Lights in Light Groups -------------------------------------------------------------
+        while (lightMask != 0) {
+            uint lightBit   = findLSB(lightMask);
+            uint lightIdx   = lightGroupBit * 32 + lightBit;
+            lightMask      ^= (1 << lightBit);
+
+            lightCount++;
+
+            // TODO: Cull light range against pixel
+            bool validLight = isValidPixel && true; // lightPixelTests(...);
+
+            if ( subgroupAny(validLight) && subgroupElect() ) {
+                lightIdxPacked = lightIdxPacked | ( lightIdx << 10 * (lightCount % 3) );
+                lightCount++;
+                if ( (lightCount % 3) == 0 ) {
+                    // TODO: May need atomic for multiple subgroup access 
+                    //tileLightListEarly[...] = lightIdxPacked;
+                    lightIdxPacked = 0;
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------
+    // Store Tile's Light Count in early light list
+    if ( subgroupElect() ) {
+        // TODO: May need atomic for multiple subgroup access
+        earlyTileLightCounts[tileIdx] = lightCount;
+        //earlyTileLightCounts[tileIdx] = lightCount;
+        // TODO: This light count may need to be read back from atomic and summed for *actual* light count.
+        if ( (lightCount % 3) != 0 ) {
+            //tileLightListEarly[...] = lightIdxPacked;
+        }
+    }
+}

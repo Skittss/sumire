@@ -1,0 +1,157 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_vote : enable
+#extension GL_KHR_shader_subgroup_ballot : enable
+
+/*
+ * Phase 4 of High Quality Shadow Mapping.
+ * 
+ * The goal is to compute the per-pixel visibility of each light.
+ *
+ * This shader is invoked once per shadow tile, and each thread processes pixels.
+*/
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+//  --- Push & Global Uniforms -----------------------------------------------------------------------------------
+layout(push_constant) uniform Push {
+    uvec2 screenResolution;
+    uvec2 shadowTileResolution;
+    uvec2 tileGroupResolution;
+    uvec2 lightMaskResolution;
+    uint  numZbinSlices;
+} push;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    int nLights;
+} ubo;
+
+#include "../../includes/inc_light.glsl"
+
+layout(set = 0, binding = 2) buffer LightSSBO {
+    Light lights[];
+};
+
+// --- Shadow mapping buffers ------------------------------------------------------------------------------------
+
+layout(set = 1, binding = 0) uniform sampler2D zBuffer;
+layout(set = 1, binding = 1) uniform sampler2D g_WorldPos;
+
+layout(set = 1, binding = 2) restrict readonly buffer tileShadowSlotIDs {
+    uint shadowSlotIDs[];
+};
+
+layout(set = 1, binding = 3) restrict coherent writeonly buffer slotCounters {
+    uint tileCounters[]; // counters per 4x4 tile group
+};
+
+layout(set = 1, binding = 3) restrict readonly buffer tileLightListEarly {
+    uint lightListEarly[];
+};
+
+layout(set = 1, binding = 4) restrict readonly buffer tileLightCountEarly {
+    uint earlyTileLightCounts[];
+};
+
+layout(set = 1, binding = 5) restrict writeonly buffer tileLightListFinal {
+    uint lightListFinal[];
+};
+
+layout(set = 1, binding = 6) restrict writeonly buffer tileLightCountFinal {
+    uint finalTileLightCounts[];
+};
+
+layout(set = 1, binding = 7) restrict writeonly buffer tileLightVisibility {
+    uint tileLightVisibilities[]; // Read by GPU as 32-bit uints, but stored as 8-bits
+};
+
+// ---------------------------------------------------------------------------------------------------------------
+
+uint getTileIdx(in uvec2 tileCoord) {
+    return tileCoord.x + tileCoord.y * push.shadowTileResolution.x;
+}
+
+float getDepth(in uvec2 pixelCoord) {
+    // Zbuffer Depth
+    return texture(zBuffer, pixelCoord / push.screenResolution).r;
+}
+
+vec3 getWorldPos(in uvec2 pixelCoord) {
+    // Read from Gbuffer
+    //   Alternatively we could reconstruct from view space depth if needed.
+    return texture(g_WorldPos, pixelCoord / push.screenResolution).rgb;
+}
+
+uint getNextEarlyLight(in uint shadowSlotID, in uint entryIdx) {
+    return 0;
+}
+
+float computeLightVisibility(in uint lightIdx, in vec3 worldPos) {
+    // PCSS. We need to read shadow maps per-light here.
+    Light light = lights[lightIdx];
+
+    return 0.0;
+}
+
+uint allocateVisibilitySlotID() {
+    uint slotID = 0;
+    if (subgroupElect()) {
+//        slotID = atomicAdd(slotCounters[...], 1);
+    }
+
+    uint visibilitySlotID = subgroupBroadcastFirst(slotID);
+    return visibilitySlotID;
+}
+
+void storeVisibility(in uint visSlotID, in uint threadIdx, in float visibility) {
+    
+}
+
+uint packLightIndexFinal(in uint lightIdx, in uint visibilitySlotID) {
+    return 0;
+}
+
+void main() {
+    const uint threadIdx   = gl_LocalInvocationIndex;
+    const uvec2 tileCoord  = gl_WorkGroupID.xy;
+    const uvec2 pixelCoord = gl_GlobalInvocationID.xy;
+
+    const uint tileIdx    = getTileIdx(tileCoord);
+
+    const uint shadowSlotID    = shadowSlotIDs[tileIdx];
+    const uint earlyLightCount = earlyTileLightCounts[tileIdx];
+    const float depth          = getDepth(pixelCoord);
+    const vec3 worldPos        = getWorldPos(pixelCoord);
+    const bool isValid         = depth != 1.0 && all(lessThan(pixelCoord, push.screenResolution));
+
+    // ---- Iterate all previously detected lights (early list) --------------------------------------------------
+    uint finalLightCount = 0;
+    uint entryIdx        = 0;
+    while (entryIdx < earlyLightCount) {
+        uint lightIdx = getNextEarlyLight(shadowSlotID, entryIdx);
+        // Standard shadow generation per pixel
+        float vis        = computeLightVisibility(lightIdx, worldPos);
+        bool isAllLit    = subgroupAll(vis > 0.9999 || !isValid);
+        bool isAllShadow = subgroupAll(vis < 0.0001 || !isValid);
+        bool hasPenumbra = !isAllLit && !isAllShadow;
+        // ---- Only write out light if not entirely in shadow ---------------------------------------------------
+        if (!isAllShadow) {
+            uint visSlotID = 0; // TODO: what value here?
+            if (hasPenumbra) {
+                visSlotID = allocateVisibilitySlotID(); // 1 slot per tile
+                storeVisibility(visSlotID, threadIdx, vis);
+            }
+            // Output packed light index and VisibilitySlotID/Flag
+            uint packedValue = packLightIndexFinal(lightIdx, visSlotID);
+            //lightListFinal[shadowSlotID...] = packedValue;
+            finalLightCount++;
+        }
+        entryIdx++;
+    }
+
+    if (subgroupElect()) {
+        // TODO: atomicadd?
+        finalTileLightCounts[tileIdx] = finalLightCount;
+    }
+}

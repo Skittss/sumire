@@ -1,0 +1,253 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_ballot : enable
+
+/* 
+ * Phase 2 of High Quality Shadow Mapping.
+ *
+ * Two Main Goals here:
+ *   - Find potentially valid lights per shadow tile
+ *       -> Tile Group Light Mask Buffer
+ *   - Reserve memory for storage of light lists built in the following phases
+ *       -> Tile Shadow Slot IDs Buffer (& Slot Counters Buffer)
+ * 
+ * We only evaluate 1 shadow tile per thread instead of per-pixel
+ *   and process groups of 8x8 shadow tiles for the entire workgroup.
+ *
+ * Notes:
+ *   - The original paper was designed with subgroup sizes of 64 in mind
+ *     whereas many desktop GPUs (esp. NVIDIA) have subgroup sizes of 32.
+ *     In some cases we may have to do an extra atomic write to compensate.
+*/
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+// ---- Inputs & Outputs -----------------------------------------------------------------------------------------
+
+layout(push_constant) uniform Push {
+    uvec2 shadowTileResolution;
+    uvec2 tileGroupResolution;
+    uvec2 lightMaskResolution;
+    uint  numZbinSlices;
+    float cameraNear;
+    float cameraFar;
+} push;
+
+#include "../includes/inc_zbin.glsl"
+#include "../includes/inc_light_mask.glsl"
+
+layout(set = 0, binding = 0) uniform sampler2D minMaxHzb;
+
+layout(set = 0, binding = 1) restrict writeonly buffer tileGroupLightMaskBuffer {
+    lightMask tileGroupLightMasks[];
+};
+
+layout(set = 0, binding = 2) restrict writeonly buffer tileShadowSlotIDs {
+    uint shadowSlotIDs[]; // per shadow tile
+};
+
+layout(set = 0, binding = 3) restrict coherent writeonly buffer slotCounters {
+    uint tileCounters[]; // counters per 4x4 tile group
+};
+
+layout(set = 0, binding = 4) restrict readonly buffer ZbinBuffer {
+    zBin zBins[];
+};
+
+layout(set = 0, binding = 5) restrict readonly buffer LightMaskBuffer {
+    lightMask lightMasks[];
+};
+
+// ---------------------------------------------------------------------------------------------------------------
+
+#include "../../includes/inc_z_depth_2_view_depth.glsl"
+
+uint roundUp(in uint value, in uint mult) {
+    uint remainder = value % mult;
+
+    return remainder == 0 ? value : value + mult - remainder;
+}
+
+const uint DEBUG_FIXED_LIGHT_COUNT = 40;
+
+uint allocateShadowSlotID(in uint inTileGroupIndex, in uint inTileLightCount) {
+    // TODO: The synchronization here is probably incorrect given we may have more than one subgroup.
+    // TODO: careful that inTileLightCount is in, is this intentional?
+
+    if (DEBUG_FIXED_LIGHT_COUNT > 0) {
+        return inTileGroupIndex * roundUp(DEBUG_FIXED_LIGHT_COUNT, 3);
+    }
+
+    // Round up to next mult of 3 as 3 indices stored per uint
+    inTileLightCount         = roundUp(inTileLightCount, 3);
+    uint tileGroupLightCount = subgroupAdd(inTileLightCount);
+    uint tileGroupSlotID     = 0;
+
+    // Single thread allocates space for entire tile group
+    if ( subgroupElect() ) {
+        // TODO: I cannot for the life of me get this atomic addition to be predictable
+        tileGroupSlotID = atomicAdd(tileCounters[inTileGroupIndex], tileGroupLightCount);
+    }
+
+    // TODO: no idea what the intention here is
+    uint shadowSlotID = subgroupBroadcastFirst(tileGroupSlotID);
+    shadowSlotID     += subgroupExclusiveAdd(inTileLightCount);
+    return shadowSlotID;
+}
+
+uint getTileIdx(in uvec2 tileCoord) {
+    return tileCoord.x + tileCoord.y * push.shadowTileResolution.x;
+}
+
+uint getTileGroupIdx(in uvec2 tileGroupCoord) {
+    return tileGroupCoord.x + tileGroupCoord.y * push.tileGroupResolution.x;
+}
+
+uint getTileLightMaskIdx(in uvec2 tileLightMaskCoord) {
+    return tileLightMaskCoord.x + tileLightMaskCoord.y * push.lightMaskResolution.x;
+}
+
+vec2 getTileNearFarDepth(in uvec2 tileCoord) {
+    // Find min max depths of shadow tiles from 1/8th Min Max HZB
+    vec2 nearFar = texture(minMaxHzb, vec2(tileCoord) / push.shadowTileResolution).rg; 
+
+    return nearFar;
+}
+
+ivec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
+    // Exponential view space mapping to mirror calculation of zBin.
+    // Slice calculation from Tiago Sous' DOOM 2016 Siggraph presentation.
+    //   Interactive graph: https://www.desmos.com/calculator/bf0g6n0hqp.
+    
+    const float logFarNear = log(push.cameraFar / push.cameraNear);
+    const float nSlices = float(push.numZbinSlices);
+    const float sliceFrac1 = nSlices / logFarNear;
+    const float sliceFrac2 = sliceFrac1 * log(push.cameraNear);
+
+    const float minDepth = zDepth2viewDepth(minMaxDepth.x, push.cameraNear, push.cameraFar);
+    const float maxDepth = zDepth2viewDepth(minMaxDepth.y, push.cameraNear, push.cameraFar);
+
+    // TODO: there is a note in the paper about reading individual depth values 
+    //       if the maximum z = 1.0 in order to substantially reduce false positive lights.
+    //       For now, ignore and just clamp these to nSlices - 1 so no out of bounds errors.
+    int minSlice = int( floor(log(minDepth) * sliceFrac1 - sliceFrac2) );
+    int maxSlice = int( floor(log(maxDepth) * sliceFrac1 - sliceFrac2) );
+    minSlice = min(minSlice, int(nSlices) - 1);
+    maxSlice = min(maxSlice, int(nSlices) - 1);
+
+    return ivec2(minSlice, maxSlice);
+}
+ivec2 getZbinRangeFromIndex(in ivec2 zBinMinMaxIdx) {
+    return ivec2(
+        zBins[zBinMinMaxIdx.x].rangedMinLightIdx, 
+        zBins[zBinMinMaxIdx.y].rangedMaxLightIdx
+    );
+}
+
+uint maskToBitRange(in uint val, in uint minIdx, in uint maxIdx) {
+    uint minMask = ~((1u << minIdx) - 1u); // set lowest n bits to 0
+    uint maxMask = maxIdx == 31u ?         // set highest n bits to 0 to excluding active highest group
+           1u << 31u                       //  Deal with overflow 
+        : (1u << (maxIdx + 1u)) - 1u; 
+    
+    return val & minMask & maxMask;
+}
+
+uint intersectLightGroupMask(in ivec2 binRange, in uint lightGroupMask) {
+    // Unset bits of groups which fall entirely outside of the given bin range
+    if ( any(lessThan(binRange, ivec2(0))) ) return 0;
+
+    uvec2 lightGroupRange  = binRange / 32;
+    return maskToBitRange(lightGroupMask, lightGroupRange.x, lightGroupRange.y);
+}
+
+uint intersectLightMask(in ivec2 binRange, in uint lightGroupBit, in uint lightMask) {
+    // We shouldn't have any negative values in the bin range here
+    //  as they should be all filtered out by the light group mask
+
+    uvec2 uintBinRange = uvec2(binRange);
+    uint maskMinLightIdx = 32 * lightGroupBit;
+    uint maskMaxLightIdx = maskMinLightIdx + 31;
+
+    if (binRange.x > maskMaxLightIdx || binRange.y < maskMinLightIdx)
+        return 0;
+
+    int localRangeMin = binRange.x - int(maskMinLightIdx);
+    uint maskMinIdx = min(0, localRangeMin);
+
+    int localRangeMax = binRange.y - int(maskMaxLightIdx);
+    uint maskMaxIdx = min(31, localRangeMax);
+
+    return maskToBitRange(lightMask, maskMinIdx, maskMaxIdx);
+}
+
+void main() {
+    const uvec2 tileCoord          = gl_GlobalInvocationID.xy;
+    const uvec2 tileGroupCoord     = gl_WorkGroupID.xy;
+    const uvec2 tileLightMaskCoord = tileCoord / 4;
+    bool isValidTile = all(lessThan(tileCoord, push.shadowTileResolution));
+
+    if (isValidTile) {
+        const uint tileIdx          = getTileIdx(tileCoord);                   // 8x8 pixel shadow tiles
+        const uint tileGroupIdx     = getTileGroupIdx(tileGroupCoord);         // 8x8 shadow tile groups
+        const uint tileLightMaskIdx = getTileLightMaskIdx(tileLightMaskCoord); // 4x4 shadow tile groups
+        const vec2 tileMinMaxDepth  = getTileNearFarDepth(tileCoord);          // per shadow tile
+        const ivec2 zBinMinMaxIdx   = getZbinMinMaxIdx(tileMinMaxDepth);
+        const ivec2 binRange        = getZbinRangeFromIndex(zBinMinMaxIdx);
+
+        uint lightGroupMask      = lightMasks[tileLightMaskIdx].bits[0];
+        lightGroupMask           = intersectLightGroupMask(binRange, lightGroupMask);
+
+        uint tileLightCount      = 0;
+        uint validLightGroupMask = 0;
+
+        // ---- Process Light Groups (of 32) ---------------------------------------------------------------------
+        while (lightGroupMask != 0) {
+            uint validLightMask = 0;
+            uint lightGroupBit  = findLSB(lightGroupMask);
+            uint lightMask      = lightMasks[tileLightMaskIdx].bits[lightGroupBit + 1];
+            lightMask           = intersectLightMask(binRange, lightGroupBit, lightMask);
+
+            // ---- Process lights within set light groups -------------------------------------------------------
+            while (lightMask != 0) {
+                uint lightBit   = findLSB(lightMask);
+                uint lightIdx   = lightGroupBit * 32 + lightBit;
+
+                // TODO: Cull light against froxel
+                bool validLight = true; // lightFroxelTests(...);
+
+                lightMask      ^= 1u << lightBit; // Unset bit of processed light
+                if (validLight) {
+                    tileLightCount += 1;
+                    validLightMask |= 1 << lightBit;
+                }
+            }
+
+            uint tileGroupLightMask = subgroupOr(validLightMask);
+            // One thread writes tile group light mask
+            if ( subgroupElect() ) {
+                tileGroupLightMasks[tileGroupIdx].bits[lightGroupBit + 1] = tileGroupLightMask;
+//                atomicOr(tileGroupLightMasks[tileGroupIdx].bits[lightGroupBit + 1],
+//                    tileGroupLightMask);
+            }
+
+            // ---------------------------------------------------------------------------------------------------
+            validLightGroupMask |= tileGroupLightMask != 0 ? 1 << lightGroupBit : 0;
+            lightGroupMask      ^= 1u << lightGroupBit; // Unset bit of processed group
+        }
+    
+        // First subgroup stores the LightGroup mask entry for the TileGroup, 
+        if ( subgroupElect() ) {
+//
+            tileGroupLightMasks[tileGroupIdx].bits[0] = validLightGroupMask;
+//            atomicOr(tileGroupLightMasks[tileGroupIdx].bits[0],
+//                validLightGroupMask);
+        }
+
+        // Allocate and store each Tile ShadowSlotID
+        uint shadowSlotID = allocateShadowSlotID(tileIdx, tileLightCount);
+        shadowSlotIDs[tileIdx] = shadowSlotID;
+    }
+}
