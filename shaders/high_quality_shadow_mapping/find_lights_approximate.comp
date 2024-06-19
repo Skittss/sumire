@@ -5,6 +5,12 @@
 #extension GL_KHR_shader_subgroup_ballot : enable
 
 /* 
+ * IMPORTANT NOTE: DO NOT USE THIS SHADER ON GPUS WITH > 64 THREAD SUBGROUP SIZE.
+ *     This shader is designed for GPUs with a subgroup 
+ *     size < 64 threads. It should not be used on GPUs with 64+ subgroup
+ *     as they can benefit from solely using fast subgroup operators
+ *     instead of shared memory & atomics.
+ *
  * Phase 2 of High Quality Shadow Mapping.
  *
  * Two Main Goals here:
@@ -27,6 +33,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 // ---- Inputs & Outputs -----------------------------------------------------------------------------------------
 
 layout(push_constant) uniform Push {
+    uvec2 screenResolution;
     uvec2 shadowTileResolution;
     uvec2 tileGroupResolution;
     uvec2 lightMaskResolution;
@@ -59,6 +66,11 @@ layout(set = 0, binding = 4) restrict readonly buffer ZbinBuffer {
 layout(set = 0, binding = 5) restrict readonly buffer LightMaskBuffer {
     lightMask lightMasks[];
 };
+
+// ---- Shared Variables (For 32-thread subgroups) ---------------------------------------------------------------
+
+shared lightMask s_tileGrouplightMask;
+shared uint s_shadowSlotID;
 
 // ---------------------------------------------------------------------------------------------------------------
 
@@ -111,7 +123,13 @@ uint getTileLightMaskIdx(in uvec2 tileLightMaskCoord) {
 
 vec2 getTileNearFarDepth(in uvec2 tileCoord) {
     // Find min max depths of shadow tiles from 1/8th Min Max HZB
-    vec2 nearFar = texture(minMaxHzb, vec2(tileCoord) / push.shadowTileResolution).rg; 
+
+    // Tile indexing is in range [0, res) so make sure to subtract one from the
+    //  resolution so that uvs are in the full range [0, 1].
+    // Note: this will break if any dimenion ends up at 1 (for some reason??)
+    vec2 pixelUv = vec2(tileCoord) / vec2(push.shadowTileResolution - uvec2(1));
+
+    vec2 nearFar = texture(minMaxHzb, pixelUv).rg; 
 
     return nearFar;
 }
@@ -139,6 +157,7 @@ ivec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
 
     return ivec2(minSlice, maxSlice);
 }
+
 ivec2 getZbinRangeFromIndex(in ivec2 zBinMinMaxIdx) {
     return ivec2(
         zBins[zBinMinMaxIdx.x].rangedMinLightIdx, 
@@ -184,6 +203,14 @@ uint intersectLightMask(in ivec2 binRange, in uint lightGroupBit, in uint lightM
 }
 
 void main() {
+
+    // Init shared variables for inter-subgroup output synchronisation
+    if (subgroupElect() && gl_SubgraoupID == 0) {
+        for (uint i = 0; i < 33; i++) s_tileGrouplightMask.bits[i] = 0;
+    }
+
+    barrier();
+
     const uvec2 tileCoord          = gl_GlobalInvocationID.xy;
     const uvec2 tileGroupCoord     = gl_WorkGroupID.xy;
     const uvec2 tileLightMaskCoord = tileCoord / 4;
@@ -228,8 +255,7 @@ void main() {
             uint tileGroupLightMask = subgroupOr(validLightMask);
             // One thread writes tile group light mask
             if ( subgroupElect() ) {
-                atomicOr(tileGroupLightMasks[tileGroupIdx].bits[lightGroupBit + 1],
-                    tileGroupLightMask);
+                atomicOr(s_tileGrouplightMask.bits[lightGroupBit + 1], tileGroupLightMask);
             }
 
             // ---------------------------------------------------------------------------------------------------
@@ -237,14 +263,23 @@ void main() {
             lightGroupMask      ^= 1u << lightGroupBit; // Unset bit of processed group
         }
     
+        validLightGroupMask = subgroupOr(validLightGroupMask);
+
         // First subgroup stores the LightGroup mask entry for the TileGroup, 
         if ( subgroupElect() ) {
-            atomicOr(tileGroupLightMasks[tileGroupIdx].bits[0],
-                validLightGroupMask);
+            atomicOr(s_tileGrouplightMask.bits[0], validLightGroupMask);
         }
 
         // Allocate and store each Tile ShadowSlotID
         uint shadowSlotID = allocateShadowSlotID(tileIdx, tileLightCount);
         shadowSlotIDs[tileIdx] = shadowSlotID;
+
+        // Single workgroup write shared vars out to buffer
+        barrier();
+
+        if (subgroupElect() && gl_SubgroupID == 0) {
+            tileGroupLightMasks[tileGroupIdx] = s_tileGrouplightMask;
+        }
+
     }
 }
