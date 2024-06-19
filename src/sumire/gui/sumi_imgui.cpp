@@ -123,6 +123,7 @@ namespace sumire {
         SumiKBMcontroller &cameraController,
         const structs::zBin& zBin,
         structs::lightMask* lightMask,
+        HQSMdebugger* hqsmDebugger,
         GpuProfiler* gpuProfiler,
         CpuProfiler* cpuProfiler
     ) {
@@ -140,7 +141,7 @@ namespace sumire {
         drawProfilingSection(frameInfo, gpuProfiler, cpuProfiler);
 
         ImGui::Spacing();
-        drawDebugSection(zBin, lightMask);
+        drawDebugSection(zBin, lightMask, hqsmDebugger);
 
         ImGui::Spacing();
         drawSceneSection(frameInfo);
@@ -646,7 +647,8 @@ namespace sumire {
 
     void SumiImgui::drawDebugSection(
         const structs::zBin& zBin,
-        structs::lightMask* lightMask
+        structs::lightMask* lightMask,
+        HQSMdebugger* hqsmDebugger
     ) {
         if (ImGui::CollapsingHeader("Debug")) {
             ImGui::SeparatorText("Debug Shaders");
@@ -665,7 +667,7 @@ namespace sumire {
             }
 
             ImGui::SeparatorText("Systems");
-            drawHighQualityShadowMappingSection(zBin, lightMask);
+            drawHighQualityShadowMappingSection(zBin, lightMask, hqsmDebugger);
 
             ImGui::Spacing();
         }
@@ -674,12 +676,13 @@ namespace sumire {
 
     void SumiImgui::drawHighQualityShadowMappingSection(
         const structs::zBin& zBin,
-        structs::lightMask* lightMask
+        structs::lightMask* lightMask,
+        HQSMdebugger* hqsmDebugger
     ) {
         if (ImGui::TreeNode("High Quality Shadow Mapping")) {
             drawZbinSubsection(zBin);
             drawLightMaskSubsection(lightMask);
-            drawHqsmDebugViewSubsection();
+            drawHqsmDebugViewSubsection(hqsmDebugger);
 
             ImGui::TreePop();
         }
@@ -835,22 +838,23 @@ namespace sumire {
         }
     }
 
-    void SumiImgui::drawHqsmDebugViewSubsection() {
+    void SumiImgui::drawHqsmDebugViewSubsection(HQSMdebugger* hqsmDebugger) {
         if (ImGui::TreeNode("Debug Views")) {
 
             if (sumiConfig.runtimeData.DEBUG_SHADERS) {
                 // Debug View Selection
-                const char* debugViews[] = { "None", "Light Count", "Light Culling" };
+                const char* debugViews[] = { "None", "HZB", "Light Count", "Light Culling" };
                 static int debugViewIdx = 0;
                 ImGui::Combo("View", &debugViewIdx, debugViews, IM_ARRAYSIZE(debugViews));
-                HQSMdebugView = static_cast<HQSMdebuggerView>(debugViewIdx);
+                HQSMdebugView = static_cast<HQSMdebuggerView>(debugViewIdx); // TODO: move to using debugger pointer
 
                 ImGui::SeparatorText("View Config");
                 switch (HQSMdebugView) {
                 case HQSMdebuggerView::HQSM_DEBUG_LIGHT_COUNT: {
-                    const char* lightCountConfigs[] = { "Early", "Final", "Difference" };
+                    const char* lightCountConfigs[] = { "Light Mask", "Approx", "Early", "Final", "Approx-Early Difference" };
                     static int lightCountConfigIdx = 0;
                     ImGui::Combo("Light List", &lightCountConfigIdx, lightCountConfigs, IM_ARRAYSIZE(lightCountConfigs));
+                    hqsmDebugger->lightCountDebugListSource = static_cast<HQSMlightCountListSource>(lightCountConfigIdx);
                 } break;
                 case HQSMdebuggerView::HQSM_DEBUG_LIGHT_CULLING: {
                     const char* lightCullingConfigs[] = { "Culling Step", "Light List" };

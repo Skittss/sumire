@@ -16,7 +16,7 @@
 
 #include <sumire/core/render_systems/high_quality_shadow_mapping/zbin.hpp>
 #include <sumire/core/render_systems/high_quality_shadow_mapping/light_mask.hpp>
-#include <sumire/core/render_systems/high_quality_shadow_mapping/hqsm_debugger_view.hpp>
+#include <sumire/core/render_systems/high_quality_shadow_mapping/hqsm_debugger.hpp>
 
 #include <sumire/input/sumi_kbm_controller.hpp>
 
@@ -53,6 +53,7 @@ namespace sumire {
                 SumiKBMcontroller &cameraController,
                 const structs::zBin& zBin,
                 structs::lightMask* lightMask,
+                HQSMdebugger* hqsmDebugger,
                 GpuProfiler* gpuProfiler,
                 CpuProfiler* cpuProfiler
             );
@@ -92,13 +93,19 @@ namespace sumire {
                 CpuProfiler* cpuProfiler
             );
             void drawDebugSection(
-                const structs::zBin& zBin, structs::lightMask* lightMask);
+                const structs::zBin& zBin,
+                structs::lightMask* lightMask,
+                HQSMdebugger* hqsmDebugger
+            );
 
             void drawHighQualityShadowMappingSection(
-                const structs::zBin& zBin, structs::lightMask* lightMask);
+                const structs::zBin& zBin, 
+                structs::lightMask* lightMask,
+                HQSMdebugger* hqsmDebugger
+            );
             void drawZbinSubsection(const structs::zBin& zbin);
             void drawLightMaskSubsection(structs::lightMask* lightMask);
-            void drawHqsmDebugViewSubsection();
+            void drawHqsmDebugViewSubsection(HQSMdebugger* hqsmDebugger);
 
             SumiConfig& sumiConfig;
             SumiDevice& sumiDevice;
