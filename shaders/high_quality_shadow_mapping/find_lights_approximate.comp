@@ -205,7 +205,7 @@ uint intersectLightMask(in ivec2 binRange, in uint lightGroupBit, in uint lightM
 void main() {
 
     // Init shared variables for inter-subgroup output synchronisation
-    if (subgroupElect() && gl_SubgraoupID == 0) {
+    if (subgroupElect() && gl_SubgroupID == 0) {
         for (uint i = 0; i < 33; i++) s_tileGrouplightMask.bits[i] = 0;
     }
 
