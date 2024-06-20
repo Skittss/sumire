@@ -27,6 +27,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 // ---- Inputs & Outputs -----------------------------------------------------------------------------------------
 
 layout(push_constant) uniform Push {
+    uvec2 screenResolution;
     uvec2 shadowTileResolution;
     uvec2 tileGroupResolution;
     uvec2 lightMaskResolution;
@@ -111,7 +112,13 @@ uint getTileLightMaskIdx(in uvec2 tileLightMaskCoord) {
 
 vec2 getTileNearFarDepth(in uvec2 tileCoord) {
     // Find min max depths of shadow tiles from 1/8th Min Max HZB
-    vec2 nearFar = texture(minMaxHzb, vec2(tileCoord) / push.shadowTileResolution).rg; 
+
+    // Tile indexing is in range [0, res) so make sure to subtract one from the
+    //  resolution so that uvs are in the full range [0, 1].
+    // Note: this will break if any dimenion ends up at 1 (for some reason??)
+    vec2 pixelUv = vec2(tileCoord) / vec2(push.shadowTileResolution - uvec2(1));
+
+    vec2 nearFar = texture(minMaxHzb, pixelUv).rg; 
 
     return nearFar;
 }
@@ -139,6 +146,7 @@ ivec2 getZbinMinMaxIdx(in vec2 minMaxDepth) {
 
     return ivec2(minSlice, maxSlice);
 }
+
 ivec2 getZbinRangeFromIndex(in ivec2 zBinMinMaxIdx) {
     return ivec2(
         zBins[zBinMinMaxIdx.x].rangedMinLightIdx, 
@@ -229,8 +237,6 @@ void main() {
             // One thread writes tile group light mask
             if ( subgroupElect() ) {
                 tileGroupLightMasks[tileGroupIdx].bits[lightGroupBit + 1] = tileGroupLightMask;
-//                atomicOr(tileGroupLightMasks[tileGroupIdx].bits[lightGroupBit + 1],
-//                    tileGroupLightMask);
             }
 
             // ---------------------------------------------------------------------------------------------------
@@ -238,16 +244,16 @@ void main() {
             lightGroupMask      ^= 1u << lightGroupBit; // Unset bit of processed group
         }
     
+        validLightGroupMask = subgroupOr(validLightGroupMask);
+
         // First subgroup stores the LightGroup mask entry for the TileGroup, 
         if ( subgroupElect() ) {
-//
             tileGroupLightMasks[tileGroupIdx].bits[0] = validLightGroupMask;
-//            atomicOr(tileGroupLightMasks[tileGroupIdx].bits[0],
-//                validLightGroupMask);
         }
 
         // Allocate and store each Tile ShadowSlotID
         uint shadowSlotID = allocateShadowSlotID(tileIdx, tileLightCount);
         shadowSlotIDs[tileIdx] = shadowSlotID;
+
     }
 }

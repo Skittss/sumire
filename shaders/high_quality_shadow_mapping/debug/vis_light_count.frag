@@ -83,17 +83,17 @@ void main() {
     // ---- Approx Count Gather ---------------------------------------------------------
     uint lightGroupMask = tileGroupLightMasks[tileGroupIdx].bits[0];
 
-//    while (lightGroupMask != 0) {
-//        uint lightGroupBit = findLSB(lightGroupMask);
-//        uint lightMask     = tileGroupLightMasks[tileGroupIdx].bits[lightGroupBit + 1];
-//        lightGroupMask     ^= (1 << lightGroupBit); // remove processed group
-//
-//        while (lightMask != 0) {
-//            uint lightBit   = findLSB(lightMask);
-//            lightMask      ^= (1 << lightBit);
-//            approxCount++;
-//        }
-//    }
+    while (lightGroupMask != 0) {
+        uint lightGroupBit = findLSB(lightGroupMask);
+        uint lightMask     = tileGroupLightMasks[tileGroupIdx].bits[lightGroupBit + 1];
+        lightGroupMask     ^= (1 << lightGroupBit); // remove processed group
+
+        while (lightMask != 0) {
+            uint lightBit   = findLSB(lightMask);
+            lightMask      ^= (1 << lightBit);
+            approxCount++;
+        }
+    }
     // ----------------------------------------------------------------------------------
 
     vec4 overlayCol = vec4(0.0);
@@ -103,8 +103,7 @@ void main() {
         count = lightMaskCount;
     }
     else if (push.listSource == 1) {
-        //count = approxCount;
-        count = lightGroupMask;
+        count = approxCount;
     } 
     else if (push.listSource == 2) {
         count = earlyCount;
