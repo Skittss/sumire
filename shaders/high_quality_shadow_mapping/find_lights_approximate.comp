@@ -168,7 +168,7 @@ ivec2 getZbinRangeFromIndex(in ivec2 zBinMinMaxIdx) {
 uint maskToBitRange(in uint val, in uint minIdx, in uint maxIdx) {
     uint minMask = ~((1u << minIdx) - 1u); // set lowest n bits to 0
     uint maxMask = maxIdx == 31u ?         // set highest n bits to 0 to excluding active highest group
-           1u << 31u                       //  Deal with overflow 
+        4294967295u                      //  Deal with overflow 
         : (1u << (maxIdx + 1u)) - 1u; 
     
     return val & minMask & maxMask;
@@ -186,18 +186,20 @@ uint intersectLightMask(in ivec2 binRange, in uint lightGroupBit, in uint lightM
     // We shouldn't have any negative values in the bin range here
     //  as they should be all filtered out by the light group mask
 
+    // TODO: I think this is the cause of implosion.
     uvec2 uintBinRange = uvec2(binRange);
-    uint maskMinLightIdx = 32 * lightGroupBit;
-    uint maskMaxLightIdx = maskMinLightIdx + 31;
+    uint maskMinLightIdx = 32 * lightGroupBit;                 
+    uint maskMaxLightIdx = maskMinLightIdx + 31;               
 
-    if (binRange.x > maskMaxLightIdx || binRange.y < maskMinLightIdx)
+    if (binRange.x > maskMaxLightIdx || binRange.y < maskMinLightIdx) {
         return 0;
+    }
 
     int localRangeMin = binRange.x - int(maskMinLightIdx);
-    uint maskMinIdx = min(0, localRangeMin);
+    uint maskMinIdx = uint(max(0, localRangeMin));
 
-    int localRangeMax = binRange.y - int(maskMaxLightIdx);
-    uint maskMaxIdx = min(31, localRangeMax);
+    int localRangeMax = binRange.y - int(maskMinLightIdx);
+    uint maskMaxIdx = uint(min(31, localRangeMax));
 
     return maskToBitRange(lightMask, maskMinIdx, maskMaxIdx);
 }
@@ -245,6 +247,7 @@ void main() {
                 // TODO: Cull light against froxel
                 bool validLight = true; // lightFroxelTests(...);
 
+                // TODO: Last two indices of light bits cause this to implode.
                 lightMask      ^= 1u << lightBit; // Unset bit of processed light
                 if (validLight) {
                     tileLightCount += 1;
@@ -276,6 +279,7 @@ void main() {
 
         // Single workgroup write shared vars out to buffer
         barrier();
+        memoryBarrierShared();
 
         if (subgroupElect() && gl_SubgroupID == 0) {
             tileGroupLightMasks[tileGroupIdx] = s_tileGrouplightMask;
