@@ -14,9 +14,20 @@
 
 // Profiling
 #include <sumire/core/profiling/gpu_profiler.hpp>
-#include <sumire/core/profiling/cpu_profiler.hpp>
+#define BEGIN_GPU_PROFILING_BLOCK(profiler, cmdBuffer, blockName)    \
+   if ((profiler)) (profiler)->beginBlock((cmdBuffer), (blockName)); \
 
-// glm
+#define END_GPU_PROFILING_BLOCK(profiler, cmdBuffer, blockName)    \
+   if ((profiler)) (profiler)->endBlock((cmdBuffer), (blockName)); \
+
+#include <sumire/core/profiling/cpu_profiler.hpp>
+#define BEGIN_CPU_PROFILING_BLOCK(profiler, blockName)  \
+   if ((profiler)) (profiler)->beginBlock((blockName)); \
+
+#define END_CPU_PROFILING_BLOCK(profiler, blockName)  \
+   if ((profiler)) (profiler)->endBlock((blockName)); \
+
+// glmw
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_ENABLE_EXPERIMENTAL
@@ -228,12 +239,16 @@ namespace sumire {
                 // Note: any blocks we add here *must be written* with beginBlock() & endBlock() 
                 //       or else we will never have query results available.
                 gpuProfiler = GpuProfiler::Builder(sumiDevice)
-                    .addBlock("0: PredrawCompute")
-                    .addBlock("1: EarlyGraphics")
-                    .addBlock("2: EarlyCompute")
-                    .addBlock("3: LateGraphics")
-                    .addBlock("4: LateCompute")
-                    .addBlock("5: Composite")
+                    .addBlock("0-- Predraw Compute")
+                    .addBlock("1-- Early Graphics")
+                    .addBlock("2-- Early Compute")
+                    .addBlock("2-0: HZB building")
+                    .addBlock("2-1: Find Lights Approx")
+                    .addBlock("2-2: Find Lights Accurate")
+                    .addBlock("2-3: Generate Deferred Shadows")
+                    .addBlock("3-- Late Graphics")
+                    .addBlock("4-- Late Compute")
+                    .addBlock("5-- Composite")
                     .build();
             }
         }
@@ -385,41 +400,43 @@ namespace sumire {
 
                 // ---- Shadow mapping preparation on the CPU ----------------------------------------------------
                 //  TODO: Only re-prepare if lights / camera view have changed.
-                if (cpuProfiler) cpuProfiler->beginBlock("0: Shadow Map Prepare");
+                BEGIN_CPU_PROFILING_BLOCK(cpuProfiler, "0: Shadow Map Prepare");
                 shadowMapper->prepare(
                     sortedLights,
                     camera
                 );
-                if (cpuProfiler) cpuProfiler->endBlock("0: Shadow Map Prepare");
+                END_CPU_PROFILING_BLOCK(cpuProfiler, "0: Shadow Map Prepare");
                 
                 if (gpuProfiler) gpuProfiler->beginFrame(frameCommandBuffers.predrawCompute);
 
                 // ---- Pre-draw compute dispatches --------------------------------------------------------------
                 // TODO: Compute based culling and skinning.
-                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.predrawCompute, "0: PredrawCompute");
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.predrawCompute, "0-- Predraw Compute");
 
-                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.predrawCompute, "0: PredrawCompute");
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.predrawCompute, "0-- Predraw Compute");
 
                 // ---- Early Graphics ---------------------------------------------------------------------------
                 // Fill gbuffer in place of a z-prepass
 
-                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.earlyGraphics, "1: EarlyGraphics");
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyGraphics, "1-- Early Graphics");
                 sumiRenderer.beginEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
 
                 deferredMeshRenderSystem->fillGbuffer(frameCommandBuffers.earlyGraphics, frameInfo);
 
                 sumiRenderer.endEarlyGraphicsRenderPass(frameCommandBuffers.earlyGraphics);
-                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.earlyGraphics, "1: EarlyGraphics");
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyGraphics, "1-- Early Graphics");
 
                 // ---- Early Compute ----------------------------------------------------------------------------
                 // Shadow mapping resolve which gbuffer resolve relies on
 
-                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-- Early Compute");
 
                 sumiRenderer.beginEarlyCompute(frameCommandBuffers.earlyCompute);
 
                 //   Generate HZB
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-0: HZB building");
                 hzbGenerator->generateShadowTileHzb(frameCommandBuffers.earlyCompute);
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-0: HZB building");
 
                 //   Transition HZB for combined image sampler use
                 sumiDevice.imageMemoryBarrier(
@@ -437,22 +454,30 @@ namespace sumire {
                 );
 
                 //   Shadow mapping
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-1: Find Lights Approx");
                 shadowMapper->findLightsApproximate(
                     frameCommandBuffers.earlyCompute,
                     camera.getNear(), camera.getFar()
                 );
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-1: Find Lights Approx");
+
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-2: Find Lights Accurate");
                 shadowMapper->findLightsAccurate(frameCommandBuffers.earlyCompute);
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-2: Find Lights Accurate");
+
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-3: Generate Deferred Shadows");
                 shadowMapper->generateDeferredShadows(frameCommandBuffers.earlyCompute, frameInfo);
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-3: Generate Deferred Shadows");
 
                 //shadowMapper.compositeHighQualityShadows(frameCommandBuffers.earlyCompute);
 
                 sumiRenderer.endEarlyCompute(frameCommandBuffers.earlyCompute);
 
-                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.earlyCompute, "2: EarlyCompute");
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.earlyCompute, "2-- Early Compute");
 
                 // ---- Late Graphics ----------------------------------------------------------------------------
                 // Lighting resolve and forward subpass for world UI + OIT
-                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.lateGraphics, "3: LateGraphics");
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.lateGraphics, "3-- Late Graphics");
                 sumiRenderer.beginLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
 
                 //   Deferred resolve subpass
@@ -469,20 +494,20 @@ namespace sumire {
                 }
                 
                 sumiRenderer.endLateGraphicsRenderPass(frameCommandBuffers.lateGraphics);
-                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.lateGraphics, "3: LateGraphics");
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.lateGraphics, "3-- Late Graphics");
 
                 // ---- Late Compute -----------------------------------------------------------------------------
                 // Post effects which can be interleaved with generation of next frame via async compute queue
-                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.lateCompute, "4: LateCompute");
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.lateCompute, "4-- Late Compute");
 
                 postProcessor->tonemap(frameCommandBuffers.lateCompute, frameInfo.frameIdx);
 
                 sumiRenderer.endLateCompute(frameCommandBuffers.lateCompute);
-                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.lateCompute, "4: LateCompute");
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.lateCompute, "4-- Late Compute");
 
                 // ---- Final Composite --------------------------------------------------------------------------
                 // Copy everything out to the swap chain image and render UI
-                if (gpuProfiler) gpuProfiler->beginBlock(frameCommandBuffers.present, "5: Composite");
+                BEGIN_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.present, "5-- Composite");
                 sumiRenderer.beginCompositeRenderPass(frameCommandBuffers.present);
 
                 postProcessor->compositeFrame(frameCommandBuffers.present, frameInfo.frameIdx);
@@ -506,7 +531,7 @@ namespace sumire {
                 gui.render(frameCommandBuffers.present);
 
                 sumiRenderer.endCompositeRenderPass(frameCommandBuffers.present);
-                if (gpuProfiler) gpuProfiler->endBlock(frameCommandBuffers.present, "5: Composite");
+                END_GPU_PROFILING_BLOCK(gpuProfiler, frameCommandBuffers.present, "5-- Composite");
 
                 sumiRenderer.endFrame();
                 if (gpuProfiler) gpuProfiler->endFrame();
@@ -552,7 +577,7 @@ namespace sumire {
     }
 
     void Sumire::loadLights() {
-        constexpr float radial_n_lights = 4.0;
+        constexpr float radial_n_lights = 20.0;
         for (float i = 0; i < radial_n_lights; i++) {
             float rads = i * glm::two_pi<float>() / radial_n_lights;
             auto light = SumiLight::createPointLight(glm::vec3{1.5f * glm::sin(rads), 3.0f, 1.5f * glm::cos(rads)});
