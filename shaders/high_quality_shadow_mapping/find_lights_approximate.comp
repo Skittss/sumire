@@ -186,7 +186,6 @@ uint intersectLightMask(in ivec2 binRange, in uint lightGroupBit, in uint lightM
     // We shouldn't have any negative values in the bin range here
     //  as they should be all filtered out by the light group mask
 
-    // TODO: I think this is the cause of implosion.
     uvec2 uintBinRange = uvec2(binRange);
     uint maskMinLightIdx = 32 * lightGroupBit;                 
     uint maskMaxLightIdx = maskMinLightIdx + 31;               
@@ -279,7 +278,6 @@ void main() {
 
         // Single workgroup write shared vars out to buffer
         barrier();
-        memoryBarrierShared();
 
         if (subgroupElect() && gl_SubgroupID == 0) {
             tileGroupLightMasks[tileGroupIdx] = s_tileGrouplightMask;
