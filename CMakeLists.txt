@@ -1,15 +1,27 @@
 cmake_minimum_required(VERSION 3.15.0)
+
+# ---- Project Meta ----------------------------------------------------------------------------------------------
 set(NAME sumire)
-project(${NAME} VERSION 0.1.0)
+project(
+    ${NAME} 
+    LANGUAGES C CXX
+    VERSION 0.1.0
+)
+
+# ---- Sumire Directories ----------------------------------------------------------------------------------------
+set(DISTRIB_DIR ${PROJECT_SOURCE_DIR}/distrib/)
+set(ASSETS_DIR ${PROJECT_SOURCE_DIR})
+set(SUMIRE_SRC_DIR ${PROJECT_SOURCE_DIR}/src/sumire)
+
+# ---- Compiler Options ------------------------------------------------------------------------------------------
 
 option(ENABLE_BUILD_ERRORS "Enable build warnings and errors." ON)
 
+add_compile_definitions(ASSETS_ROOT="/")
+
 include(./.env.cmake OPTIONAL RESULT_VARIABLE LOCAL_ENV)
 message(STATUS "Using local .env.cmake at: ${LOCAL_ENV}")
- 
-# Compiler choice
-message(STATUS "Using ${CMAKE_GENERATOR}")
- 
+
 # ---- Vulkan Package --------------------------------------------------------------------------------------------
 if (DEFINED VULKAN_SDK_PATH)
     set(Vulkan_INCLUDE_DIRS "${VULKAN_SDK_PATH}/Include")
@@ -46,19 +58,13 @@ else()
 endif()
   
 # ---- External Lib Paths ----------------------------------------------------------------------------------------
-# TINY OBJ LOADER
-set(TINYOBJ_PATH external/tinyobjloader)
-# TINY GLTF LOADER
-set(TINYGLTF_PATH external/tinygltf)
-# IMGUI
-set(IMGUI_PATH external/imgui)
-set(IMGUI_BACKEND_PATH external/imgui/backends)
-# MIKKTSPACE
-set(MIKKTSPACE_PATH external/MikkTSpace)
-# RAPIDJSON
-set(RAPIDJSON_PATH external/rapidjson)
-# GLM
-set(GLM_PATH external/glm)
+set(TINYOBJ_PATH       external/tinyobjloader)     # TINY OBJ LOADER
+set(TINYGLTF_PATH      external/tinygltf)          # TINY GLTF LOADER
+set(IMGUI_PATH         external/imgui)             # IMGUI
+set(IMGUI_BACKEND_PATH external/imgui/backends)    #  |-
+set(MIKKTSPACE_PATH    external/MikkTSpace)        # MIKKTSPACE
+set(RAPIDJSON_PATH     external/rapidjson)         # RAPIDJSON
+set(GLM_PATH           external/glm)               # GLM
 
 # ---- Shader libs -----------------------------------------------------------------------------------------------
 # Vulkan provides shader libs, so no need to find_library here.
@@ -68,42 +74,101 @@ else()
     set(SHADERC_LIBS shaderc_combined)
 endif()
 
+# ---- External Sources ------------------------------------------------------------------------------------------
+SET(MIKKTSPACE_SOURCES
+    "${MIKKTSPACE_PATH}/mikktspace.c")
+SET(IMGUI_SOURCES
+    "${IMGUI_PATH}/imgui.cpp"
+    "${IMGUI_PATH}/imgui_draw.cpp"
+    "${IMGUI_PATH}/imgui_tables.cpp"
+    "${IMGUI_PATH}/imgui_widgets.cpp"
+    "${IMGUI_PATH}/imgui_demo.cpp")
+SET(IMGUI_BACKEND_SOURCES
+    "${IMGUI_BACKEND_PATH}/imgui_impl_vulkan.cpp"
+    "${IMGUI_BACKEND_PATH}/imgui_impl_glfw.cpp")
+
+# ---- Sumire Sources --------------------------------------------------------------------------------------------
+SET(SUMIRE_SOURCES
+    "${SUMIRE_SRC_DIR}/config/sumi_config.cpp"
+    "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_attachment.cpp"
+    "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_buffer.cpp"
+    "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_compute_pipeline.cpp"
+    "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_descriptors.cpp"
+    "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_device.cpp"
+    "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_pipeline.cpp"
+    "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_swap_chain.cpp "
+    "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_texture.cpp"
+    "${SUMIRE_SRC_DIR}/core/materials/sumi_material.cpp"
+    "${SUMIRE_SRC_DIR}/core/models/mesh.cpp "
+    "${SUMIRE_SRC_DIR}/core/models/node.cpp "
+    "${SUMIRE_SRC_DIR}/core/models/sumi_model.cpp "
+    "${SUMIRE_SRC_DIR}/core/models/vertex.cpp"
+    "${SUMIRE_SRC_DIR}/core/profiling/cpu_profiler.cpp "
+    "${SUMIRE_SRC_DIR}/core/profiling/gpu_profiler.cpp "
+    "${SUMIRE_SRC_DIR}/core/rendering/general/sumi_camera.cpp"
+    "${SUMIRE_SRC_DIR}/core/rendering/geometry/sumi_gbuffer.cpp"
+    "${SUMIRE_SRC_DIR}/core/rendering/geometry/sumi_hzb.cpp"
+    "${SUMIRE_SRC_DIR}/core/rendering/lighting/sumi_light.cpp"
+    "${SUMIRE_SRC_DIR}/core/rendering/shadows/sumi_cascaded_shadow_map.cpp"
+    "${SUMIRE_SRC_DIR}/core/rendering/shadows/sumi_shadow_cubemap_array.cpp"
+    "${SUMIRE_SRC_DIR}/core/rendering/shadows/sumi_shadow_map_array.cpp"
+    "${SUMIRE_SRC_DIR}/core/rendering/shadows/sumi_virtual_shadow_map.cpp"
+    "${SUMIRE_SRC_DIR}/core/rendering/sumi_renderer.cpp"
+    "${SUMIRE_SRC_DIR}/core/render_systems/deferred/deferred_mesh_rendersys.cpp "
+    "${SUMIRE_SRC_DIR}/core/render_systems/depth_buffers/hzb_generator.cpp "
+    "${SUMIRE_SRC_DIR}/core/render_systems/forward/mesh_rendersys.cpp "
+    "${SUMIRE_SRC_DIR}/core/render_systems/high_quality_shadow_mapping/high_quality_shadow_mapper.cpp"
+    "${SUMIRE_SRC_DIR}/core/render_systems/high_quality_shadow_mapping/hqsm_debugger.cpp"
+    "${SUMIRE_SRC_DIR}/core/render_systems/post/post_processor.cpp "
+    "${SUMIRE_SRC_DIR}/core/render_systems/world_ui/grid_rendersys.cpp "
+    "${SUMIRE_SRC_DIR}/core/render_systems/world_ui/point_light_rendersys.cpp"
+    "${SUMIRE_SRC_DIR}/core/shaders/shader_compiler.cpp "
+    "${SUMIRE_SRC_DIR}/core/shaders/shader_manager.cpp "
+    "${SUMIRE_SRC_DIR}/core/shaders/shader_source.cpp "
+    "${SUMIRE_SRC_DIR}/core/shaders/shader_update_listener.cpp "
+    "${SUMIRE_SRC_DIR}/core/windowing/sumi_window.cpp "
+    "${SUMIRE_SRC_DIR}/core/sumire.cpp "
+    "${SUMIRE_SRC_DIR}/gui/sumi_imgui.cpp "
+    "${SUMIRE_SRC_DIR}/input/sumi_kbm_controller.cpp"
+    "${SUMIRE_SRC_DIR}/loaders/gltf_loader.cpp "
+    "${SUMIRE_SRC_DIR}/loaders/obj_loader.cpp"
+    "${SUMIRE_SRC_DIR}/math/coord_space_converters.cpp "
+    "${SUMIRE_SRC_DIR}/math/frustum_culling.cpp "
+    "${SUMIRE_SRC_DIR}/math/view_space_depth.cpp "
+    "${SUMIRE_SRC_DIR}/util/generate_mikktspace_tangents.cpp "
+    "${SUMIRE_SRC_DIR}/util/gltf_interpolators.cpp "
+    "${SUMIRE_SRC_DIR}/util/gltf_vulkan_flag_converters.cpp "
+    "${SUMIRE_SRC_DIR}/util/relative_engine_filepath.cpp "
+    "${SUMIRE_SRC_DIR}/util/rw_file_binary.cpp"
+    "${SUMIRE_SRC_DIR}/watchers/fs_watcher_win.cpp"
+    "${SUMIRE_SRC_DIR}/main.cpp"
+)
+
 # ---- Sumire Binary ---------------------------------------------------------------------------------------------
 # Binary Output Dirs
 SET(OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   "${OUTPUT_DIRECTORY}/Debug")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release") # VS uses no configuration suffix for releases
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}/Release")         #  But I've included it anyhow just in case.
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY         "${OUTPUT_DIRECTORY}/Release") #  But I've included it anyhow just in case.
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG   "${OUTPUT_DIRECTORY}/Debug")
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release")
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}/Release")
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}/Debug")
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY         "${OUTPUT_DIRECTORY}/Release")
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   "${OUTPUT_DIRECTORY}/Debug")
 SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}/Release")
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}/Release")
-
-# External Sources
-file(GLOB MIKKTSPACE_SOURCES ${MIKKTSPACE_PATH}/*.c)
-file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp)
-file(GLOB IMGUI_BACKEND_SOURCES # Only use required Imgui Backends
-    ${IMGUI_BACKEND_PATH}/imgui_impl_vulkan.cpp ${IMGUI_BACKEND_PATH}/imgui_impl_glfw.cpp)
-
-# Sumire Sources
-file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp) # find cpp files (nested) -> store in ${SOURCES}
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY         "${OUTPUT_DIRECTORY}/Release")
  
 add_executable(${PROJECT_NAME} 
-    ${SOURCES} 
+    ${SUMIRE_SOURCES} 
     ${IMGUI_SOURCES} 
     ${IMGUI_BACKEND_SOURCES} 
     ${MIKKTSPACE_SOURCES}
 )
  
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # c++ 17 standard
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # Use c++ 17
  
-# set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
-
 # ---- Includes and Linking --------------------------------------------------------------------------------------
 if (WIN32)
-    message(STATUS "Creating target Sumire (Windows)")
+    message(STATUS "Building Sumire for Windows")
 
     if (USE_MINGW)
     target_include_directories(${PROJECT_NAME} PUBLIC
@@ -146,11 +211,7 @@ elseif (UNIX)
     message(FATAL_ERROR "Building for UNIX is currently unsupported.")
 endif()
  
-# ---- Custom Target SHADERS -------------------------------------------------------------------------------------
-message(STATUS "Creating target Shaders")
-# Find all shader sources within shaders directory
-# taken from VBlancos vulkan tutorial
-# https://github.com/vblanco20-1/vulkan-guide/blob/all-chapters/CMakeLists.txt
+# ---- Shader Target ---------------------------------------------------------------------------------------------
 find_program(GLSL_VALIDATOR glslangValidator HINTS 
     ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} 
     /usr/bin 
@@ -187,3 +248,5 @@ add_custom_target(
 if (MSVC)
     add_dependencies(${PROJECT_NAME} Shaders)
 endif()
+
+# ---- Post build Packaging ---------------------------------------------------------------------------------------
