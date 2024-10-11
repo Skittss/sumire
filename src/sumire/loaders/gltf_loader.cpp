@@ -1,7 +1,5 @@
-#define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#define TINYGLTF_NOEXCEPTION // No exceptions (for now?)
 
 #include <sumire/loaders/gltf_loader.hpp>
 

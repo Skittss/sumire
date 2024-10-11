@@ -89,6 +89,10 @@ SET(IMGUI_BACKEND_SOURCES
 
 # ---- Sumire Sources --------------------------------------------------------------------------------------------
 SET(SUMIRE_SOURCES
+    "${SUMIRE_SRC_DIR}/common/external_impl/stb_image_impl.cpp"
+    "${SUMIRE_SRC_DIR}/common/external_impl/stb_image_write_impl.cpp"
+    "${SUMIRE_SRC_DIR}/common/external_impl/tinygltf_impl.cpp"
+    "${SUMIRE_SRC_DIR}/common/external_impl/tinyobj_impl.cpp"
     "${SUMIRE_SRC_DIR}/config/sumi_config.cpp"
     "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_attachment.cpp"
     "${SUMIRE_SRC_DIR}/core/graphics_pipeline/sumi_buffer.cpp"
@@ -250,3 +254,4 @@ if (MSVC)
 endif()
 
 # ---- Post build Packaging ---------------------------------------------------------------------------------------
+# TODO
