@@ -1,17 +1,42 @@
 {
-    "graphics_device": {
-        "idx": 0,
-        "name": "unset"
+    "graphics": {
+        "user": {
+            "graphics_device": {
+                "idx": 0,
+                "name": "unset"
+            },
+            "resolution": {
+                "width": 1920,
+                "height": 1080
+            },
+            "vsync": false
+        },
+        "internal": {
+            "max_n_lights": 1024
+        }
     },
-    "resolution": {
-        "width": 1920,
-        "height": 1080
+    "keybinds": {
+        "debug_camera": {
+            "move_left": 65,
+            "move_right": 68,
+            "move_forward": 87,
+            "move_backward": 83,
+            "move_up": 32,
+            "move_down": 341,
+            "look_left": 263,
+            "look_right": 262,
+            "look_up": 265,
+            "look_down": 264,
+            "sprint": 340,
+            "toggle_cursor": 342
+        }
     },
-    "cpu_profiling": false,
-    "gpu_profiling": false,
-    "debug_shaders": false,
-    "shader_hot_reloading": false,
-    "vsync": false,
-    "max_n_lights": 1024
-
+    "profiling": {
+        "cpu_profiling": false,
+        "gpu_profiling": false
+    },
+    "shaders": {
+        "debug_shaders": false,
+        "shader_hot_reloading": false
+    }
 }

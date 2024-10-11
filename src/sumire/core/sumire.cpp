@@ -54,8 +54,8 @@ namespace sumire {
     };
 
     Sumire::Sumire() {
-        screenWidth = sumiConfig.runtimeData.RESOLUTION.WIDTH;
-        screenHeight = sumiConfig.runtimeData.RESOLUTION.HEIGHT;
+        screenWidth = sumiConfig.runtimeData.graphics.user.RESOLUTION.WIDTH;
+        screenHeight = sumiConfig.runtimeData.graphics.user.RESOLUTION.HEIGHT;
 
         init();
 
@@ -68,7 +68,7 @@ namespace sumire {
         initDescriptors();
         initRenderSystems();
 
-        if (sumiConfig.runtimeData.DEBUG_SHADERS) {
+        if (sumiConfig.runtimeData.shaders.DEBUG_SHADERS) {
             initDebugRenderSystems();
         }
     }
@@ -106,7 +106,7 @@ namespace sumire {
         for (int i = 0; i < SumiSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
             lightSSBOs[i] = std::make_unique<SumiBuffer>(
                 sumiDevice,
-                sumiConfig.runtimeData.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
+                sumiConfig.runtimeData.graphics.internal.MAX_N_LIGHTS * sizeof(SumiLight::LightShaderData),
                 1,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -215,6 +215,7 @@ namespace sumire {
         SumiCamera camera{ glm::radians(50.0f), sumiRenderer.getAspect() };
         camera.transform.setTranslation(glm::vec3{ 0.0f, 1.0f, 3.0f });
         SumiKBMcontroller cameraController{
+            sumiConfig,
             sumiWindow,
             SumiKBMcontroller::ControllerType::FPS
         };
@@ -231,7 +232,7 @@ namespace sumire {
 
         // Profiling, if enabled
         std::unique_ptr<GpuProfiler> gpuProfiler = nullptr;
-        if (sumiConfig.startupData.GPU_PROFILING) {
+        if (sumiConfig.startupData.profiling.GPU_PROFILING) {
             if (!sumiDevice.properties.limits.timestampComputeAndGraphics) {
                 std::cout << "[Sumire::Sumire] WARNING: Physical device does not support profiling." << std::endl;
             }
@@ -254,7 +255,7 @@ namespace sumire {
         }
 
         std::unique_ptr<CpuProfiler> cpuProfiler = nullptr;
-        if (sumiConfig.startupData.CPU_PROFILING) {
+        if (sumiConfig.startupData.profiling.CPU_PROFILING) {
             cpuProfiler = CpuProfiler::Builder()
                 .addBlock("0: Shadow Map Prepare")
                 .build();
@@ -272,7 +273,7 @@ namespace sumire {
             sumiWindow.pollMousePos(); // if manual polling mouse pos
             // sumiWindow.clearMouseDelta(); // if using event-based polling
             sumiWindow.clearKeypressEvents();
-            glfwPollEvents();
+            SumiWindow::pollEvents();
 
             auto newTime = std::chrono::high_resolution_clock::now();
             float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();

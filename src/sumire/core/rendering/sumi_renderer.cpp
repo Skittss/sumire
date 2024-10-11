@@ -10,7 +10,7 @@ namespace sumire {
     SumiRenderer::SumiRenderer(
         SumiWindow &window, SumiDevice &device, SumiConfig &config
     ) : sumiWindow{ window }, sumiDevice{ device }, sumiConfig{ config } {
-        swapChainUseVsync = config.runtimeData.VSYNC;
+        swapChainUseVsync = config.runtimeData.graphics.user.VSYNC;
 
         recreateSwapChain();
         recreateGbuffer();
@@ -53,7 +53,7 @@ namespace sumire {
         while (extent.width == 0 || extent.height == 0) {
             // Wait on minimization
             extent = sumiWindow.getExtent();
-            glfwWaitEvents();
+            SumiWindow::waitEvents();
         }
 
         vkDeviceWaitIdle(sumiDevice.device());
@@ -111,7 +111,7 @@ namespace sumire {
         while (extent.width == 0 || extent.height == 0) {
             // Wait on minimization
             extent = sumiWindow.getExtent();
-            glfwWaitEvents();
+            SumiWindow::waitEvents();
         }
 
         vkDeviceWaitIdle(sumiDevice.device());
@@ -130,7 +130,7 @@ namespace sumire {
         auto extent = sumiWindow.getExtent();
         while (extent.width == 0 || extent.height == 0) {
             extent = sumiWindow.getExtent();
-            glfwWaitEvents();
+            SumiWindow::waitEvents();
         }
 
         vkDeviceWaitIdle(sumiDevice.device());

@@ -84,8 +84,9 @@ namespace sumire {
     }
 
     void SumiDevice::writeDeviceInfoToConfig(SumiConfig* config) {
+        auto& graphicsDeviceConfig = config->runtimeData.graphics.user.GRAPHICS_DEVICE;
         if (config != nullptr) {
-            config->runtimeData.GRAPHICS_DEVICE = {
+            graphicsDeviceConfig = {
                 physicalDeviceDetails.idx,
                 physicalDeviceDetails.name.c_str()
             };
@@ -148,6 +149,8 @@ namespace sumire {
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
+        auto& runtimeGraphicsDeviceConfig = config->runtimeData.graphics.user.GRAPHICS_DEVICE;
+
         bool foundConfigSpecifiedGpu = false;
         physicalDeviceList = std::vector<PhysicalDeviceDetails>(deviceCount);
         uint32_t suitableDeviceCount = 0;
@@ -166,8 +169,8 @@ namespace sumire {
                 suitableDeviceCount++;
 
                 if (config != nullptr && 
-                    config->runtimeData.GRAPHICS_DEVICE.IDX  == i &&
-                    config->runtimeData.GRAPHICS_DEVICE.NAME == deviceProperties.deviceName
+                    runtimeGraphicsDeviceConfig.IDX  == i &&
+                    runtimeGraphicsDeviceConfig.NAME == deviceProperties.deviceName
                 ) {
                     foundConfigSpecifiedGpu = true;
                 }
@@ -188,14 +191,14 @@ namespace sumire {
 
         if (!foundConfigSpecifiedGpu && config != nullptr) {
             std::cout << "[Sumire::SumiDevice] WARNING: Could not find gpu specified by config: ["
-                << config->runtimeData.GRAPHICS_DEVICE.IDX << ", " << config->runtimeData.GRAPHICS_DEVICE.NAME
+                << runtimeGraphicsDeviceConfig.IDX << ", " << runtimeGraphicsDeviceConfig.NAME
                 << "]. The device is missing or is not supported." << std::endl;
         }
 
         uint32_t chosenDeviceIdx = 0;
         if (foundConfigSpecifiedGpu && config != nullptr) {
             std::cout << "[Sumire::SumiDevice] Using device specified by config." << std::endl;
-            chosenDeviceIdx = config->runtimeData.GRAPHICS_DEVICE.IDX;
+            chosenDeviceIdx = runtimeGraphicsDeviceConfig.IDX;
         }
         else {
             std::vector<PhysicalDeviceDetails> sortedPhysicalDeviceList = physicalDeviceList;
@@ -327,7 +330,7 @@ namespace sumire {
 
     void SumiDevice::initShaderManager(SumiConfig* config) {
         bool hotReloading = config ? 
-            config->startupData.SHADER_HOT_RELOADING : false;
+            config->startupData.shaders.SHADER_HOT_RELOADING : false;
 
         shaderManager_ = std::make_unique<ShaderManager>(device_, hotReloading);
     }
@@ -473,11 +476,11 @@ namespace sumire {
     }
 
     std::vector<const char*> SumiDevice::getRequiredExtensions() {
-        uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        uint32_t windowExtensionCount = 0;
+        const char** windowExtensions;
+        windowExtensions = SumiWindow::getRequiredInstanceExtensions(&windowExtensionCount);
 
-        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+        std::vector<const char*> extensions(windowExtensions, windowExtensions + windowExtensionCount);
 
         if (enableValidationLayers) {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

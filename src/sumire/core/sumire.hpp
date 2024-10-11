@@ -51,8 +51,8 @@ namespace sumire {
 
         SumiConfig sumiConfig{};
         SumiWindow sumiWindow{ 
-            static_cast<int>(sumiConfig.startupData.RESOLUTION.WIDTH),
-            static_cast<int>(sumiConfig.startupData.RESOLUTION.HEIGHT),
+            static_cast<int>(sumiConfig.startupData.graphics.user.RESOLUTION.WIDTH),
+            static_cast<int>(sumiConfig.startupData.graphics.user.RESOLUTION.HEIGHT),
             "Sumire" 
         };
         SumiDevice sumiDevice{ sumiWindow, &sumiConfig };

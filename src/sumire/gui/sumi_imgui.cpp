@@ -179,8 +179,8 @@ namespace sumire {
             ImGui::Combo("Device", &deviceListIdx, deviceNames.data(), deviceNames.size());
 
             uint32_t selectedDeviceIdx = static_cast<uint32_t>(deviceListIdx);
-            if (selectedDeviceIdx != sumiConfig.runtimeData.GRAPHICS_DEVICE.IDX) {
-                sumiConfig.runtimeData.GRAPHICS_DEVICE = {
+            if (selectedDeviceIdx != sumiConfig.runtimeData.graphics.user.GRAPHICS_DEVICE.IDX) {
+                sumiConfig.runtimeData.graphics.user.GRAPHICS_DEVICE = {
                     selectedDeviceIdx,
                     deviceList[selectedDeviceIdx].name.c_str(),
                 };
@@ -194,18 +194,18 @@ namespace sumire {
             }
 
             // --------- Vsync -----------------------------------------------------------------------
-            static int vsyncIdx = sumiConfig.runtimeData.VSYNC ? 0 : 1;
+            static int vsyncIdx = sumiConfig.runtimeData.graphics.user.VSYNC ? 0 : 1;
             ImGui::Combo("Vsync", &vsyncIdx, "On\0Off\0\0");
             bool vsync = vsyncIdx == 0 ? true : false;
-            if (vsync != sumiConfig.runtimeData.VSYNC) {
-                sumiConfig.runtimeData.VSYNC = vsync;
+            if (vsync != sumiConfig.runtimeData.graphics.user.VSYNC) {
+                sumiConfig.runtimeData.graphics.user.VSYNC = vsync;
                 sumiConfig.writeConfig();
 
                 // Update swapchain present mode
-                bool test1 = sumiConfig.runtimeData.VSYNC;
+                bool test1 = sumiConfig.runtimeData.graphics.user.VSYNC;
                 bool test2 = sumiRenderer.getSwapChain()->isVsyncEnabled();
-                if (sumiConfig.runtimeData.VSYNC != sumiRenderer.getSwapChain()->isVsyncEnabled()) {
-                    sumiRenderer.changeSwapChainPresentMode(sumiConfig.runtimeData.VSYNC);
+                if (sumiConfig.runtimeData.graphics.user.VSYNC != sumiRenderer.getSwapChain()->isVsyncEnabled()) {
+                    sumiRenderer.changeSwapChainPresentMode(sumiConfig.runtimeData.graphics.user.VSYNC);
                 }
             }
 
@@ -213,15 +213,15 @@ namespace sumire {
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Shaders")) {
-            static bool shaderHotReloadingEnabled = sumiConfig.runtimeData.SHADER_HOT_RELOADING;
+            static bool shaderHotReloadingEnabled = sumiConfig.runtimeData.shaders.SHADER_HOT_RELOADING;
             ImGui::Checkbox("Enable Shader Hot-Reloading", &shaderHotReloadingEnabled);
 
-            if (shaderHotReloadingEnabled != sumiConfig.runtimeData.SHADER_HOT_RELOADING) {
-                sumiConfig.runtimeData.SHADER_HOT_RELOADING = shaderHotReloadingEnabled;
+            if (shaderHotReloadingEnabled != sumiConfig.runtimeData.shaders.SHADER_HOT_RELOADING) {
+                sumiConfig.runtimeData.shaders.SHADER_HOT_RELOADING = shaderHotReloadingEnabled;
                 sumiConfig.writeConfig();
             }
 
-            if (shaderHotReloadingEnabled != sumiConfig.startupData.SHADER_HOT_RELOADING) {
+            if (shaderHotReloadingEnabled != sumiConfig.startupData.shaders.SHADER_HOT_RELOADING) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
                 ImGui::Text("A restart is required to change hot reloading settings.");
                 ImGui::PopStyleColor();
@@ -572,15 +572,15 @@ namespace sumire {
 
             // ---- CPU ------------------------------------------------------------------------------------------
             ImGui::SeparatorText("CPU Profiling");
-            static bool cpuProfilingEnabled = sumiConfig.runtimeData.CPU_PROFILING;
+            static bool cpuProfilingEnabled = sumiConfig.runtimeData.profiling.CPU_PROFILING;
             ImGui::Checkbox("Enable CPU profiling blocks", &cpuProfilingEnabled);
 
-            if (cpuProfilingEnabled != sumiConfig.runtimeData.CPU_PROFILING) {
-                sumiConfig.runtimeData.CPU_PROFILING = cpuProfilingEnabled;
+            if (cpuProfilingEnabled != sumiConfig.runtimeData.profiling.CPU_PROFILING) {
+                sumiConfig.runtimeData.profiling.CPU_PROFILING = cpuProfilingEnabled;
                 sumiConfig.writeConfig();
             }
 
-            if (cpuProfilingEnabled != sumiConfig.startupData.CPU_PROFILING) {
+            if (cpuProfilingEnabled != sumiConfig.startupData.profiling.CPU_PROFILING) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
                 ImGui::Text("A restart is required to change profiling settings.");
                 ImGui::PopStyleColor();
@@ -606,15 +606,15 @@ namespace sumire {
 
             // ---- GPU ------------------------------------------------------------------------------------------
             ImGui::SeparatorText("GPU Profiling");
-            static bool gpuProfilingEnabled = sumiConfig.runtimeData.GPU_PROFILING;
+            static bool gpuProfilingEnabled = sumiConfig.runtimeData.profiling.GPU_PROFILING;
             ImGui::Checkbox("Enable GPU profiling", &gpuProfilingEnabled);
 
-            if (gpuProfilingEnabled != sumiConfig.runtimeData.GPU_PROFILING) {
-                sumiConfig.runtimeData.GPU_PROFILING = gpuProfilingEnabled;
+            if (gpuProfilingEnabled != sumiConfig.runtimeData.profiling.GPU_PROFILING) {
+                sumiConfig.runtimeData.profiling.GPU_PROFILING = gpuProfilingEnabled;
                 sumiConfig.writeConfig();
             }
 
-            if (gpuProfilingEnabled != sumiConfig.startupData.GPU_PROFILING) {
+            if (gpuProfilingEnabled != sumiConfig.startupData.profiling.GPU_PROFILING) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
                 ImGui::Text("A restart is required to change profiling settings.");
                 ImGui::PopStyleColor();
@@ -652,15 +652,15 @@ namespace sumire {
     ) {
         if (ImGui::CollapsingHeader("Debug")) {
             ImGui::SeparatorText("Debug Shaders");
-            static bool debuggingShadersEnabled = sumiConfig.runtimeData.DEBUG_SHADERS;
+            static bool debuggingShadersEnabled = sumiConfig.runtimeData.shaders.DEBUG_SHADERS;
             ImGui::Checkbox("Enable Debug Shaders", &debuggingShadersEnabled);
 
-            if (debuggingShadersEnabled != sumiConfig.runtimeData.DEBUG_SHADERS) {
-                sumiConfig.runtimeData.DEBUG_SHADERS = debuggingShadersEnabled;
+            if (debuggingShadersEnabled != sumiConfig.runtimeData.shaders.DEBUG_SHADERS) {
+                sumiConfig.runtimeData.shaders.DEBUG_SHADERS = debuggingShadersEnabled;
                 sumiConfig.writeConfig();
             }
 
-            if (debuggingShadersEnabled != sumiConfig.startupData.DEBUG_SHADERS) {
+            if (debuggingShadersEnabled != sumiConfig.startupData.shaders.DEBUG_SHADERS) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
                 ImGui::Text("A restart is required to change debug shader settings.");
                 ImGui::PopStyleColor();
@@ -841,7 +841,7 @@ namespace sumire {
     void SumiImgui::drawHqsmDebugViewSubsection(HQSMdebugger* hqsmDebugger) {
         if (ImGui::TreeNode("Debug Views")) {
 
-            if (sumiConfig.runtimeData.DEBUG_SHADERS) {
+            if (sumiConfig.startupData.shaders.DEBUG_SHADERS) {
                 // Debug View Selection
                 const char* debugViews[] = { "None", "HZB", "Light Count", "Light Culling" };
                 static int debugViewIdx = 0;
