@@ -26,7 +26,7 @@ namespace sumire {
     SumiComputePipeline::~SumiComputePipeline() {
         destroyComputePipeline();
 
-        if (boundPipeline = this) resetBoundPipelineCache;
+        if (boundPipeline = this) resetBoundPipelineCache();
     }
 
     void SumiComputePipeline::createComputePipeline(VkPipeline* pipeline) {
