@@ -21,6 +21,21 @@
 
 namespace sumire {
 
+    bool parseObject(
+        const rapidjson::Value& config,
+        const std::string& memberName,
+        const std::string& errorName
+    ) {
+        const char* cstrName = memberName.c_str();
+        if (config.HasMember(cstrName) && config[cstrName].IsObject()) {
+            return true;
+        }
+        else {
+            std::cout << OBJECT_PARSE_WARNING_STR(errorName) << std::endl;
+            return false;
+        }
+    }
+
     void parseBool(
         const rapidjson::Value& config,
         const std::string& memberName, 
@@ -66,4 +81,18 @@ namespace sumire {
         }
     }
 
+    void parseInt(
+        const rapidjson::Value& config,
+        const std::string& memberName,
+        const std::string& errorName,
+        int* out
+    ) {
+        const char* cstrName = memberName.c_str();
+        if (config.HasMember(cstrName) && config[cstrName].IsInt()) {
+            *out = config[cstrName].GetInt();
+        }
+        else {
+            std::cout << FIELD_PARSE_WARNING_STR(errorName) << std::endl;
+        }
+    }
 }

@@ -22,6 +22,8 @@ namespace sumire {
         static constexpr char* CONFIG_PATH = SUMIRE_ENGINE_PATH("config/config.json");
 
         SumiConfigData loadConfigData();
+        inline void strStackAdd(std::string& stack, const std::string& str) { stack += str; }
+        inline void strStackPop(std::string& stack, const std::string& str) { stack = stack.substr(0, stack.size() - str.size()); }
         void writeConfigData(const SumiConfigData& data) const;
 
         SumiConfigData createDefaultConfig();
