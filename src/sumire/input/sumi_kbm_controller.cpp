@@ -7,8 +7,13 @@
 
 namespace sumire {
 
-    SumiKBMcontroller::SumiKBMcontroller(SumiWindow &sumiWindow, ControllerType type) 
-        : sumiWindow{ sumiWindow }, type{ type } 
+    SumiKBMcontroller::SumiKBMcontroller(
+        SumiConfig& config,
+        SumiWindow& sumiWindow, 
+        ControllerType type
+    ) : sumiConfig{ config },
+        sumiWindow { sumiWindow },
+        type{ type } 
     {
         switch(type) {
             // Init cursor behaviour for camera types
@@ -54,13 +59,13 @@ namespace sumire {
         const glm::mat4 &view,
         Transform3DComponent &transform
     ) {
-        GLFWwindow *window = sumiWindow.getGLFWwindow();
+        const auto& keybinds = sumiConfig.runtimeData.keybinds.debugCamera;
 
         glm::vec3 rotate{0.0f};
-        if (glfwGetKey(window, keybinds.lookRight) == GLFW_PRESS) rotate.y -= 1.0f;
-        if (glfwGetKey(window, keybinds.lookLeft ) == GLFW_PRESS) rotate.y += 1.0f;
-        if (glfwGetKey(window, keybinds.lookUp   ) == GLFW_PRESS) rotate.x += 1.0f;
-        if (glfwGetKey(window, keybinds.lookDown ) == GLFW_PRESS) rotate.x -= 1.0f;
+        if (sumiWindow.getKey(keybinds.LOOK_RIGHT) == SUMI_KEYSTATE_PRESS) rotate.y -= 1.0f;
+        if (sumiWindow.getKey(keybinds.LOOK_LEFT ) == SUMI_KEYSTATE_PRESS) rotate.y += 1.0f;
+        if (sumiWindow.getKey(keybinds.LOOK_UP   ) == SUMI_KEYSTATE_PRESS) rotate.x += 1.0f;
+        if (sumiWindow.getKey(keybinds.LOOK_DOWN ) == SUMI_KEYSTATE_PRESS) rotate.x -= 1.0f;
 
         glm::vec3 newRotation = transform.getRotation();
         if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) {
@@ -78,14 +83,16 @@ namespace sumire {
         const glm::vec3 up{0.0f, 1.0f, 0.0f}; 
 
         glm::vec3 moveDir{0.0f};
-        if (glfwGetKey(window, keybinds.moveForward ) == GLFW_PRESS) moveDir -= forward;
-        if (glfwGetKey(window, keybinds.moveBackward) == GLFW_PRESS) moveDir += forward;
-        if (glfwGetKey(window, keybinds.moveRight   ) == GLFW_PRESS) moveDir += right;
-        if (glfwGetKey(window, keybinds.moveLeft    ) == GLFW_PRESS) moveDir -= right;
-        if (glfwGetKey(window, keybinds.moveUp      ) == GLFW_PRESS) moveDir += up;
-        if (glfwGetKey(window, keybinds.moveDown    ) == GLFW_PRESS) moveDir -= up;
+        if (sumiWindow.getKey(keybinds.MOVE_FORWARD ) == SUMI_KEYSTATE_PRESS) moveDir -= forward;
+        if (sumiWindow.getKey(keybinds.MOVE_BACKWARD) == SUMI_KEYSTATE_PRESS) moveDir += forward;
+        if (sumiWindow.getKey(keybinds.MOVE_RIGHT   ) == SUMI_KEYSTATE_PRESS) moveDir += right;
+        if (sumiWindow.getKey(keybinds.MOVE_LEFT    ) == SUMI_KEYSTATE_PRESS) moveDir -= right;
+        if (sumiWindow.getKey(keybinds.MOVE_UP      ) == SUMI_KEYSTATE_PRESS) moveDir += up;
+        if (sumiWindow.getKey(keybinds.MOVE_DOWN    ) == SUMI_KEYSTATE_PRESS) moveDir -= up;
         
-        float moveSpeed = (glfwGetKey(window, keybinds.sprint) == GLFW_PRESS) ? sprintSensitivity : moveSensitivity;
+        const bool sprinting = (sumiWindow.getKey(keybinds.SPRINT) == SUMI_KEYSTATE_PRESS);
+        float moveSpeed = (sprinting) ? sprintSensitivity : moveSensitivity;
+
         if (glm::dot(moveDir, moveDir) > std::numeric_limits<float>::epsilon()) {
             transform.setTranslation(transform.getTranslation() + moveSpeed * dt * glm::normalize(moveDir));
         }
@@ -98,19 +105,20 @@ namespace sumire {
         const glm::mat4 &view,
         Transform3DComponent &transform
     ) {
-        GLFWwindow *window = sumiWindow.getGLFWwindow();
+        const auto& keybinds = sumiConfig.runtimeData.keybinds.debugCamera;
 
         // Toggle cursor
-        auto toggleCursorEvent = keypressEvents.find(keybinds.toggleCursor);
+        auto toggleCursorEvent = keypressEvents.find(keybinds.TOGGLE_CURSOR);
         if (toggleCursorEvent != keypressEvents.end()) {
             switch (toggleCursorEvent->second.action) {
-                case GLFW_PRESS: {
+                case SUMI_KEYSTATE_PRESS: {
                     cursorHidden = toggleShowCursor ? !cursorHidden : false;
                 }
                 break;
-                case GLFW_RELEASE: {
+                case SUMI_KEYSTATE_RELEASE: {
                     if (!toggleShowCursor) cursorHidden = true;
                 }
+                break;
                 default:
                 break;
             }
@@ -138,14 +146,16 @@ namespace sumire {
         const glm::vec3 up{0.0f, 1.0f, 0.0f}; 
 
         glm::vec3 moveDir{0.0f};
-        if (glfwGetKey(window, keybinds.moveForward ) == GLFW_PRESS) moveDir -= forward;
-        if (glfwGetKey(window, keybinds.moveBackward) == GLFW_PRESS) moveDir += forward;
-        if (glfwGetKey(window, keybinds.moveRight   ) == GLFW_PRESS) moveDir += right;
-        if (glfwGetKey(window, keybinds.moveLeft    ) == GLFW_PRESS) moveDir -= right;
-        if (glfwGetKey(window, keybinds.moveUp      ) == GLFW_PRESS) moveDir += up;
-        if (glfwGetKey(window, keybinds.moveDown    ) == GLFW_PRESS) moveDir -= up;
+        if (sumiWindow.getKey(keybinds.MOVE_FORWARD ) == SUMI_KEYSTATE_PRESS) moveDir -= forward;
+        if (sumiWindow.getKey(keybinds.MOVE_BACKWARD) == SUMI_KEYSTATE_PRESS) moveDir += forward;
+        if (sumiWindow.getKey(keybinds.MOVE_RIGHT   ) == SUMI_KEYSTATE_PRESS) moveDir += right;
+        if (sumiWindow.getKey(keybinds.MOVE_LEFT    ) == SUMI_KEYSTATE_PRESS) moveDir -= right;
+        if (sumiWindow.getKey(keybinds.MOVE_UP      ) == SUMI_KEYSTATE_PRESS) moveDir += up;
+        if (sumiWindow.getKey(keybinds.MOVE_DOWN    ) == SUMI_KEYSTATE_PRESS) moveDir -= up;
         
-        float moveSpeed = (glfwGetKey(window, keybinds.sprint) == GLFW_PRESS) ? sprintSensitivity : moveSensitivity;
+        const bool sprinting = (sumiWindow.getKey(keybinds.SPRINT) == SUMI_KEYSTATE_PRESS);
+        float moveSpeed = (sprinting) ? sprintSensitivity : moveSensitivity;
+
         if (glm::dot(moveDir, moveDir) > std::numeric_limits<float>::epsilon()) {
             transform.setTranslation(transform.getTranslation() + moveSpeed * dt * glm::normalize(moveDir));
         }

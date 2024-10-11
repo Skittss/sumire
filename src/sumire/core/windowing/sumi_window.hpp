@@ -1,12 +1,12 @@
 #pragma once
 
-#include <string>
+#include <sumire/core/windowing/sumi_key_input.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
 #include <glm/glm.hpp>
 
+#include <string>
 #include <unordered_map>
 
 namespace sumire {
@@ -20,13 +20,20 @@ namespace sumire {
         SumiWindow(const SumiWindow&) = delete;
         SumiWindow& operator=(const SumiWindow&) = delete;
 
-        bool shouldClose() { return glfwWindowShouldClose(window); }
         VkExtent2D getExtent() { return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }
         bool wasWindowResized() { return fbResizeFlag; }
         void resetWindowResizedFlag() { fbResizeFlag = false; }
         GLFWwindow *getGLFWwindow() const { return window; }
 
+        // --- GLFW API abstractions ---
+        bool shouldClose() { return glfwWindowShouldClose(window); }
+        inline static void waitEvents() { glfwWaitEvents(); }
+        inline static void pollEvents() { glfwPollEvents(); }
+        SumiKeyState getKey(SumiKey key) { return glfwGetKey(window, key); }
+
+        // --- Vulkan related ---
         void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
+        static const char** getRequiredInstanceExtensions(uint32_t* count) { return glfwGetRequiredInstanceExtensions(count);}
         
         void showCursor();
         void disableCursor();
