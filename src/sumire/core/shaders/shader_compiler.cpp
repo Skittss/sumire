@@ -122,7 +122,7 @@ namespace sumire {
 
     shaderc_shader_kind ShaderCompiler::getShaderType(const std::string& sourcePath) {
         std::filesystem::path source{ sourcePath };
-        const std::string& ext = source.extension().u8string();
+        const std::string& ext = source.extension().string();
 
         if      (ext == ".vert") return shaderc_vertex_shader;
         else if (ext == ".frag") return shaderc_fragment_shader;

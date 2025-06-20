@@ -9,7 +9,7 @@ namespace sumire::util {
         std::filesystem::path cleanedPath = combinedPath.make_preferred();
         std::filesystem::path enginePath = std::filesystem::relative(cleanedPath);
 
-        return enginePath.u8string();
+        return enginePath.string();
     }
 
 }

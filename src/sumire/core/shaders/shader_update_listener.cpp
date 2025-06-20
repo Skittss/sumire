@@ -19,13 +19,13 @@ namespace sumire {
         case watchers::FsWatchAction::FS_MODIFIED: {
             std::filesystem::path filePath{ filename };
             std::filesystem::path ext{ filePath.extension()};
-            bool isShaderSource = validShaderSourceExt(ext.u8string());
+            bool isShaderSource = validShaderSourceExt(ext.string());
 
             if (isShaderSource) {
                 std::filesystem::path dirPath{ dir };
                 std::filesystem::path combinedPath = dirPath / filePath ;
 
-                shaderManager->hotReload(combinedPath.u8string());
+                shaderManager->hotReload(combinedPath.string());
             }
 
         } break;

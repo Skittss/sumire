@@ -168,7 +168,7 @@ add_executable(${PROJECT_NAME}
     ${MIKKTSPACE_SOURCES}
 )
  
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17) # Use c++ 17
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
  
 # ---- Includes and Linking --------------------------------------------------------------------------------------
 if (WIN32)

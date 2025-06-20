@@ -56,12 +56,12 @@ namespace sumire {
         VkDevice device_;
 
         // ---- Hot reloading ------------------------------------------------------------------------------------
-        static constexpr char* VERBOSE_HOTRELOAD = false;
+        static constexpr bool VERBOSE_HOTRELOAD = false;
         std::unique_ptr<ShaderUpdateListener> listener; 
         std::unique_ptr<ShaderCompiler> compiler;
         void initShaderCompiler();
 
-        static constexpr char* shaderDir = SUMIRE_ENGINE_PATH("shaders/");
+        static constexpr const char* shaderDir = SUMIRE_ENGINE_PATH("shaders/");
         void initShaderDirWatcher();
         void startShaderDirWatcher();
         void stopShaderDirWatcher();

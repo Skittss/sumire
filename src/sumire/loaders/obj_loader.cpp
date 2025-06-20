@@ -45,7 +45,7 @@ namespace sumire::loaders {
         loadModel(device, filepath, data, genTangents);
 
         auto modelPtr = std::make_unique<SumiModel>(device, data);
-        modelPtr->displayName = fp.filename().u8string();
+        modelPtr->displayName = fp.filename().string();
 
         std::cout << "[Sumire::OBJloader] Loaded Model <" << filepath << "> (verts: " << data.vertices.size() 
                     << ", triangles: " << (modelPtr->hasIndices() ? data.indices.size() / 3.0f : data.vertices.size())
@@ -63,7 +63,7 @@ namespace sumire::loaders {
         if (ext == ".obj") 
             loadOBJ(device, filepath, data, genTangents);
         else
-            throw std::runtime_error("[Sumire::OBJloader] Attempted to load unsupported OBJ type: <" + ext.u8string() + ">");
+            throw std::runtime_error("[Sumire::OBJloader] Attempted to load unsupported OBJ type: <" + ext.string() + ">");
 
     }
 

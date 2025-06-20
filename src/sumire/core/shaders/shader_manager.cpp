@@ -66,7 +66,7 @@ namespace sumire {
     ) {
         std::string formattedPath = formatPath(sourcePath);
 
-        auto& dependencyEntry = dependencies.find(formattedPath);
+        auto dependencyEntry = dependencies.find(formattedPath);
         if (dependencyEntry == dependencies.end()) {
             dependencies.emplace(formattedPath, std::vector<ImplPipeline*>{ dependency });
         }
@@ -84,7 +84,7 @@ namespace sumire {
     void ShaderManager::invalidateSourceAndChildren(const std::string& sourcePath) {
         std::string formattedPath = formatPath(sourcePath);
 
-        auto& sourceEntry = sources.find(formattedPath);
+        auto sourceEntry = sources.find(formattedPath);
         if (sourceEntry != sources.end()) {
             sourceEntry->second->invalidate();
         }
@@ -146,7 +146,7 @@ namespace sumire {
 
     std::string ShaderManager::formatPath(const std::string& path) const {
         std::filesystem::path fp = path;
-        return fp.make_preferred().u8string();
+        return fp.make_preferred().string();
     }
     
     // ---- Hot Reloading ----------------------------------------------------------------------------------------
