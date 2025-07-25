@@ -20,6 +20,8 @@
 
 #include <sumire/input/sumi_kbm_controller.hpp>
 
+#include <sumire/gui/prototypes/kbf_instance.hpp>
+
 namespace sumire {
 
     struct SceneViewerDrawData {
@@ -119,6 +121,9 @@ namespace sumire {
 
             std::array<float, PROFILING_MAX_LINE_PLOT_POINTS> cpuLineGraphPoints{ 0.0 };
             std::array<float, PROFILING_MAX_LINE_PLOT_POINTS> gpuLineGraphPoints{ 0.0 };
+
+			// NOTE: TEST PROTOTYPES, REMOVE LATER
+            kbf::KBFInstance kbfInstance{};
     };
 
 }

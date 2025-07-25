@@ -1,0 +1,181 @@
+#include <sumire/gui/prototypes/gui/panels/create_preset_panel.hpp>
+
+#include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
+#include <sumire/gui/prototypes/data/ids/special_armour_ids.hpp>
+#include <sumire/gui/prototypes/data/armour/armour_list.hpp>
+#include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
+#include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
+
+#include <format>
+
+namespace kbf {
+
+    CreatePresetPanel::CreatePresetPanel(
+        const std::string& name,
+        const std::string& strID,
+        const KBFDataManager& dataManager,
+        ImFont* wsSymbolFont,
+        ImFont* wsArmourFont
+    ) : iPanel(name, strID), dataManager{ dataManager }, wsSymbolFont{ wsSymbolFont }, wsArmourFont{ wsArmourFont } {
+        preset        = Preset{};
+        preset.uuid   = uuid::v4::UUID::New().String();
+        preset.female = true;
+        preset.armour = ArmourSet{ ANY_ARMOUR_ID, false };
+
+        std::strcpy(presetNameBuffer, "New Preset");
+    }
+
+    bool CreatePresetPanel::draw() {
+        bool open = true;
+        processFocus();
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
+        ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+
+        ImGui::InputText(" Name ", presetNameBuffer, IM_ARRAYSIZE(presetNameBuffer));
+        preset.name = std::string{ presetNameBuffer };
+
+        ImGui::Spacing();
+        std::string sexComboValue = preset.female ? "Female" : "Male";
+        if (ImGui::BeginCombo(" Sex ", sexComboValue.c_str())) {
+            if (ImGui::Selectable("Male")) {
+                preset.female = false;
+            }
+            if (ImGui::Selectable("Female")) {
+                preset.female = true;
+            };
+            ImGui::EndCombo();
+        }
+        ImGui::SetItemTooltip("Suggested character sex to use with (not a hard restriction)");
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        static char dummyStrBuffer[8] = "";
+
+        ImGui::PushStyleVar(ImGuiStyleVar_DisabledAlpha, 1.0f); // Prevent fading
+        ImGui::BeginDisabled();
+        ImGui::InputText(" Armour ", dummyStrBuffer, IM_ARRAYSIZE(dummyStrBuffer));
+        ImGui::EndDisabled();
+        ImGui::PopStyleVar();
+        ImGui::SetItemTooltip("Suggested armour set to use with (not a hard restriction)");
+
+        drawArmourSetName(preset.armour, 10.0f, 17.5f);
+
+        ImGui::Spacing();
+
+        static char filterBuffer[128] = "";
+        std::string filterStr{ filterBuffer };
+
+        drawArmourList(filterStr);
+
+        ImGui::InputText(" Search ", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        static constexpr const char* kCancelLabel = "Cancel";
+        static constexpr const char* kCreateLabel = "Create";
+
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float buttonWidth1 = ImGui::CalcTextSize(kCancelLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+        float buttonWidth2 = ImGui::CalcTextSize(kCreateLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+        float totalWidth = buttonWidth1 + buttonWidth2 + spacing;
+
+        float availableWidth = ImGui::GetContentRegionAvail().x;
+        ImGui::SetCursorPosX(availableWidth - totalWidth + 8.0f); // Align to the right
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.20f, 0.20f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.10f, 0.10f, 0.10f, 1.0f));
+
+        if (ImGui::Button(kCancelLabel)) {
+            INVOKE_REQUIRED_CALLBACK(cancelCallback);
+        }
+
+        ImGui::PopStyleColor(3);
+        
+        ImGui::SameLine();
+
+		const bool nameEmpty = preset.name.empty();
+        const bool alreadyExists = dataManager.presetExists(preset.name);
+		const bool disableCreateButton = nameEmpty || alreadyExists;
+        if (disableCreateButton) ImGui::BeginDisabled();
+        if (ImGui::Button(kCreateLabel)) {
+            INVOKE_REQUIRED_CALLBACK(createCallback, preset);
+        }
+        if (disableCreateButton) ImGui::EndDisabled();
+        if (nameEmpty) ImGui::SetItemTooltip("Provide a non-empty name");
+        else if (alreadyExists) ImGui::SetItemTooltip("Preset name already taken");
+
+        ImGui::End();
+        ImGui::PopStyleVar();
+
+        return open;
+    }
+
+    void CreatePresetPanel::drawArmourList(const std::string& filter) {
+        std::vector<ArmourSet> armours = ArmourList::getFilteredSets(filter);
+
+        // Fixed-height, scrollable region
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10, 10));
+        ImGui::BeginChild("ArmourListChild", ImVec2(0, 150), true, ImGuiWindowFlags_HorizontalScrollbar);
+
+        float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+
+        if (armours.size() == 0) {
+            const char* noneFoundStr = "No Armours Found";
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (ImGui::GetColumnWidth() - ImGui::CalcTextSize(noneFoundStr).x) * 0.5f);
+            ImGui::Text(noneFoundStr);
+            ImGui::PopStyleColor();
+        }
+        else {
+            for (const auto& armourSet : armours)
+            {
+                std::string selectableId = std::format("##{}_{}", armourSet.name, armourSet.female ? "f" : "m");
+                if (ImGui::Selectable(selectableId.c_str(), preset.armour == armourSet)) {
+                    preset.armour = armourSet;
+                }
+
+                drawArmourSetName(armourSet, 5.0f, 17.5f);
+
+                if (armours.size() > 1 && armourSet.name == ANY_ARMOUR_ID) ImGui::Separator();
+            }
+        }
+
+        ImGui::EndChild();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+    }
+
+    void CreatePresetPanel::drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter) {
+        // Sex Mark
+        std::string symbol  = armourSet.female ? WS_FONT_FEMALE : WS_FONT_MALE;
+        std::string tooltip = armourSet.female ? "Female" : "Male";
+        ImVec4 colour = armourSet.female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+        ImGui::PushFont(wsSymbolFont);
+        ImGui::PushStyleColor(ImGuiCol_Text, colour);
+
+        float sexMarkerCursorPosX = ImGui::GetCursorScreenPos().x + offsetBefore;
+        float sexMarkerCursorPosY = ImGui::GetItemRectMin().y + 4.0f;  // Same Y as the selectable item, plus vertical alignment
+        ImGui::GetWindowDrawList()->AddText(
+            ImVec2(sexMarkerCursorPosX, sexMarkerCursorPosY),
+            ImGui::GetColorU32(ImGuiCol_Text),
+            symbol.c_str());
+
+        ImGui::PopStyleColor();
+        ImGui::PopFont();
+
+        // Name
+        float armourNameCursorPosX = ImGui::GetCursorScreenPos().x + offsetBefore + offsetAfter;
+        float armourNameCursorPosY = ImGui::GetItemRectMin().y + 4.0f;  // Same Y as the selectable item, plus vertical alignment
+
+        ImGui::PushFont(wsArmourFont);
+        ImGui::GetWindowDrawList()->AddText(ImVec2(armourNameCursorPosX, armourNameCursorPosY), ImGui::GetColorU32(ImGuiCol_Text), armourSet.name.c_str());
+        ImGui::PopFont();
+	}
+
+}

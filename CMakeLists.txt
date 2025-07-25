@@ -18,6 +18,7 @@ set(SUMIRE_SRC_DIR ${PROJECT_SOURCE_DIR}/src/sumire)
 option(ENABLE_BUILD_ERRORS "Enable build warnings and errors." ON)
 
 add_compile_definitions(ASSETS_ROOT="/")
+add_compile_definitions(SUMI_NO_VALIDATION_LAYERS=1) # Turn off validation layers manually, if needed
 
 include(./.env.cmake OPTIONAL RESULT_VARIABLE LOCAL_ENV)
 message(STATUS "Using local .env.cmake at: ${LOCAL_ENV}")
@@ -132,6 +133,17 @@ SET(SUMIRE_SOURCES
     "${SUMIRE_SRC_DIR}/core/shaders/shader_update_listener.cpp "
     "${SUMIRE_SRC_DIR}/core/windowing/sumi_window.cpp "
     "${SUMIRE_SRC_DIR}/core/sumire.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/data/armour/armour_list.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/data/kbf_data_manager.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/create_preset_panel.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/info_popup_panel.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/player_list_panel.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/player_override_panel.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/player/player_tab.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/about/about_tab.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/settings/settings_tab.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/debug/debug_tab.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/kbf_window.cpp"
     "${SUMIRE_SRC_DIR}/gui/sumi_imgui.cpp "
     "${SUMIRE_SRC_DIR}/input/sumi_kbm_controller.cpp"
     "${SUMIRE_SRC_DIR}/loaders/gltf_loader.cpp "
@@ -165,8 +177,7 @@ add_executable(${PROJECT_NAME}
     ${SUMIRE_SOURCES} 
     ${IMGUI_SOURCES} 
     ${IMGUI_BACKEND_SOURCES} 
-    ${MIKKTSPACE_SOURCES}
-)
+    ${MIKKTSPACE_SOURCES})
  
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
  

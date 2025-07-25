@@ -1,6 +1,7 @@
 #include <sumire/gui/sumi_imgui.hpp>
 
 #include <sumire/util/vk_check_success.hpp>
+#include <sumire/util/sumire_engine_path.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -8,6 +9,8 @@
 
 #include <stdexcept>
 #include <string>
+
+#include <iostream>
 
 namespace sumire {
 
@@ -21,6 +24,7 @@ namespace sumire {
     ) : sumiDevice{ device }, sumiConfig{ config }, sumiRenderer { renderer } 
     {
         initImgui(renderPass, subpassIdx, workQueue);
+        kbfInstance.initialize();
     }
 
     SumiImgui::~SumiImgui() {
@@ -102,6 +106,8 @@ namespace sumire {
 
         // TODO: 1. Upload imgui font textures to GPU
         //       2. Then clear from CPU memory
+        ImFont* defaultFont = io.Fonts->AddFontFromFileTTF(SUMIRE_ENGINE_PATH("assets/fonts/Roboto-Regular.ttf"), 18.0f);
+        io.FontDefault = defaultFont;
     }
 
     void SumiImgui::beginFrame() {
@@ -127,7 +133,8 @@ namespace sumire {
         GpuProfiler* gpuProfiler,
         CpuProfiler* cpuProfiler
     ) {
-        //ImGui::ShowDemoWindow();
+        ImGui::ShowDemoWindow();
+        kbfInstance.draw();
         
         ImGui::Begin("Sumire Scene Viewer");
         ImGui::Text("Sumire Build v0.0.1");

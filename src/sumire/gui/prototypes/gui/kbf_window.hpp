@@ -1,0 +1,69 @@
+#pragma once
+
+#include <sumire/gui/prototypes/data/kbf_data_manager.hpp>
+#include <sumire/gui/prototypes/gui/tabs/kbf_tab.hpp>
+#include <sumire/gui/prototypes/gui/tabs/player/player_tab.hpp>
+#include <sumire/gui/prototypes/gui/tabs/about/about_tab.hpp>
+#include <sumire/gui/prototypes/gui/tabs/debug/debug_tab.hpp>
+#include <sumire/gui/prototypes/gui/tabs/settings/settings_tab.hpp>
+#include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/create_preset_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/info_popup_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/player_list_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/player_override_panel.hpp>
+#include <sumire/util/sumire_engine_path.hpp>
+
+#include <imgui.h>
+
+#include <string>
+
+namespace kbf {
+
+	class KBFWindow {
+	public:
+		KBFWindow(KBFDataManager& dataManager) : dataManager{ dataManager } {}
+		~KBFWindow() = default;
+
+		KBFWindow(const KBFWindow&) = delete;
+		KBFWindow& operator=(const KBFWindow&) = delete;
+
+		void initialize();
+		void draw();
+
+	private:
+		void drawSexMarker(const bool male, const bool sameline = true, const bool center = true);
+
+		void drawKbfMenuItem(const std::string& label, const KBFTab tabId);
+		void drawMenuBar();
+
+		void drawTab_NPCs();
+		void drawTab_PresetGroups();
+		void drawTab_Presets_PresetList();
+		void drawTab_Presets();
+		void drawTab_Editor();
+		void drawTab();
+		void drawPopouts();
+
+		PlayerTab   playerTab;
+		SettingsTab settingsTab;
+		DebugTab    debugTab;
+		AboutTab    aboutTab;
+				UniquePanel<CreatePresetPanel>   createPresetPanel;
+		UniquePanel<InfoPopupPanel>      infoPopupPanel;
+		void openCreatePresetPanel();
+
+		void addPlayerOverride(PlayerData playerData);
+		void removePlayerOverride(PlayerData playerData);
+
+		KBFTab tab = KBFTab::Players;
+
+		ImFont* mainFont;
+		ImFont* wildsSymbolsFont;
+		ImFont* wildsArmourFont;
+		ImFont* monoFont;
+		ImFont* monoFontTiny;
+
+		KBFDataManager& dataManager;
+	};
+
+}
