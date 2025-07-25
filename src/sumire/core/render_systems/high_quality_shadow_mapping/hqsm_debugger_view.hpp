@@ -2,7 +2,7 @@
 
 namespace sumire {
 
-    typedef enum HQSMdebuggerView {
+    enum HQSMdebuggerView {
         HQSM_DEBUG_NONE,
         HQSM_DEBUG_HZB,
         HQSM_DEBUG_LIGHT_COUNT,
@@ -10,7 +10,7 @@ namespace sumire {
         //...
     };
 
-    typedef enum HQSMlightCountListSource {
+    enum HQSMlightCountListSource {
         HQSM_LIGHT_COUNT_LIGHT_MASK,
         HQSM_LIGHT_COUNT_TILE_GROUP_LIGHT_MASK,
         HQSM_LIGHT_COUNT_EARLY_LIST,
