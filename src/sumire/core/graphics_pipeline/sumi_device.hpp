@@ -56,7 +56,7 @@ namespace sumire {
     class SumiDevice {
     public:
 
-    #ifdef NDEBUG
+    #if defined NDEBUG || defined SUMI_NO_VALIDATION_LAYERS
         const bool enableValidationLayers = false;
     #else
         const bool enableValidationLayers = true;
