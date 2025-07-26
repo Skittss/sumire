@@ -2,9 +2,11 @@
 
 #include <sumire/gui/prototypes/gui/tabs/i_tab.hpp>
 
+#include <imgui.h>
+
 namespace kbf {
 
-	class NpcTab : public iTab {
+	class PresetGroupsTab : public iTab {
 	public:
 
 		void draw() override;

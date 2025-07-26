@@ -11,7 +11,7 @@ namespace kbf {
 
 	class PlayerTab : public iTab {
 	public:
-		PlayerTab(ImFont* wsSymbolFont = nullptr) : wsSymbolFont{ wsSymbolFont } {}
+		PlayerTab(ImFont* wsSymbolFont = nullptr) : iTab(), wsSymbolFont{ wsSymbolFont } {}
 
 		void setSymbolFont(ImFont* font) { wsSymbolFont = font; }
 
