@@ -18,6 +18,7 @@ namespace kbf {
 	struct Preset {
 		std::string uuid;
 		std::string name;
+		std::string bundle;
 		bool female;
 		bool hasBody;
 		bool hasLegs;
