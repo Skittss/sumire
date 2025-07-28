@@ -16,7 +16,7 @@ namespace kbf {
 	public:
 		UniquePanel() = default;
 
-		PanelT* get() { return panel.get(); }
+		PanelT* get() { return pendingNewPanel ? pendingNewPanel.get() : panel.get(); }
 		bool isVisible() const { return panel != nullptr; }
 
 		// TODO: I don't know how to make intellisense pick up the packed types here - Oh well!
@@ -25,7 +25,22 @@ namespace kbf {
 			if (panel == nullptr) panel = std::make_unique<PanelT>(std::forward<Args>(args)...);
 			else panel->focus();
 		}
-		inline void close() { panel = nullptr; }
+
+		// Close and reopen the panel in a thread-safe mannerw
+		template <typename... Args>
+		inline void reopen(Args&&... args) {
+			pendingNewPanel = std::make_unique<PanelT>(std::forward<Args>(args)...);
+		}
+
+		template <typename... Args>
+		inline void openNew(Args&&... args) {
+			if (isVisible()) reopen(std::forward<Args>(args)...);
+			else             open(std::forward<Args>(args)...);
+		}
+
+		// Close that waits until next draw to complete (else synchronization issues may occur)
+		inline void close() { needsClose = true; }
+		inline void forceClose() { panel = nullptr; }
 
 		void draw() {
 			if (!isVisible()) return;
@@ -34,11 +49,20 @@ namespace kbf {
 			ImGui::SetNextWindowPos(center, ImGuiCond_Once, ImVec2(0.5f, 0.5f));
 
 			bool open = panel->draw();
-			if (!open) panel = nullptr;
+			if (needsClose || !open) {
+				panel = nullptr;
+				needsClose = false;
+			}
+
+			if (pendingNewPanel) {
+				panel = std::move(pendingNewPanel);
+			}
 		}
 
 	private:
 		std::unique_ptr<PanelT> panel;
+		std::unique_ptr<PanelT> pendingNewPanel;
+		bool needsClose = false;
 
 	};
 
