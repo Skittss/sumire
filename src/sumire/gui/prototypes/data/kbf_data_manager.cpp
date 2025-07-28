@@ -3,6 +3,8 @@
 #include <sumire/gui/prototypes/data/field_parsers.hpp>
 #include <sumire/gui/prototypes/data/ids/config_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/preset_ids.hpp>
+#include <sumire/gui/prototypes/data/ids/preset_group_ids.hpp>
+#include <sumire/gui/prototypes/data/ids/player_override_ids.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
@@ -25,6 +27,8 @@ namespace kbf {
 		loadPlayerConfig(&presetGroupDefaults.player);
 
 		loadPresets();
+		loadPresetGroups();
+		loadPlayerOverrides();
 
 		//loadPresetGroup();
 		//loadPlayerOverride();
@@ -39,7 +43,41 @@ namespace kbf {
 		return false;
 	}
 
-	std::vector<const Preset*> KBFDataManager::getPresets(const std::string& filter) const {
+	bool KBFDataManager::presetGroupExists(const std::string& name) const {
+		for (const auto& [uuid, presetGroup] : presetGroups) {
+			if (presetGroup.name == name) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool KBFDataManager::playerOverrideExists(const PlayerData& player) const {
+		for (const auto& [playerData, playerOverride] : playerOverrides) {
+			if (player == playerData) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	const Preset* KBFDataManager::getPresetByUUID(const std::string& uuid) const {
+		if (presets.find(uuid) != presets.end()) return &presets.at(uuid);
+		return nullptr;
+	}
+
+	const PresetGroup* KBFDataManager::getPresetGroupByUUID(const std::string& uuid) const {
+		if (presetGroups.find(uuid) != presetGroups.end()) return &presetGroups.at(uuid);
+		return nullptr;
+	}
+
+	const PlayerOverride* KBFDataManager::getPlayerOverride(const PlayerData& player) const {
+		if (playerOverrides.find(player) != playerOverrides.end()) return &playerOverrides.at(player);
+		return nullptr;
+	}
+
+	std::vector<const Preset*> KBFDataManager::getPresets(const std::string& filter, bool sort) const {
 		std::vector<const Preset*> filteredPresets;
 
 		std::string filterLower = toLower(filter);
@@ -52,14 +90,62 @@ namespace kbf {
 			}
 		}
 
-		//std::sort(filteredPresets.begin(), filteredPresets.end(),
-		//	[](const Preset& a, const Preset& b) {
-		//		return a.name < b.name;
-		//	});
+		if (sort) {
+			std::sort(filteredPresets.begin(), filteredPresets.end(),
+				[](const Preset* a, const Preset* b) {
+					return a->name < b->name;
+				});
+		}
 
 		return filteredPresets;
-
 	}
+
+	std::vector<const PresetGroup*> KBFDataManager::getPresetGroups(const std::string& filter, bool sort) const {
+		std::vector<const PresetGroup*> filteredPresetGroups;
+
+		std::string filterLower = toLower(filter);
+
+		for (const auto& [uuid, presetGroup] : presetGroups) {
+			std::string presetGroupNameLower = toLower(presetGroup.name);
+
+			if (filterLower.empty() || presetGroupNameLower.find(filterLower) != std::string::npos) {
+				filteredPresetGroups.push_back(&presetGroup);
+			}
+		}
+
+		if (sort) {
+			std::sort(filteredPresetGroups.begin(), filteredPresetGroups.end(),
+				[](const PresetGroup* a, const PresetGroup* b) {
+					return a->name < b->name;
+				});
+		}
+
+		return filteredPresetGroups;
+	}
+
+	std::vector<const PlayerOverride*> KBFDataManager::getPlayerOverrides(const std::string& filter, bool sort) const {
+		std::vector<const PlayerOverride*> filteredPlayerOverrides;
+
+		std::string filterLower = toLower(filter);
+
+		for (const auto& [uuid, playerOverride] : playerOverrides) {
+			std::string overridePlayerNameLower = toLower(playerOverride.player.name);
+
+			if (filterLower.empty() || overridePlayerNameLower.find(filterLower) != std::string::npos) {
+				filteredPlayerOverrides.push_back(&playerOverride);
+			}
+		}
+
+		if (sort) {
+			std::sort(filteredPlayerOverrides.begin(), filteredPlayerOverrides.end(),
+				[](const PlayerOverride* a, const PlayerOverride* b) {
+					return a->player.name < b->player.name;
+				});
+		}
+
+		return filteredPlayerOverrides;
+	}
+
 
 	void KBFDataManager::addPreset(const Preset& preset, bool write) {
 		if (presets.find(preset.uuid) != presets.end()) {
@@ -79,11 +165,177 @@ namespace kbf {
 		}
 	}
 
+
+	void KBFDataManager::addPresetGroup(const PresetGroup& presetGroup, bool write) {
+		if (presetGroups.find(presetGroup.uuid) != presetGroups.end()) {
+			DEBUG_STACK.push(std::format("Tried to add new preset group with UUID {}, but a preset with this UUID already exists. Skipping...", 
+				presetGroup.uuid
+			), DebugStack::Color::WARNING);
+			return;
+		}
+		presetGroups.emplace(presetGroup.uuid, presetGroup);
+
+		if (write) {
+			std::filesystem::path presetGroupPath = this->presetGroupPath / (presetGroup.name + ".json");
+			if (writePresetGroup(presetGroupPath, presetGroup)) {
+				DEBUG_STACK.push(std::format("Added new preset group: {} ({})", presetGroup.name, presetGroup.uuid), DebugStack::Color::SUCCESS);
+			}
+		}
+		else {
+			DEBUG_STACK.push(std::format("Added new preset group (NON-PERSISTENT): {} ({})", presetGroup.name, presetGroup.uuid), DebugStack::Color::SUCCESS);
+		}
+	}
+
+	void KBFDataManager::addPlayerOverride(const PlayerOverride& playerOverride, bool write) {
+		const PlayerData& player = playerOverride.player;
+
+		if (playerOverrides.find(playerOverride.player) != playerOverrides.end()) {
+			DEBUG_STACK.push(std::format("Tried to add new player override for player {}, but an override for this player already exists. Skipping...", player.string()), DebugStack::Color::WARNING);
+			return;
+		}
+		playerOverrides.emplace(player, playerOverride);
+
+		if (write) {
+			std::filesystem::path playerOverridePath = this->playerOverridePath / (getPlayerOverrideFilename(player) + ".json");
+			if (writePlayerOverride(playerOverridePath, playerOverride)) {
+				DEBUG_STACK.push(std::format("Added new player override: {}", player.string()), DebugStack::Color::SUCCESS);
+			}
+		}
+		else {
+			DEBUG_STACK.push(std::format("Added new player override (NON-PERSISTENT): {}", player.string()), DebugStack::Color::SUCCESS);
+		}
+	}
+
+	void KBFDataManager::deletePreset(const std::string& uuid) {
+		if (presets.find(uuid) == presets.end()) {
+			DEBUG_STACK.push(std::format("Tried to delete preset with UUID {}, but no such preset exists. Skipping...", uuid), DebugStack::Color::WARNING);
+			return;
+		}
+		std::string presetName = presets.at(uuid).name;
+
+		// Delete corresponding preset file.
+		std::filesystem::path currPresetPath = this->presetPath / (presetName + ".json");
+		if (!std::filesystem::exists(currPresetPath)) {
+			DEBUG_STACK.push(std::format("Deleted preset {} ({}) locally, but no corresponding .json file exists.", presetName, uuid), DebugStack::Color::WARNING);
+			presets.erase(uuid);
+			return;
+		}
+
+		if (deleteJsonFile(currPresetPath.string())) {
+			DEBUG_STACK.push(std::format("Deleted preset {} ({})", presetName, uuid), DebugStack::Color::SUCCESS);
+			presets.erase(uuid);
+		}
+	}
+
+	void KBFDataManager::deletePresetGroup(const std::string& uuid) {
+		if (presetGroups.find(uuid) == presetGroups.end()) {
+			DEBUG_STACK.push(std::format("Tried to delete preset group with UUID {}, but no such group exists. Skipping...", uuid), DebugStack::Color::WARNING);
+			return;
+		}
+		std::string presetGroupName = presetGroups.at(uuid).name;
+
+		// Delete corresponding preset file.
+		std::filesystem::path currPresetGroupPath = this->presetGroupPath / (presetGroupName + ".json");
+		if (!std::filesystem::exists(currPresetGroupPath)) {
+			DEBUG_STACK.push(std::format("Deleted preset group {} ({}) locally, but no corresponding .json file exists.", presetGroupName, uuid), DebugStack::Color::WARNING);
+			presetGroups.erase(uuid);
+			return;
+		}
+
+		if (deleteJsonFile(currPresetGroupPath.string())) {
+			DEBUG_STACK.push(std::format("Deleted preset group {} ({})", presetGroupName, uuid), DebugStack::Color::SUCCESS);
+			presetGroups.erase(uuid);
+		}
+	}
+
+	void KBFDataManager::deletePlayerOverride(const PlayerData& player) {
+		if (playerOverrides.find(player) == playerOverrides.end()) {
+			DEBUG_STACK.push(std::format("Tried to delete player override for player {}, but no such group exists. Skipping...", player.string()), DebugStack::Color::WARNING);
+			return;
+		}
+
+		// Delete corresponding preset file.
+		std::filesystem::path currPlayerOverridePath = this->playerOverridePath / (getPlayerOverrideFilename(player) + ".json");
+		if (!std::filesystem::exists(currPlayerOverridePath)) {
+			DEBUG_STACK.push(std::format("Deleted player override: {} locally, but no corresponding .json file exists ({}).", player.string(), currPlayerOverridePath.string()), DebugStack::Color::WARNING);
+			playerOverrides.erase(player);
+			return;
+		}
+
+		if (deleteJsonFile(currPlayerOverridePath.string())) {
+			DEBUG_STACK.push(std::format("Deleted player override: {}", player.string()), DebugStack::Color::SUCCESS);
+			playerOverrides.erase(player);
+		}
+	}
+
+	void KBFDataManager::updatePreset(const std::string& uuid, Preset newPreset) {
+		if (presets.find(uuid) == presets.end()) {
+			DEBUG_STACK.push(std::format("Tried to update preset with UUID {}, but no such preset exists. Skipping...", uuid), DebugStack::Color::WARNING);
+			return;
+		}
+		Preset& currentPreset = presets.at(uuid);
+
+		if (currentPreset.uuid != newPreset.uuid) {
+			DEBUG_STACK.push(std::format("Tried to update preset {} ({}) to a preset with a different uuid: {}. Skipping...", currentPreset.name, currentPreset.uuid, newPreset.uuid), DebugStack::Color::WARNING);
+			return;
+		}
+
+		std::filesystem::path presetPathBefore = this->presetPath / (currentPreset.name + ".json");
+		std::filesystem::path presetPathAfter  = this->presetPath / (newPreset.name + ".json");
+		
+		if (presetPathBefore != presetPathAfter) deleteJsonFile(presetPathBefore.string());
+		if (writePreset(presetPathAfter, newPreset)) {
+			DEBUG_STACK.push(std::format("Updated preset: {} -> {} ({})", currentPreset.name, newPreset.name, newPreset.uuid), DebugStack::Color::SUCCESS);
+			currentPreset = newPreset;
+		}
+	}
+
+	void KBFDataManager::updatePresetGroup(const std::string& uuid, PresetGroup newPresetGroup) {
+		if (presetGroups.find(uuid) == presetGroups.end()) {
+			DEBUG_STACK.push(std::format("Tried to update preset group with UUID {}, but no such preset exists. Skipping...", uuid), DebugStack::Color::WARNING);
+			return;
+		}
+		PresetGroup& currentPresetGroup = presetGroups.at(uuid);
+
+		if (currentPresetGroup.uuid != newPresetGroup.uuid) {
+			DEBUG_STACK.push(std::format("Tried to update preset group {} ({}) to a preset group with a different uuid: {}. Skipping...", currentPresetGroup.name, currentPresetGroup.uuid, newPresetGroup.uuid), DebugStack::Color::WARNING);
+			return;
+		}
+
+		std::filesystem::path presetPathBefore = this->presetGroupPath / (currentPresetGroup.name + ".json");
+		std::filesystem::path presetPathAfter  = this->presetGroupPath / (newPresetGroup.name + ".json");
+
+		if (presetPathBefore != presetPathAfter) deleteJsonFile(presetPathBefore.string());
+		if (writePresetGroup(presetPathAfter, newPresetGroup)) {
+			DEBUG_STACK.push(std::format("Updated preset group: {} -> {} ({})", currentPresetGroup.name, newPresetGroup.name, newPresetGroup.uuid), DebugStack::Color::SUCCESS);
+			currentPresetGroup = newPresetGroup;
+		}
+	}
+
+	void KBFDataManager::updatePlayerOverride(const PlayerData& player, PlayerOverride newOverride) {
+		if (playerOverrides.find(player) == playerOverrides.end()) {
+			DEBUG_STACK.push(std::format("Tried to update player override for player {}, but no such override exists. Skipping...", player.string()), DebugStack::Color::WARNING);
+			return;
+		}
+		PlayerOverride& currentOverride = playerOverrides.at(player);
+
+		std::filesystem::path overridePathBefore = this->playerOverridePath / (getPlayerOverrideFilename(player) + ".json");
+		std::filesystem::path overridePathAfter = this->playerOverridePath / (getPlayerOverrideFilename(newOverride.player) + ".json");
+
+		if (overridePathBefore != overridePathAfter) deleteJsonFile(overridePathBefore.string());
+		if (writePlayerOverride(overridePathAfter, newOverride)) {
+			DEBUG_STACK.push(std::format("Updated player override: {} -> {}", currentOverride.player.string(), newOverride.player.string()), DebugStack::Color::SUCCESS);
+			// Have to update the entire entry here as data in the key is NOT constant
+			playerOverrides.erase(player);
+			playerOverrides.emplace(newOverride.player, newOverride);
+		}
+	}
+
 	void KBFDataManager::verifyDirectoriesExist() const {
 		createDirectoryIfNotExists(dataBasePath);
 		createDirectoryIfNotExists(presetPath);
 		createDirectoryIfNotExists(presetGroupPath);
-		createDirectoryIfNotExists(playerOverrideDataPath);
+		createDirectoryIfNotExists(playerOverridePath);
 	}
 
 	void KBFDataManager::createDirectoryIfNotExists(const std::filesystem::path& path) const {
@@ -135,7 +387,7 @@ namespace kbf {
 		return buffer;
 	}
 
-	bool KBFDataManager::writeJsonFile(const char* path, const char* json) const {
+	bool KBFDataManager::writeJsonFile(std::string path, const std::string& json) const {
 		std::ofstream file(path, std::ios::trunc);
 		if (file.is_open()) {
 			file << json;
@@ -147,6 +399,23 @@ namespace kbf {
 		}
 
 		return false;
+	}
+
+	bool KBFDataManager::deleteJsonFile(std::string path) const {
+		try {
+			if (std::filesystem::remove(path)) {
+				return true;
+			}
+			else {
+				DEBUG_STACK.push(std::format("Failed to delete json file: {}", path), DebugStack::Color::ERROR);
+				return false;
+			}
+		}
+		catch (const std::filesystem::filesystem_error& e) {
+			DEBUG_STACK.push(std::format("Failed to delete json file: {}", path), DebugStack::Color::ERROR);
+			return false;
+		}
+
 	}
 	
 	bool KBFDataManager::loadAlmaConfig(AlmaDefaults* out) {
@@ -194,7 +463,7 @@ namespace kbf {
 		writer.String(out.summerPoncho.uuid.c_str());
 		writer.EndObject();
 
-		bool success = writeJsonFile(almaConfigPath.string().c_str(), s.GetString());
+		bool success = writeJsonFile(almaConfigPath.string(), s.GetString());
 
 		if (!success) {
 			DEBUG_STACK.push(std::format("Failed to write Alma config to {}", almaConfigPath.string()), DebugStack::Color::ERROR);
@@ -233,7 +502,7 @@ namespace kbf {
 		writer.String(out.summerHat.uuid.c_str());
 		writer.EndObject();
 
-		bool success = writeJsonFile(erikConfigPath.string().c_str(), s.GetString());
+		bool success = writeJsonFile(erikConfigPath.string(), s.GetString());
 
 		if (!success) {
 			DEBUG_STACK.push(std::format("Failed to write Erik config to ", erikConfigPath.string()), DebugStack::Color::ERROR);
@@ -272,7 +541,7 @@ namespace kbf {
 		writer.String(out.summerCoveralls.uuid.c_str());
 		writer.EndObject();
 
-		bool success = writeJsonFile(gemmaConfigPath.string().c_str(), s.GetString());
+		bool success = writeJsonFile(gemmaConfigPath.string(), s.GetString());
 
 		if (!success) {
 			DEBUG_STACK.push(std::format("Failed to write Gemma config to {}", gemmaConfigPath.string()), DebugStack::Color::ERROR);
@@ -310,7 +579,7 @@ namespace kbf {
 		writer.String(out.female.uuid.c_str());
 		writer.EndObject();
 
-		bool success = writeJsonFile(npcConfigPath.string().c_str(), s.GetString());
+		bool success = writeJsonFile(npcConfigPath.string(), s.GetString());
 
 		if (!success) {
 			DEBUG_STACK.push(std::format("Failed to write NPC config to {}", npcConfigPath.string()), DebugStack::Color::ERROR);
@@ -348,7 +617,7 @@ namespace kbf {
 		writer.String(out.female.uuid.c_str());
 		writer.EndObject();
 
-		bool success = writeJsonFile(playerConfigPath.string().c_str(), s.GetString());
+		bool success = writeJsonFile(playerConfigPath.string(), s.GetString());
 
 		if (!success) {
 			DEBUG_STACK.push(std::format("Failed to write Player config to {}", playerConfigPath.string()), DebugStack::Color::ERROR);
@@ -367,6 +636,7 @@ namespace kbf {
 
 		bool parsed = true;
 		parsed &= parseString(presetDoc, PRESET_UUID_ID, PRESET_UUID_ID, &out->uuid);
+		parsed &= parseString(presetDoc, PRESET_BUNDLE_ID, PRESET_BUNDLE_ID, &out->bundle);
 		parsed &= parseString(presetDoc, PRESET_ARMOUR_NAME_ID, PRESET_ARMOUR_NAME_ID, &out->armour.name);
 		parsed &= parseBool(presetDoc, PRESET_ARMOUR_FEMALE_ID, PRESET_ARMOUR_FEMALE_ID, &out->armour.female);
 		parsed &= parseBool(presetDoc, PRESET_FEMALE_ID, PRESET_FEMALE_ID, &out->female);
@@ -385,6 +655,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(PRESET_UUID_ID);
 		writer.String(preset.uuid.c_str());
+		writer.Key(PRESET_BUNDLE_ID);
+		writer.String(preset.bundle.c_str());
 		writer.Key(PRESET_ARMOUR_NAME_ID);
 		writer.String(preset.armour.name.c_str());
 		writer.Key(PRESET_ARMOUR_FEMALE_ID);
@@ -393,16 +665,18 @@ namespace kbf {
 		writer.Bool(preset.female);
 		writer.EndObject();
 
-		bool success = writeJsonFile(path.string().c_str(), s.GetString());
+		bool success = writeJsonFile(path.string(), s.GetString());
 
 		if (!success) {
-			DEBUG_STACK.push(std::format("Failed to write preset {} () to {}", preset.name, preset.uuid, path.string()), DebugStack::Color::ERROR);
+			DEBUG_STACK.push(std::format("Failed to write preset {} ({}) to {}", preset.name, preset.uuid, path.string()), DebugStack::Color::ERROR);
 		}
 
 		return success;
 	}
 
 	bool KBFDataManager::loadPresets() {
+		bool hasFailure = false;
+
 		// Load all presets from the preset directory
 		for (const auto& entry : std::filesystem::directory_iterator(presetPath)) {
 			if (entry.is_regular_file() && entry.path().extension() == ".json") {
@@ -414,16 +688,142 @@ namespace kbf {
 					presets.emplace(preset.uuid, preset);
 					DEBUG_STACK.push(std::format("Loaded preset: {} ({})", preset.name, preset.uuid), DebugStack::Color::SUCCESS);
 				}
+				else {
+					hasFailure = true;
+				}
 			}
 		}
+		return hasFailure;
 	}
 
-	void KBFDataManager::loadPresetGroup(const std::filesystem::path& path) {
-		// Implementation for loading preset groups
+	bool KBFDataManager::loadPresetGroup(const std::filesystem::path& path, PresetGroup* out) {
+		assert(out != nullptr);
+
+		rapidjson::Document presetGroupDoc = loadConfigJson(path.string(), nullptr);
+		if (!presetGroupDoc.IsObject() || presetGroupDoc.HasParseError()) return false;
+
+		out->name = path.stem().string();
+
+		bool parsed = true;
+		parsed &= parseString(presetGroupDoc, PRESET_GROUP_UUID_ID, PRESET_GROUP_UUID_ID, &out->uuid);
+		parsed &= parseBool(presetGroupDoc, PRESET_GROUP_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->female);
+
+		if (!parsed) {
+			DEBUG_STACK.push(std::format("Failed to parse preset group {}. One or more required values were missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
+		}
+
+		return parsed;
 	}
 
-	void KBFDataManager::loadPlayerOverride(const std::filesystem::path& path) {
-		// Implementation for loading player overrides
+	bool KBFDataManager::writePresetGroup(const std::filesystem::path& path, const PresetGroup& presetGroup) const {
+		rapidjson::StringBuffer s;
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+
+		writer.StartObject();
+		writer.Key(PRESET_GROUP_UUID_ID);
+		writer.String(presetGroup.uuid.c_str());
+		writer.Key(PRESET_GROUP_FEMALE_ID);
+		writer.Bool(presetGroup.female);
+		writer.EndObject();
+
+		bool success = writeJsonFile(path.string(), s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write preset group {} ({}) to {}", presetGroup.name, presetGroup.uuid, path.string()), DebugStack::Color::ERROR);
+		}
+
+		return success;
 	}
 
-} // namespace sumire
+	bool KBFDataManager::loadPresetGroups() {
+		bool hasFailure = false;
+
+		// Load all preset groups from the preset directory
+		for (const auto& entry : std::filesystem::directory_iterator(presetGroupPath)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".json") {
+
+				DEBUG_STACK.push(std::format("Loading preset group from {}", entry.path().string()), DebugStack::Color::INFO);
+
+				PresetGroup presetGroup;
+				if (loadPresetGroup(entry.path(), &presetGroup)) {
+					presetGroups.emplace(presetGroup.uuid, presetGroup);
+					DEBUG_STACK.push(std::format("Loaded preset group: {} ({})", presetGroup.name, presetGroup.uuid), DebugStack::Color::SUCCESS);
+				}
+				else {
+					hasFailure = true;
+				}
+			}
+		}
+		return hasFailure;
+	}
+
+	bool KBFDataManager::loadPlayerOverride(const std::filesystem::path& path, PlayerOverride* out) {
+		assert(out != nullptr);
+
+		rapidjson::Document overrideDoc = loadConfigJson(path.string(), nullptr);
+		if (!overrideDoc.IsObject() || overrideDoc.HasParseError()) return false;
+
+		bool parsed = true;
+		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PLAYER_NAME_ID, PLAYER_OVERRIDE_PLAYER_NAME_ID, &out->player.name);
+		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, &out->player.hunterId);
+		parsed &= parseBool(overrideDoc, PLAYER_OVERRIDE_PLAYER_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->player.female);
+		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PRESET_GROUP_UUID_ID, PLAYER_OVERRIDE_PRESET_GROUP_UUID_ID, &out->presetGroup);
+
+		if (!parsed) {
+			DEBUG_STACK.push(std::format("Failed to parse player override {}. One or more required values were missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
+		}
+
+		return parsed;
+	}
+
+	bool KBFDataManager::writePlayerOverride(const std::filesystem::path& path, const PlayerOverride& playerOverride) const {
+		rapidjson::StringBuffer s;
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+
+		writer.StartObject();
+		writer.Key(PLAYER_OVERRIDE_PLAYER_NAME_ID);
+		writer.String(playerOverride.player.name.c_str());
+		writer.Key(PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID);
+		writer.String(playerOverride.player.hunterId.c_str());
+		writer.Key(PLAYER_OVERRIDE_PLAYER_FEMALE_ID);
+		writer.Bool(playerOverride.player.female);
+		writer.Key(PLAYER_OVERRIDE_PRESET_GROUP_UUID_ID);
+		writer.String(playerOverride.presetGroup.c_str());
+		writer.EndObject();
+
+		bool success = writeJsonFile(path.string(), s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write player override for player {} to {}", playerOverride.player.string(), path.string()), DebugStack::Color::ERROR);
+		}
+
+		return success;
+	}
+
+	bool KBFDataManager::loadPlayerOverrides() {
+		bool hasFailure = false;
+
+		// Load all player overrides from the preset directory
+		for (const auto& entry : std::filesystem::directory_iterator(playerOverridePath)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".json") {
+
+				DEBUG_STACK.push(std::format("Loading player override from {}", entry.path().string()), DebugStack::Color::INFO);
+
+				PlayerOverride playerOverride;
+				if (loadPlayerOverride(entry.path(), &playerOverride)) {
+					playerOverrides.emplace(playerOverride.player, playerOverride);
+					DEBUG_STACK.push(std::format("Loaded player override: {}", playerOverride.player.string()), DebugStack::Color::SUCCESS);
+				}
+				else {
+					hasFailure = true;
+				}
+			}
+		}
+		return hasFailure;
+	}
+
+	std::string KBFDataManager::getPlayerOverrideFilename(const PlayerData& player) const {
+		return player.name + "-" + (player.female ? "Female" : "Male") + "-" + player.hunterId;
+	}
+
+}
