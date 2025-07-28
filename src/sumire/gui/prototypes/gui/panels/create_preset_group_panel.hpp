@@ -10,33 +10,27 @@
 
 namespace kbf {
 
-	class CreatePresetPanel : public iPanel {
+	class CreatePresetGroupPanel : public iPanel {
 	public:
-		CreatePresetPanel(
+		CreatePresetGroupPanel(
 			const std::string& name,
 			const std::string& strID,
 			const KBFDataManager& dataManager,
-			ImFont* wsSymbolFont,
-			ImFont* wsArmourFont);
+			ImFont* wsSymbolFont);
 
 		bool draw() override;
-		void onCreate(std::function<void(Preset)> callback) { createCallback = callback; }
+		void onCreate(std::function<void(PresetGroup)> callback) { createCallback = callback; }
 		void onCancel(std::function<void()> callback) { cancelCallback = callback; }
 
 	private:
 		const KBFDataManager& dataManager;
-		Preset preset;
-		char presetNameBuffer[128];
-		char presetBundleBuffer[128];
+		PresetGroup presetGroup;
+		char presetGroupNameBuffer[128];
 
-		void drawArmourList(const std::string& filter);
-		void drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter);
-
-		std::function<void(Preset)> createCallback;
+		std::function<void(PresetGroup)> createCallback;
 		std::function<void()> cancelCallback;
 
 		ImFont* wsSymbolFont;
-		ImFont* wsArmourFont;
 	};
 
 }

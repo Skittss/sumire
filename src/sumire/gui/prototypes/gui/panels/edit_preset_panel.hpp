@@ -10,9 +10,10 @@
 
 namespace kbf {
 
-	class CreatePresetPanel : public iPanel {
+	class EditPresetPanel : public iPanel {
 	public:
-		CreatePresetPanel(
+		EditPresetPanel(
+			const std::string& presetUUID,
 			const std::string& name,
 			const std::string& strID,
 			const KBFDataManager& dataManager,
@@ -20,11 +21,14 @@ namespace kbf {
 			ImFont* wsArmourFont);
 
 		bool draw() override;
-		void onCreate(std::function<void(Preset)> callback) { createCallback = callback; }
+		void onDelete(std::function<void(const std::string)> callback) { deleteCallback = callback; }
+		void onUpdate(std::function<void(const std::string&, Preset)> callback) { updateCallback = callback; }
 		void onCancel(std::function<void()> callback) { cancelCallback = callback; }
 
 	private:
 		const KBFDataManager& dataManager;
+		std::string presetUUID;
+		Preset presetBefore;
 		Preset preset;
 		char presetNameBuffer[128];
 		char presetBundleBuffer[128];
@@ -32,8 +36,9 @@ namespace kbf {
 		void drawArmourList(const std::string& filter);
 		void drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter);
 
-		std::function<void(Preset)> createCallback;
-		std::function<void()> cancelCallback;
+		std::function<void(const std::string&)>         deleteCallback;
+		std::function<void(const std::string&, Preset)> updateCallback;
+		std::function<void()>                           cancelCallback;
 
 		ImFont* wsSymbolFont;
 		ImFont* wsArmourFont;
