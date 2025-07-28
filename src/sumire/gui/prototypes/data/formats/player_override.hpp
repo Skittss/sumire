@@ -7,8 +7,7 @@ namespace kbf {
 
 	struct PlayerOverride {
 		PlayerData player;
-		PresetGroup presetGroup;
-		//std::string presetGroupName;
+		std::string presetGroup; // uuid
 	};
 
 }
