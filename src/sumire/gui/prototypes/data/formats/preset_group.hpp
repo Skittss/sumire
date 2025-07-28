@@ -7,14 +7,11 @@
 
 namespace kbf {
 
-	struct PresetGroupData {
-		std::string name;
-		std::unordered_map<std::string, Preset> presets;
-	};
-
 	struct PresetGroup {
 		std::string uuid;
-		PresetGroupData* data;
+		std::string name;
+		bool female;
+		std::unordered_map<std::string, Preset> presets;
 	};
 
 }
