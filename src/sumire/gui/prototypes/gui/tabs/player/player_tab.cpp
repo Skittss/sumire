@@ -7,6 +7,9 @@
 #include <sumire/gui/prototypes/gui/tabs/shared/preset_selectors.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/alignment.hpp>
 
+#include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
+#include <sumire/gui/prototypes/util/string/to_lower.hpp>
+
 #include <vector>
 #include <algorithm>
 
@@ -26,44 +29,38 @@ namespace kbf {
         drawTabBarSeparator("Overrides", "PlayerTabOverrides");
 
         drawOverrideList();
+
+        ImGui::PopStyleVar();
     }
 
     void PlayerTab::drawPopouts() {
-        playerListPanel.draw();
+        addPlayerOverridePanel.draw();
+        editPlayerOverridePanel.draw();
     }
 
     void PlayerTab::drawOverrideList() {
         const ImVec2 buttonSize = ImVec2(ImGui::GetContentRegionAvail().x, 0.0f);
         if (ImGui::Button("Add Player Override", buttonSize)) {
-            playerListPanel.open("Select Player to Override", "AddPlayerOverridePanel", wsSymbolFont);
-            playerListPanel.get()->onSelectPlayer([&](PlayerData playerData) {
-                playerListPanel.close();
-                //addPlayerOverride(playerData);
-            });
+            openAddPlayerOverridePanel();
         }
 
-        static std::vector<PlayerOverride> playerOverrides = {
-            { {"Player 1",  "WK5UJ9FQ", false}, },
-            { {"Player 2",  "XK3L8D2R", true},  },
-            { {"Player 3",  "ZQ9N4B7T", false}, },
-            { {"Player 4",  "YH6M1C5V", true},  },
-            { {"Player 5",  "QJ2K8F3W", false}, },
-            { {"Player 6",  "LM4N7D1X", true},  },
-            { {"Player 7",  "TR5P9B2Y", false}, },
-            { {"Player 8",  "ZK3L6F8Q", true},  },
-            { {"Player 9",  "XH2M4C5R", false}, },
-            { {"Player 10", "YJ1N8D3T", true},  },
-            { {"Player 11", "WK5UJ9FA", false}, },
-            { {"Player 12", "XK3L8D2B", true},  },
-            { {"Player 13", "ZQ9N4B7C", false}, },
-            { {"Player 14", "YH6M1C5D", true},  },
-            { {"Player 15", "QJ2K8F3E", false}, },
-            { {"Player 16", "LM4N7D1F", true},  },
-            { {"Player 17", "TR5P9B2G", false}, },
-            { {"Player 18", "ZK3L6F8H", true},  },
-            { {"Player 19", "XH2M4C5I", false}, },
-            { {"Player 20", "YJ1N8D3J", true},  }
-        };
+        std::vector<const PlayerOverride*> playerOverrides = dataManager.getPlayerOverrides();
+
+        static bool sortDirAscending;
+        static enum class SortCol {
+            NONE,
+            NAME
+        } sortCol;
+
+        // Sort
+        switch (sortCol)
+        {
+        case SortCol::NAME:
+            std::sort(playerOverrides.begin(), playerOverrides.end(), [&](const PlayerOverride* a, const PlayerOverride* b) {
+                std::string lowa = toLower(a->player.name); std::string lowb = toLower(b->player.name);
+                return sortDirAscending ? lowa < lowb : lowa > lowb;
+                });
+        }
 
         if (playerOverrides.size() == 0) {
             ImGui::Spacing();
@@ -91,37 +88,35 @@ namespace kbf {
             if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs()) {
                 if (sort_specs->SpecsDirty && sort_specs->SpecsCount > 0) {
                     const ImGuiTableColumnSortSpecs& sort_spec = sort_specs->Specs[0];
+                    sortDirAscending = sort_spec.SortDirection == ImGuiSortDirection_Ascending;
 
-                    std::sort(playerOverrides.begin(), playerOverrides.end(), [&](const PlayerOverride& a, const PlayerOverride& b) {
-                        switch (sort_spec.ColumnIndex)
-                        {
-                        case 0: return (sort_spec.SortDirection == ImGuiSortDirection_Ascending) ? (a.player.name < b.player.name) : (a.player.name > b.player.name);
-                        default: return false;
-                        }
-                        });
+                    switch (sort_spec.ColumnIndex)
+                    {
+                    case 0:  sortCol = SortCol::NAME; break;
+                    default: sortCol = SortCol::NONE; break;
+                    }
 
                     sort_specs->SpecsDirty = false;
                 }
             }
 
-            ImGui::PopStyleVar();
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, 0.0f));
 
             float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-            for (PlayerOverride & override : playerOverrides) {
+            for (const PlayerOverride* override : playerOverrides) {
                 ImGui::TableNextRow();
 
                 ImGui::TableNextColumn();
 
                 constexpr float selectableHeight = 60.0f;
                 ImVec2 pos = ImGui::GetCursorScreenPos();
-                if (ImGui::Selectable(("##Selectable_" + override.player.name).c_str(), false, 0, ImVec2(0.0f, selectableHeight))) {
-                    openPlayerOverridePanel(override);
+                if (ImGui::Selectable(("##Selectable_" + override->player.string()).c_str(), false, 0, ImVec2(0.0f, selectableHeight))) {
+                    openEditPlayerOverridePanel(override->player);
                 }
 
                 // Sex Mark
-                std::string sexMarkSymbol = override.player.female ? WS_FONT_FEMALE : WS_FONT_MALE;
-                ImVec4 sexMarkerCol = override.player.female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+                std::string sexMarkSymbol = override->player.female ? WS_FONT_FEMALE : WS_FONT_MALE;
+                ImVec4 sexMarkerCol = override->player.female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
 
                 ImGui::PushFont(wsSymbolFont);
 
@@ -137,14 +132,16 @@ namespace kbf {
 
                 // Group name... floating because imgui has no vertical alignment STILL :(
                 constexpr float playerNameSpacingAfter = 5.0f;
-                ImVec2 playerNameSize = ImGui::CalcTextSize(override.player.name.c_str());
+                ImVec2 playerNameSize = ImGui::CalcTextSize(override->player.name.c_str());
                 ImVec2 playerNamePos;
                 playerNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
                 playerNamePos.y = pos.y + (selectableHeight - playerNameSize.y) * 0.5f;
-                ImGui::GetWindowDrawList()->AddText(playerNamePos, ImGui::GetColorU32(ImGuiCol_Text), override.player.name.c_str());
+                ImGui::GetWindowDrawList()->AddText(playerNamePos, ImGui::GetColorU32(ImGuiCol_Text), override->player.name.c_str());
 
                 // Active group
-                std::string presetGroupName = override.presetGroup.uuid.empty() ? "Default" : override.presetGroup.data->name;
+                const PresetGroup* activeGroup = dataManager.getPresetGroupByUUID(override->presetGroup);
+
+                std::string presetGroupName = override->presetGroup.empty() || activeGroup == nullptr ? "Default" : activeGroup->name;
                 std::string currentGroupStr = "(" + presetGroupName + ")";
                 ImVec2 currentGroupStrSize = ImGui::CalcTextSize(currentGroupStr.c_str());
                 ImVec2 currentGroupStrPos;
@@ -155,44 +152,54 @@ namespace kbf {
                 ImGui::PopStyleColor();
 
                 // Hunter ID
-                ImVec2 hunterIdSize = ImGui::CalcTextSize(override.player.hunterId.c_str());
+                ImVec2 hunterIdSize = ImGui::CalcTextSize(override->player.hunterId.c_str());
                 ImVec2 hunterIdPos;
                 hunterIdPos.x = ImGui::GetCursorScreenPos().x + contentRegionWidth - hunterIdSize.x - ImGui::GetStyle().ItemSpacing.x;
                 hunterIdPos.y = pos.y + (selectableHeight - hunterIdSize.y) * 0.5f;
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-                ImGui::GetWindowDrawList()->AddText(hunterIdPos, ImGui::GetColorU32(ImGuiCol_Text), override.player.hunterId.c_str());
+                ImGui::GetWindowDrawList()->AddText(hunterIdPos, ImGui::GetColorU32(ImGuiCol_Text), override->player.hunterId.c_str());
                 ImGui::PopStyleColor();
             }
 
+            ImGui::PopStyleVar();
             ImGui::EndTable();
-            ImGui::PopStyleVar(1);
         }
     }
 
-    void PlayerTab::openPlayerOverridePanel(PlayerOverride & override) {
-        static std::vector<PresetGroup> presetGroups = {
-            //         { "Preset Group 1",  {} },
-            //         { "Preset Group 2",  { {"Bruh", {"Bruh", "Armour 1"} } } },
-            //         { "Preset Group 3",  { {"Bruh", {"Bruh", "Armour 1"} }, {"Bruh2", {"Bruh", "Armour 1"} } } } ,
-            //         { "Preset Group 4",  {} },
-            //         { "Preset Group 5",  {} },
-            //         { "Preset Group 6",  {} },
-            //         { "Preset Group 7",  {} },
-            //         { "Preset Group 8",  {} },
-            //         { "Preset Group 9",  {} },
-                     //{ "Preset Group 10", {} }
-        };
+    void PlayerTab::openAddPlayerOverridePanel() {
+        addPlayerOverridePanel.openNew("Select Player to Override", "AddPlayerOverridePanel", wsSymbolFont);
+        addPlayerOverridePanel.get()->focus();
 
-        if (playerOverridePanel.isVisible()) playerOverridePanel.close();
-        playerOverridePanel.open("Edit Player Override", "PlayerOverridePanel", override, presetGroups);
-        playerOverridePanel.get()->focus();
+        addPlayerOverridePanel.get()->onSelectPlayer([&](PlayerData playerData) {
+            PlayerOverride newOverride{};
+            newOverride.player = playerData;
+            newOverride.presetGroup = "";
 
-        playerOverridePanel.get()->onCancel([&]() {
-            playerOverridePanel.close();
-            });
+            dataManager.addPlayerOverride(newOverride);
+            addPlayerOverridePanel.close();
+        });
+    }
 
-        // TODO: On save, on delete
+    void PlayerTab::openEditPlayerOverridePanel(const PlayerData& playerData) {
+        editPlayerOverridePanel.openNew(playerData, "Edit Player Override", "EditPlayerOverridePanel", dataManager);
+
+        editPlayerOverridePanel.get()->focus();
+
+        editPlayerOverridePanel.get()->onCancel([&]() {
+            editPlayerOverridePanel.close();
+        });
+
+        editPlayerOverridePanel.get()->onDelete([&](const PlayerData& playerData) {
+            dataManager.deletePlayerOverride(playerData);
+            editPlayerOverridePanel.close();
+        });
+
+        editPlayerOverridePanel.get()->onUpdate([&](const PlayerData& playerData, PlayerOverride newOverride) {
+            dataManager.updatePlayerOverride(playerData, newOverride);
+            editPlayerOverridePanel.close();
+        });
+
     }
 
 }
