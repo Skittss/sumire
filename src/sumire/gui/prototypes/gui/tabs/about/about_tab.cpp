@@ -8,7 +8,7 @@ namespace kbf {
         ImGui::Text("Kana's Body Framework v1.0");
         ImGui::Text("I'm no UI designer, if you have any suggestions to make the user experience better, feel free to send them my way.");
 
-        assert(monoFontType != nullptr);
+        assert(monoFontTiny != nullptr);
         ImGui::PushFont(monoFontTiny);
         ImGui::TextUnformatted(ASCII_ART_SPLASH);
         ImGui::PopFont();
