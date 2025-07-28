@@ -19,21 +19,46 @@
 namespace kbf {
 
     void KBFWindow::initialize() {
-		mainFont         = ImGui::GetIO().Fonts->AddFontFromFileTTF(SUMIRE_ENGINE_PATH("assets/fonts/Roboto-Regular.ttf"),            18.0f);
-        wildsSymbolsFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(SUMIRE_ENGINE_PATH("assets/fonts/Roboto-Regular-WS-Symbols.ttf"), 30.0f);
-        wildsArmourFont  = ImGui::GetIO().Fonts->AddFontFromFileTTF(SUMIRE_ENGINE_PATH("assets/fonts/Roboto-Regular-WS-Armour.ttf"),  18.0f);
-        monoFont         = ImGui::GetIO().Fonts->AddFontFromFileTTF(SUMIRE_ENGINE_PATH("assets/fonts/RobotoMono-Regular.ttf"),        18.0f);
-        monoFontTiny     = ImGui::GetIO().Fonts->AddFontFromFileTTF(SUMIRE_ENGINE_PATH("assets/fonts/RobotoMono-Regular.ttf"),        9.0f );
+        initializeFonts();
+
+		DEBUG_STACK.push("Hello from Kana! Framework initialized.", DebugStack::Color::INFO);
+    }
+
+    void KBFWindow::initializeFonts() {
+        const std::string mainFontPath        = SUMIRE_ENGINE_PATH("assets/fonts/Roboto-Regular.ttf");
+        const std::string wildsSymbolFontPath = SUMIRE_ENGINE_PATH("assets/fonts/Roboto-Regular-WS-Symbols.ttf");
+        const std::string wildsArmourFontPath = SUMIRE_ENGINE_PATH("assets/fonts/Roboto-Regular-WS-Armour.ttf");
+        const std::string monoFontPath        = SUMIRE_ENGINE_PATH("assets/fonts/RobotoMono-Regular.ttf");
+
+        std::vector<std::string> unfoundFonts = {};
+        if (!std::filesystem::exists(mainFontPath))        unfoundFonts.push_back(mainFontPath);
+        if (!std::filesystem::exists(wildsSymbolFontPath)) unfoundFonts.push_back(wildsSymbolFontPath);
+        if (!std::filesystem::exists(wildsArmourFontPath)) unfoundFonts.push_back(wildsArmourFontPath);
+        if (!std::filesystem::exists(monoFontPath))        unfoundFonts.push_back(monoFontPath);
+
+        if (unfoundFonts.size() > 0) {
+            std::string errMsg = "Failed to find required font files:\n";
+            for (size_t i = 0; i < unfoundFonts.size(); i++) {
+                errMsg += " - " + unfoundFonts[i];
+                if (i < unfoundFonts.size() - 1) errMsg += "\n";
+            }
+            DEBUG_STACK.push(errMsg, DebugStack::Color::ERROR);
+        }
+
+        mainFont         = ImGui::GetIO().Fonts->AddFontFromFileTTF(mainFontPath.c_str(),        18.0f);
+        wildsSymbolsFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(wildsSymbolFontPath.c_str(), 30.0f);
+        wildsArmourFont  = ImGui::GetIO().Fonts->AddFontFromFileTTF(wildsArmourFontPath.c_str(), 18.0f);
+        monoFont         = ImGui::GetIO().Fonts->AddFontFromFileTTF(monoFontPath.c_str(),        18.0f);
+        monoFontTiny     = ImGui::GetIO().Fonts->AddFontFromFileTTF(monoFontPath.c_str(),        9.0f);
 
         // Deferred initialization of any tabs that need special fonts.
         playerTab.setSymbolFont(wildsSymbolsFont);
         npcTab.setSymbolFont(wildsSymbolsFont);
+        presetGroupsTab.setSymbolFont(wildsSymbolsFont);
         presetsTab.setSymbolFont(wildsSymbolsFont);
         presetsTab.setArmourFont(wildsArmourFont);
         debugTab.setMonoFont(monoFont);
         aboutTab.setAsciiFont(monoFontTiny);
-
-		DEBUG_STACK.push("Hello from Kana! Framework initialized.", DebugStack::Color::INFO);
     }
 
     void KBFWindow::draw() {
@@ -51,9 +76,9 @@ namespace kbf {
         drawTab();
         drawPopouts();
 
-        ImGui::End();
-
         ImGui::PopFont();
+
+        ImGui::End();
         ImGui::PopStyleVar(2);
     }
 

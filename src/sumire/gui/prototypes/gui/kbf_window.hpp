@@ -30,6 +30,8 @@ namespace kbf {
 		void draw();
 
 	private:
+		void initializeFonts();
+
 		void drawSexMarker(const bool male, const bool sameline = true, const bool center = true);
 
 		void drawKbfMenuItem(const std::string& label, const KBFTab tabId);
@@ -42,9 +44,9 @@ namespace kbf {
 
 		KBFDataManager& dataManager;
 
-		PlayerTab       playerTab;
+		PlayerTab       playerTab{ dataManager };
 		NpcTab          npcTab;
-		PresetGroupsTab presetGroupsTab;
+		PresetGroupsTab presetGroupsTab{ dataManager };
 		PresetsTab      presetsTab{ dataManager };
 		EditorTab       editorTab;
 		SettingsTab     settingsTab;
