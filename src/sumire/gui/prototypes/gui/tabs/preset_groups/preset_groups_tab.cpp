@@ -93,7 +93,6 @@ namespace kbf {
                 }
             }
 
-            ImGui::PopStyleVar();
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, 0.0f));
 
             for (const PresetGroup* group : presetGroups) {

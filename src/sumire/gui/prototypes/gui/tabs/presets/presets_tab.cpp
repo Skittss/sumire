@@ -123,7 +123,6 @@ namespace kbf {
                 }
             }
 
-            ImGui::PopStyleVar();
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, 0.0f));
 
             // Sort bundles
@@ -236,7 +235,6 @@ namespace kbf {
                 }
             }
 
-            ImGui::PopStyleVar();
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, 0.0f));
 
             float contentRegionWidth = ImGui::GetContentRegionAvail().x;
