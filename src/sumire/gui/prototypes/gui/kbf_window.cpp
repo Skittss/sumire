@@ -53,7 +53,9 @@ namespace kbf {
 
         // Deferred initialization of any tabs that need special fonts.
         playerTab.setSymbolFont(wildsSymbolsFont);
+        playerTab.setArmourFont(wildsArmourFont);
         npcTab.setSymbolFont(wildsSymbolsFont);
+        npcTab.setArmourFont(wildsArmourFont);
         presetGroupsTab.setSymbolFont(wildsSymbolsFont);
         presetsTab.setSymbolFont(wildsSymbolsFont);
         presetsTab.setArmourFont(wildsArmourFont);

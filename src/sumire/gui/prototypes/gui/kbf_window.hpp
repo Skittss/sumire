@@ -45,7 +45,7 @@ namespace kbf {
 		KBFDataManager& dataManager;
 
 		PlayerTab       playerTab{ dataManager };
-		NpcTab          npcTab;
+		NpcTab          npcTab{ dataManager };
 		PresetGroupsTab presetGroupsTab{ dataManager };
 		PresetsTab      presetsTab{ dataManager };
 		EditorTab       editorTab;

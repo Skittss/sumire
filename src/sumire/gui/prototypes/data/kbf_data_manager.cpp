@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <format>
+#include <unordered_set>
 
 namespace kbf {
 	void KBFDataManager::loadData() {
@@ -239,12 +240,14 @@ namespace kbf {
 		if (!std::filesystem::exists(currPresetGroupPath)) {
 			DEBUG_STACK.push(std::format("Deleted preset group {} ({}) locally, but no corresponding .json file exists.", presetGroupName, uuid), DebugStack::Color::WARNING);
 			presetGroups.erase(uuid);
+			validateObjectsUsingPresetGroups();
 			return;
 		}
 
 		if (deleteJsonFile(currPresetGroupPath.string())) {
 			DEBUG_STACK.push(std::format("Deleted preset group {} ({})", presetGroupName, uuid), DebugStack::Color::SUCCESS);
 			presetGroups.erase(uuid);
+			validateObjectsUsingPresetGroups();
 		}
 	}
 
@@ -430,13 +433,13 @@ namespace kbf {
 		if (!config.IsObject() || config.HasParseError()) return false;
 
 		// Outfits 
-		parseString(config, ALMA_HANDLERS_OUTFIT_ID, ALMA_HANDLERS_OUTFIT_ID, &out->handlersOutfit.uuid);
-		parseString(config, ALMA_NEW_WORLD_COMISSION_ID, ALMA_NEW_WORLD_COMISSION_ID, &out->newWorldComission.uuid);
-		parseString(config, ALMA_SCRIVENERS_COAT_ID, ALMA_SCRIVENERS_COAT_ID, &out->scrivenersCoat.uuid);
-		parseString(config, ALMA_SPRING_BLOSSOM_KIMONO_ID, ALMA_SPRING_BLOSSOM_KIMONO_ID, &out->springBlossomKimono.uuid);
-		parseString(config, ALMA_CHUN_LI_OUTFIT_ID, ALMA_CHUN_LI_OUTFIT_ID, &out->chunLiOutfit.uuid);
-		parseString(config, ALMA_CAMMY_OUTFIT_ID, ALMA_CAMMY_OUTFIT_ID, &out->cammyOutfit.uuid);
-		parseString(config, ALMA_SUMMER_PONCHO_ID, ALMA_SUMMER_PONCHO_ID, &out->cammyOutfit.uuid);
+		parseString(config, ALMA_HANDLERS_OUTFIT_ID, ALMA_HANDLERS_OUTFIT_ID, &out->handlersOutfit);
+		parseString(config, ALMA_NEW_WORLD_COMISSION_ID, ALMA_NEW_WORLD_COMISSION_ID, &out->newWorldComission);
+		parseString(config, ALMA_SCRIVENERS_COAT_ID, ALMA_SCRIVENERS_COAT_ID, &out->scrivenersCoat);
+		parseString(config, ALMA_SPRING_BLOSSOM_KIMONO_ID, ALMA_SPRING_BLOSSOM_KIMONO_ID, &out->springBlossomKimono);
+		parseString(config, ALMA_CHUN_LI_OUTFIT_ID, ALMA_CHUN_LI_OUTFIT_ID, &out->chunLiOutfit);
+		parseString(config, ALMA_CAMMY_OUTFIT_ID, ALMA_CAMMY_OUTFIT_ID, &out->cammyOutfit);
+		parseString(config, ALMA_SUMMER_PONCHO_ID, ALMA_SUMMER_PONCHO_ID, &out->cammyOutfit);
 
 		DEBUG_STACK.push(std::format("Loaded Alma config from {}", almaConfigPath.string()), DebugStack::Color::SUCCESS);
 		return true;
@@ -448,19 +451,19 @@ namespace kbf {
 
 		writer.StartObject();
 		writer.Key(ALMA_HANDLERS_OUTFIT_ID);
-		writer.String(out.handlersOutfit.uuid.c_str());
+		writer.String(out.handlersOutfit.c_str());
 		writer.Key(ALMA_NEW_WORLD_COMISSION_ID);
-		writer.String(out.newWorldComission.uuid.c_str());
+		writer.String(out.newWorldComission.c_str());
 		writer.Key(ALMA_SCRIVENERS_COAT_ID);
-		writer.String(out.scrivenersCoat.uuid.c_str());
+		writer.String(out.scrivenersCoat.c_str());
 		writer.Key(ALMA_SPRING_BLOSSOM_KIMONO_ID);
-		writer.String(out.springBlossomKimono.uuid.c_str());
+		writer.String(out.springBlossomKimono.c_str());
 		writer.Key(ALMA_CHUN_LI_OUTFIT_ID);
-		writer.String(out.chunLiOutfit.uuid.c_str());
+		writer.String(out.chunLiOutfit.c_str());
 		writer.Key(ALMA_CAMMY_OUTFIT_ID);
-		writer.String(out.cammyOutfit.uuid.c_str());
+		writer.String(out.cammyOutfit.c_str());
 		writer.Key(ALMA_SUMMER_PONCHO_ID);
-		writer.String(out.summerPoncho.uuid.c_str());
+		writer.String(out.summerPoncho.c_str());
 		writer.EndObject();
 
 		bool success = writeJsonFile(almaConfigPath.string(), s.GetString());
@@ -484,8 +487,8 @@ namespace kbf {
 		if (!config.IsObject() || config.HasParseError()) return false;
 
 		// Outfits
-		parseString(config, ERIK_HANDLERS_OUTFIT_ID, ERIK_HANDLERS_OUTFIT_ID, &out->handlersOutfit.uuid);
-		parseString(config, ERIK_SUMMER_HAT_ID, ERIK_SUMMER_HAT_ID, &out->summerHat.uuid);
+		parseString(config, ERIK_HANDLERS_OUTFIT_ID, ERIK_HANDLERS_OUTFIT_ID, &out->handlersOutfit);
+		parseString(config, ERIK_SUMMER_HAT_ID, ERIK_SUMMER_HAT_ID, &out->summerHat);
 
 		DEBUG_STACK.push(std::format("Loaded Erik config from {}", erikConfigPath.string()), DebugStack::Color::SUCCESS);
 		return true;
@@ -497,9 +500,9 @@ namespace kbf {
 
 		writer.StartObject();
 		writer.Key(ERIK_HANDLERS_OUTFIT_ID);
-		writer.String(out.handlersOutfit.uuid.c_str());
+		writer.String(out.handlersOutfit.c_str());
 		writer.Key(ERIK_SUMMER_HAT_ID);
-		writer.String(out.summerHat.uuid.c_str());
+		writer.String(out.summerHat.c_str());
 		writer.EndObject();
 
 		bool success = writeJsonFile(erikConfigPath.string(), s.GetString());
@@ -523,8 +526,8 @@ namespace kbf {
 		if (!config.IsObject() || config.HasParseError()) return false;
 
 		// Outfits
-		parseString(config, GEMMA_SMITHYS_OUTFIT_ID, GEMMA_SMITHYS_OUTFIT_ID, &out->smithysOutfit.uuid);
-		parseString(config, GEMMA_SUMMER_COVERALLS_ID, GEMMA_SUMMER_COVERALLS_ID, &out->summerCoveralls.uuid);
+		parseString(config, GEMMA_SMITHYS_OUTFIT_ID, GEMMA_SMITHYS_OUTFIT_ID, &out->smithysOutfit);
+		parseString(config, GEMMA_SUMMER_COVERALLS_ID, GEMMA_SUMMER_COVERALLS_ID, &out->summerCoveralls);
 
 		DEBUG_STACK.push(std::format("Loaded Gemma config from {}", gemmaConfigPath.string()), DebugStack::Color::SUCCESS);
 		return true;
@@ -536,9 +539,9 @@ namespace kbf {
 
 		writer.StartObject();
 		writer.Key(GEMMA_SMITHYS_OUTFIT_ID);
-		writer.String(out.smithysOutfit.uuid.c_str());
+		writer.String(out.smithysOutfit.c_str());
 		writer.Key(GEMMA_SUMMER_COVERALLS_ID);
-		writer.String(out.summerCoveralls.uuid.c_str());
+		writer.String(out.summerCoveralls.c_str());
 		writer.EndObject();
 
 		bool success = writeJsonFile(gemmaConfigPath.string(), s.GetString());
@@ -561,8 +564,8 @@ namespace kbf {
 		});
 		if (!config.IsObject() || config.HasParseError()) return false;
 
-		parseString(config, NPC_MALE_ID, NPC_MALE_ID, &out->male.uuid);
-		parseString(config, NPC_FEMALE_ID, NPC_FEMALE_ID, &out->female.uuid);
+		parseString(config, NPC_MALE_ID, NPC_MALE_ID, &out->male);
+		parseString(config, NPC_FEMALE_ID, NPC_FEMALE_ID, &out->female);
 
 		DEBUG_STACK.push(std::format("Loaded NPC config from {}", npcConfigPath.string()), DebugStack::Color::SUCCESS);
 		return true;
@@ -574,9 +577,9 @@ namespace kbf {
 
 		writer.StartObject();
 		writer.Key(NPC_MALE_ID);
-		writer.String(out.male.uuid.c_str());
+		writer.String(out.male.c_str());
 		writer.Key(NPC_FEMALE_ID);
-		writer.String(out.female.uuid.c_str());
+		writer.String(out.female.c_str());
 		writer.EndObject();
 
 		bool success = writeJsonFile(npcConfigPath.string(), s.GetString());
@@ -599,8 +602,8 @@ namespace kbf {
 		});
 		if (!config.IsObject() || config.HasParseError()) return false;
 
-		parseString(config, PLAYER_MALE_ID, PLAYER_MALE_ID, &out->male.uuid);
-		parseString(config, PLAYER_FEMALE_ID, PLAYER_FEMALE_ID, &out->female.uuid);
+		parseString(config, PLAYER_MALE_ID, PLAYER_MALE_ID, &out->male);
+		parseString(config, PLAYER_FEMALE_ID, PLAYER_FEMALE_ID, &out->female);
 
 		DEBUG_STACK.push(std::format("Loaded Player config from {}", playerConfigPath.string()), DebugStack::Color::SUCCESS);
 		return true;
@@ -612,9 +615,9 @@ namespace kbf {
 
 		writer.StartObject();
 		writer.Key(PLAYER_MALE_ID);
-		writer.String(out.male.uuid.c_str());
+		writer.String(out.male.c_str());
 		writer.Key(PLAYER_FEMALE_ID);
-		writer.String(out.female.uuid.c_str());
+		writer.String(out.female.c_str());
 		writer.EndObject();
 
 		bool success = writeJsonFile(playerConfigPath.string(), s.GetString());
@@ -825,5 +828,74 @@ namespace kbf {
 	std::string KBFDataManager::getPlayerOverrideFilename(const PlayerData& player) const {
 		return player.name + "-" + (player.female ? "Female" : "Male") + "-" + player.hunterId;
 	}
+
+	void KBFDataManager::validateObjectsUsingPresetGroups() {
+		validatePlayerOverrides();
+		validateDefaultConfigs_PresetGroups();
+	}
+
+	void KBFDataManager::validatePlayerOverrides() {
+		DEBUG_STACK.push("Validating Player Overrides...", DebugStack::Color::DEBUG);
+		for (auto& [player, playerOverride] : playerOverrides) {
+			if (!playerOverride.presetGroup.empty() && getPresetGroupByUUID(playerOverride.presetGroup) == nullptr) {
+				DEBUG_STACK.push(std::format("Player override for {} has an invalid preset group ({}) - it may have been deleted. Reverting to default...",
+					player.string(),
+					playerOverride.presetGroup
+				), DebugStack::Color::WARNING);
+
+				PlayerOverride newPlayerOverride = playerOverride;
+				newPlayerOverride.presetGroup = "";
+
+				updatePlayerOverride(player, newPlayerOverride);
+			}
+		}
+	}
+
+	void KBFDataManager::validateDefaultConfigs_PresetGroups() {
+		// Players
+		DEBUG_STACK.push("Validating Player Defaults...", DebugStack::Color::DEBUG);
+		std::unordered_set<std::string> badUUIDs;
+
+		PlayerDefaults& player = presetGroupDefaults.player;
+		if (!validatePresetGroup(player.male))   badUUIDs.insert(player.male);
+		if (!validatePresetGroup(player.female)) badUUIDs.insert(player.female);
+
+		if (badUUIDs.size() > 0) {
+			std::string errStr = "Player defaults had invalid preset group(s):\n";
+			for (const auto& id : badUUIDs) {
+				errStr += " - " + id + "\n";
+			}
+			errStr += " Which may have been deleted. Reverting to default...";
+			DEBUG_STACK.push(errStr, DebugStack::Color::WARNING);
+			writePlayerConfig(player);
+		}
+
+		// NPCs
+		badUUIDs.clear();
+		DEBUG_STACK.push("Validating NPC Defaults...", DebugStack::Color::DEBUG);
+
+		NpcDefaults& npc = presetGroupDefaults.npc;
+		if (!validatePresetGroup(npc.male))   badUUIDs.insert(npc.male);
+		if (!validatePresetGroup(npc.female)) badUUIDs.insert(npc.female);
+
+		if (badUUIDs.size() > 0) {
+			std::string errStr = "NPC defaults had invalid preset group(s):\n";
+			for (const auto& id : badUUIDs) {
+				errStr += " - " + id + "\n";
+			}
+			errStr += " Which may have been deleted. Reverting to default...";
+			DEBUG_STACK.push(errStr, DebugStack::Color::WARNING);
+			writeNpcConfig(npc);
+		}
+	}
+
+	bool KBFDataManager::validatePresetGroup(std::string& uuid) const {
+		if (!uuid.empty() && getPresetGroupByUUID(uuid) == nullptr) {
+			uuid = "";
+			return false;
+		}
+		return true;
+	}
+
 
 }

@@ -5,13 +5,13 @@
 namespace kbf {
 
 	struct PlayerDefaults {
-		PresetGroup male;
-		PresetGroup female;
+		std::string male;
+		std::string female;
 	};
 	
 	struct NpcDefaults {
-		PresetGroup male;
-		PresetGroup female;
+		std::string male;
+		std::string female;
 	};
 
 	struct PresetGroupDefaults {

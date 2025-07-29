@@ -22,6 +22,14 @@ namespace kbf {
 		// TODO: If can ever be bothered, most of this can be abstracted to 3 
 		//        JSON handler classes that derive from some base.
 
+		PlayerDefaults& playerDefaults() { return presetGroupDefaults.player; }
+		NpcDefaults& npcDefaults() { return presetGroupDefaults.npc; }
+
+		void setPlayerConfig_Male(std::string presetUUID) { playerDefaults().male = presetUUID; writePlayerConfig(playerDefaults()); }
+		void setPlayerConfig_Female(std::string presetUUID) { playerDefaults().female = presetUUID; writePlayerConfig(playerDefaults()); }
+		void setNpcConfig_Male(std::string presetUUID) { npcDefaults().male = presetUUID; writeNpcConfig(npcDefaults()); }
+		void setNpcConfig_Female(std::string presetUUID) { npcDefaults().female = presetUUID; writeNpcConfig(npcDefaults()); }
+
 		bool presetExists(const std::string& name) const;
 		bool presetGroupExists(const std::string& name) const;
 		bool playerOverrideExists(const PlayerData& player) const;
@@ -106,6 +114,16 @@ namespace kbf {
 		bool writePlayerOverride(const std::filesystem::path& path, const PlayerOverride& playerOverride) const;
 		bool loadPlayerOverrides();
 		std::string getPlayerOverrideFilename(const PlayerData& playerData) const;
+
+		void validateObjectsUsingPresetGroups();
+		void validatePlayerOverrides();
+		void validateDefaultConfigs_PresetGroups();
+		bool validatePresetGroup(std::string& uuid) const;
+
+		void validateObjectsUsingPresets();
+		void validatePresetGroups();
+		void validateDefaultConfigs_Presets();
+
 	};
 
 }

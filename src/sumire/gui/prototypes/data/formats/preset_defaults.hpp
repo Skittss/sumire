@@ -5,23 +5,23 @@
 namespace kbf {
 
 	struct AlmaDefaults {
-		Preset handlersOutfit;
-		Preset newWorldComission;
-		Preset scrivenersCoat;
-		Preset springBlossomKimono;
-		Preset chunLiOutfit;
-		Preset cammyOutfit;
-		Preset summerPoncho;
+		std::string handlersOutfit;
+		std::string newWorldComission;
+		std::string scrivenersCoat;
+		std::string springBlossomKimono;
+		std::string chunLiOutfit;
+		std::string cammyOutfit;
+		std::string summerPoncho;
 	};
 
 	struct GemmaDefaults {
-		Preset smithysOutfit;
-		Preset summerCoveralls;
+		std::string smithysOutfit;
+		std::string summerCoveralls;
 	};
 
 	struct ErikDefaults {
-		Preset handlersOutfit;
-		Preset summerHat;
+		std::string handlersOutfit;
+		std::string summerHat;
 	};
 
 	struct PresetDefaults {

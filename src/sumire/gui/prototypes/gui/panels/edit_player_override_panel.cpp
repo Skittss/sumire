@@ -102,7 +102,7 @@ namespace kbf {
         if (cantUpdate) ImGui::BeginDisabled();
         if (ImGui::Button("Update")) {
             // Validate preset group can be found
-            if (dataManager.getPresetGroupByUUID(playerOverride.presetGroup) == nullptr) {
+            if (!playerOverride.presetGroup.empty() && dataManager.getPresetGroupByUUID(playerOverride.presetGroup) == nullptr) {
                 DEBUG_STACK.push(std::format("Updated player override: {} uses an invalid preset group: {}. Reverting to default...", playerOverride.player.string(), playerOverride.presetGroup), DebugStack::Color::WARNING);
             }
             INVOKE_REQUIRED_CALLBACK(updateCallback, playerOverrideBefore.player, playerOverride);

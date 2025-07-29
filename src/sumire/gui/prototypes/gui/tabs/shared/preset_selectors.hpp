@@ -1,7 +1,11 @@
 #pragma once
 
+#include <sumire/gui/prototypes/data/formats/preset_group.hpp>
+
 #include <sumire/gui/prototypes/gui/tabs/shared/sex_marker.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/alignment.hpp>
+
+#include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 
 #include <imgui.h>
 
@@ -39,11 +43,15 @@ namespace kbf {
         }
     }
 
-    inline void drawPresetGroupSelectorCombo(const std::string& strId, bool stretch = true) {
-
-        //std::string activeGroupStr = presetGroup ? presetGroup->name : "Default";
+    inline void drawPresetGroupSelectorCombo(
+        const std::string& strId, 
+        const PresetGroup* presetGroup, 
+        std::function<void()> onEdit, 
+        bool stretch = true
+    ) {
+        std::string activeGroupStr = presetGroup ? presetGroup->name : "Default";
         static char activeGroupStrBuffer[128] = "";
-        //std::strcpy(activeGroupStrBuffer, activeGroupStr.c_str());
+        std::strcpy(activeGroupStrBuffer, activeGroupStr.c_str());
 
         std::string id = "##" + strId;
         constexpr char const* buttonText = "Edit";
@@ -66,7 +74,7 @@ namespace kbf {
 
         std::string buttonLabel = buttonText + id;
         if (ImGui::Button(buttonLabel.c_str())) {
-            // TODO: Open window
+            INVOKE_REQUIRED_CALLBACK(onEdit);
         }
     }
 
@@ -82,7 +90,13 @@ namespace kbf {
         drawPresetSelectorCombo(strId);
     }
 
-    inline void drawPresetGroupSelectTableEntry(ImFont* symbolFont, const std::string& strId, const std::string& entryName) {
+    inline void drawPresetGroupSelectTableEntry(
+        ImFont* symbolFont, 
+        const std::string& strId, 
+        const std::string& entryName,
+        const PresetGroup* presetGroup,
+        std::function<void()> onEdit
+    ) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
@@ -99,7 +113,7 @@ namespace kbf {
 
         ImGui::TableNextColumn();
         padY(ImGui::GetTextLineHeightWithSpacing() * 0.25f);
-        drawPresetGroupSelectorCombo(strId);
+        drawPresetGroupSelectorCombo(entryName + strId, presetGroup, onEdit);
     }
 
 }

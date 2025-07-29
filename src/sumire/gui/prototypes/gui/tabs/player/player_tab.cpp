@@ -20,22 +20,33 @@ namespace kbf {
 
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, LIST_PADDING);
 
-        constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_PadOuterX;
-        ImGui::BeginTable("##PlayerDefaultPresetGroupList", 2, tableFlags);
-        drawPresetGroupSelectTableEntry(wsSymbolFont, "##PlayerPresetGroup_Male", "Male");
-        drawPresetGroupSelectTableEntry(wsSymbolFont, "##PlayerPresetGroup_Female", "Female");
-        ImGui::EndTable();
-
+        drawDefaults();
         drawTabBarSeparator("Overrides", "PlayerTabOverrides");
-
         drawOverrideList();
 
         ImGui::PopStyleVar();
     }
 
     void PlayerTab::drawPopouts() {
+        editDefaultPanel.draw();
         addPlayerOverridePanel.draw();
         editPlayerOverridePanel.draw();
+    }
+
+    void PlayerTab::drawDefaults() {
+        constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_PadOuterX;
+        ImGui::BeginTable("##PlayerDefaultPresetGroupList", 2, tableFlags);
+
+        drawPresetGroupSelectTableEntry(wsSymbolFont, 
+            "##PlayerPresetGroup_Male", "Male",  
+            dataManager.getPresetGroupByUUID(dataManager.playerDefaults().male), 
+            editMaleCb);
+        drawPresetGroupSelectTableEntry(wsSymbolFont, 
+            "##PlayerPresetGroup_Female", "Female", 
+            dataManager.getPresetGroupByUUID(dataManager.playerDefaults().female),
+            editFemaleCb);
+
+        ImGui::EndTable();
     }
 
     void PlayerTab::drawOverrideList() {
@@ -165,6 +176,16 @@ namespace kbf {
             ImGui::PopStyleVar();
             ImGui::EndTable();
         }
+    }
+
+    void PlayerTab::openEditDefaultPanel(const std::function<void(std::string)>& onSelect) {
+        editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_PlayerTab", dataManager, wsSymbolFont, wsArmourFont);
+        editDefaultPanel.get()->focus();
+
+        editDefaultPanel.get()->onSelectPresetGroup([&](std::string uuid) {
+            INVOKE_REQUIRED_CALLBACK(onSelect, uuid);
+            editDefaultPanel.close();
+        });
     }
 
     void PlayerTab::openAddPlayerOverridePanel() {

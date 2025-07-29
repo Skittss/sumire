@@ -40,13 +40,31 @@ namespace kbf {
         drawTabBarSeparator("Unnamed NPCs", "NpcTabUnnamed");
 
         ImGui::BeginTable("##UnnamedNpcPresetGroupList", 2, tableFlags);
-        drawPresetGroupSelectTableEntry(wsSymbolFont, "##UnnamedNpcPresetGroup_Male", "Male");
-        drawPresetGroupSelectTableEntry(wsSymbolFont, "##UnnamedNpcPresetGroup_Female", "Female");
+        drawPresetGroupSelectTableEntry(wsSymbolFont, 
+            "##UnnamedNpcPresetGroup_Male", "Male",
+            dataManager.getPresetGroupByUUID(dataManager.npcDefaults().male),
+            editMaleCb);
+        drawPresetGroupSelectTableEntry(wsSymbolFont, 
+            "##UnnamedNpcPresetGroup_Female", "Female",
+            dataManager.getPresetGroupByUUID(dataManager.npcDefaults().female),
+            editFemaleCb);
         ImGui::EndTable();
 
         ImGui::PopStyleVar(1);
 	}
 
-	void NpcTab::drawPopouts() {};
+	void NpcTab::drawPopouts() {
+        editDefaultPanel.draw();
+    };
+
+    void NpcTab::openEditDefaultPanel(const std::function<void(std::string)>& onSelect) {
+        editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_PlayerTab", dataManager, wsSymbolFont, wsArmourFont);
+        editDefaultPanel.get()->focus();
+
+        editDefaultPanel.get()->onSelectPresetGroup([&](std::string uuid) {
+            INVOKE_REQUIRED_CALLBACK(onSelect, uuid);
+            editDefaultPanel.close();
+            });
+    }
 
 }
