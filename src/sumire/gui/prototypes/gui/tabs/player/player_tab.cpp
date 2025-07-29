@@ -179,6 +179,12 @@ namespace kbf {
             dataManager.addPlayerOverride(newOverride);
             addPlayerOverridePanel.close();
         });
+
+        addPlayerOverridePanel.get()->onCheckDisablePlayer([&](const PlayerData& playerData) {
+            return dataManager.playerOverrideExists(playerData);
+        });
+
+        addPlayerOverridePanel.get()->onRequestDisabledPlayerTooltip([&]() { return "An override already exists for this player"; });
     }
 
     void PlayerTab::openEditPlayerOverridePanel(const PlayerData& playerData) {

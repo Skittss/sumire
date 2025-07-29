@@ -18,6 +18,8 @@ namespace kbf {
 
 		bool draw() override;
 		void onSelectPlayer(std::function<void(PlayerData)> callback) { selectCallback = callback; }
+		void onCheckDisablePlayer(std::function<bool(const PlayerData&)> callback) { checkDisablePlayerCallback = callback; }
+		void onRequestDisabledPlayerTooltip(std::function<std::string()> callback) { requestDisabledPlayerTooltipCallback = callback; }
 
 	private:
 		std::vector<PlayerData> filterPlayerList(
@@ -26,6 +28,8 @@ namespace kbf {
 		void drawPlayerList(const std::vector<PlayerData>& playerList);
 
 		std::function<void(PlayerData)> selectCallback;
+		std::function<bool(PlayerData)> checkDisablePlayerCallback;
+		std::function<std::string()> requestDisabledPlayerTooltipCallback;
 
 		ImFont* wsSymbolFont;
 	};

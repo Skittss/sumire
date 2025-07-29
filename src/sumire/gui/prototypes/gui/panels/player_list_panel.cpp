@@ -66,6 +66,8 @@ namespace kbf {
         std::vector<PlayerData> nameMatches;
         std::vector<PlayerData> idMatches;
 
+        std::string filterLower = toLower(filter);
+
         for (const auto& player : playerList)
         {
             std::string nameLower = toLower(player.name);
@@ -73,9 +75,9 @@ namespace kbf {
 
             if (!filter.empty())
             {
-                if (nameLower.find(filter) != std::string::npos)
+                if (nameLower.find(filterLower) != std::string::npos)
                     nameMatches.push_back(player);
-                else if (idLower.find(filter) != std::string::npos)
+                else if (idLower.find(filterLower) != std::string::npos)
                     idMatches.push_back(player);
             }
             else
@@ -110,8 +112,24 @@ namespace kbf {
         else {
             for (const auto& player : playerList)
             {
+                bool disablePlayer = INVOKE_OPTIONAL_CALLBACK_TYPED(bool, false, checkDisablePlayerCallback, player);
+                std::string disableTooltip = INVOKE_OPTIONAL_CALLBACK_TYPED(std::string, "", requestDisabledPlayerTooltipCallback);
+
+                if (disablePlayer) {
+                    const ImVec4 test = ImColor(255, 0, 0, 100);
+                    const ImVec4 disabled_bg = ImColor(100, 100, 100, 100); // Greyed-out background
+                    const ImVec4 disabled_text = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+                    ImGui::PushStyleColor(ImGuiCol_Header, test);           // Unselected background
+                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, test);    // Hovered background
+                    ImGui::PushStyleColor(ImGuiCol_HeaderActive, test);     // Active background
+                    ImGui::PushStyleColor(ImGuiCol_Text, disabled_text);           // Greyed-out text
+                }
                 if (ImGui::Selectable(player.name.c_str())) {
-                    INVOKE_REQUIRED_CALLBACK(selectCallback, player);
+                    if (!disablePlayer) INVOKE_REQUIRED_CALLBACK(selectCallback, player);
+                }
+                if (disablePlayer) {
+                    ImGui::PopStyleColor(4);
+                    if (!disableTooltip.empty()) ImGui::SetItemTooltip(disableTooltip.c_str());
                 }
 
                 constexpr float sexMarkerOffset = 10.0f;
