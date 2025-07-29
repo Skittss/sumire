@@ -142,6 +142,7 @@ SET(SUMIRE_SOURCES
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/edit_preset_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/info_popup_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/player_list_panel.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/preset_group_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/debug/debug_tab.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/editor/editor_tab.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/npc/npc_tab.cpp "
