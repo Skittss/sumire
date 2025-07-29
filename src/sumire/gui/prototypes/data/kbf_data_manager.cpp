@@ -349,7 +349,7 @@ namespace kbf {
 		if (!exists && onRequestCreateDefault) {
 			DEBUG_STACK.push(std::format("Json file does not exist at {}. Creating...", path), DebugStack::Color::WARNING);
 
-			bool createdDefault = INVOKE_OPTIONAL_CALLBACK_TYPED(bool, onRequestCreateDefault);
+			bool createdDefault = INVOKE_OPTIONAL_CALLBACK_TYPED(bool, false, onRequestCreateDefault);
 
 			if (createdDefault) {
 				DEBUG_STACK.push(std::format("Created default json at {}", path), DebugStack::Color::SUCCESS);
