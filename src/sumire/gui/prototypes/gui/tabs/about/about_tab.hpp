@@ -16,6 +16,10 @@ namespace kbf {
 		void drawPopouts() override;
 
 	private:
+		void drawInfoTab();
+		void drawTutorialsTab();
+		void drawChangelogTab();
+
 		ImFont* monoFontTiny;
 
 	};
