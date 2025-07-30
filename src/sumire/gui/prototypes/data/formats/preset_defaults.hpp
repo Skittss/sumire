@@ -4,9 +4,11 @@
 
 namespace kbf {
 
+	// Note: If adding new entires, check ALL references to these variables to see where updates are needed.
+
 	struct AlmaDefaults {
 		std::string handlersOutfit;
-		std::string newWorldComission;
+		std::string newWorldCommission;
 		std::string scrivenersCoat;
 		std::string springBlossomKimono;
 		std::string chunLiOutfit;
