@@ -17,7 +17,8 @@ namespace kbf {
 			const PlayerData& playerData,
 			const std::string& label,
 			const std::string& strID,
-			const KBFDataManager& dataManager);
+			const KBFDataManager& dataManager,
+			ImFont* wsSymbolFont);
 
 		bool draw() override;
 		void onUpdate(std::function<void(const PlayerData&, PlayerOverride)> callback) { updateCallback = callback; }
@@ -26,6 +27,7 @@ namespace kbf {
 
 	private:
 		const KBFDataManager& dataManager;
+		ImFont* wsSymbolFont;
 
 		PlayerOverride playerOverrideBefore;
 		PlayerOverride playerOverride;

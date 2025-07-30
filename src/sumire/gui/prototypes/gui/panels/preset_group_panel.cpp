@@ -22,15 +22,23 @@ namespace kbf {
         bool open = true;
         processFocus();
         ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
-        ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::SetNextWindowSize(ImVec2(550, 0), ImGuiCond_Once);
+        ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse);
+
+        float width = ImGui::GetWindowSize().x;
 
         static char filterBuffer[128] = "";
         std::string filterStr{ filterBuffer };
 
         drawPresetGroupList(dataManager.getPresetGroups(filterStr, true));
 
-        ImGui::Spacing();
-        ImGui::InputText(" Search ", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PushItemWidth(-1);
+        ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PopItemWidth();
+
+        float contentHeight = ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y;
+        ImVec2 newSize = ImVec2(width, contentHeight);
+        ImGui::SetWindowSize(newSize);
 
         ImGui::End();
         ImGui::PopStyleVar();
@@ -45,18 +53,46 @@ namespace kbf {
         ImGui::BeginChild("PresetGroupChild", ImVec2(0, 150), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+        const float selectableHeight = ImGui::GetTextLineHeight();
 
-        if (ImGui::Selectable("Default")) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.365f, 0.678f, 0.886f, 0.8f));
+        if (ImGui::Selectable("Default", false, 0, ImVec2(0.0f, selectableHeight))) {
             INVOKE_REQUIRED_CALLBACK(selectCallback, "");
         }
+        ImGui::PopStyleColor();
 
         if (presetGroups.size() > 0) ImGui::Separator();
 
         for (const PresetGroup* group : presetGroups)
         {
-            if (ImGui::Selectable(group->name.c_str())) {
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+
+            if (ImGui::Selectable(("##" + group->name).c_str(), false, 0, ImVec2(0.0f, selectableHeight))) {
                 INVOKE_REQUIRED_CALLBACK(selectCallback, group->uuid);
             }
+
+            // Sex Mark
+            std::string sexMarkSymbol = group->female ? WS_FONT_FEMALE : WS_FONT_MALE;
+            ImVec4 sexMarkerCol = group->female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+            ImGui::PushFont(wsSymbolFont);
+
+            constexpr float sexMarkerSpacingAfter = 5.0f;
+            constexpr float sexMarkerVerticalAlignOffset = 5.0f;
+            ImVec2 sexMarkerSize = ImGui::CalcTextSize(sexMarkSymbol.c_str());
+            ImVec2 sexMarkerPos;
+            sexMarkerPos.x = pos.x + ImGui::GetStyle().ItemSpacing.x;
+            sexMarkerPos.y = pos.y + (selectableHeight - sexMarkerSize.y) * 0.5f + sexMarkerVerticalAlignOffset;
+            ImGui::GetWindowDrawList()->AddText(sexMarkerPos, ImGui::GetColorU32(sexMarkerCol), sexMarkSymbol.c_str());
+
+            ImGui::PopFont();
+
+            // Group name
+            ImVec2 presetGroupNameSize = ImGui::CalcTextSize(group->name.c_str());
+            ImVec2 presetGroupNamePos;
+            presetGroupNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
+            presetGroupNamePos.y = pos.y + (selectableHeight - presetGroupNameSize.y) * 0.5f;
+            ImGui::GetWindowDrawList()->AddText(presetGroupNamePos, ImGui::GetColorU32(ImGuiCol_Text), group->name.c_str());
 
             std::string presetCountStr;
             if (group->presets.size() == 0) presetCountStr = "Empty";

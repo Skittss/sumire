@@ -20,7 +20,10 @@ namespace kbf {
         bool open = true;
         processFocus();
         ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
-        ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::SetNextWindowSize(ImVec2(350, 0), ImGuiCond_Once);
+        ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse);
+
+        float width = ImGui::GetWindowSize().x;
 
         std::vector<PlayerData> playerList = {
             {"Player 1",  "WK5UJ9FQ", false},
@@ -51,7 +54,13 @@ namespace kbf {
         drawPlayerList(filterPlayerList(filterStr, playerList));
 
         ImGui::Spacing();
-        ImGui::InputText(" Search ", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PushItemWidth(-1);
+        ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PopItemWidth();
+
+        float contentHeight = ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y;
+        ImVec2 newSize = ImVec2(width, contentHeight);
+        ImGui::SetWindowSize(newSize);
 
         ImGui::End();
         ImGui::PopStyleVar();

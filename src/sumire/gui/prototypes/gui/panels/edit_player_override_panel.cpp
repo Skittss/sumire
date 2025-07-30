@@ -1,6 +1,7 @@
 #include <sumire/gui/prototypes/gui/panels/edit_player_override_panel.hpp>
 
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
+#include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
@@ -13,8 +14,9 @@ namespace kbf {
         const PlayerData& playerData,
         const std::string& label,
         const std::string& strID,
-        const KBFDataManager& dataManager
-    ) : iPanel(name, strID), dataManager{ dataManager } {
+        const KBFDataManager& dataManager,
+        ImFont* wsSymbolFont
+    ) : iPanel(label, strID), dataManager{ dataManager }, wsSymbolFont{ wsSymbolFont } {
         const PlayerOverride* overridePtr = dataManager.getPlayerOverride(playerData);
         playerOverrideBefore = *overridePtr;
         playerOverride       = *overridePtr;
@@ -71,7 +73,9 @@ namespace kbf {
 
         drawPresetGroupList(dataManager.getPresetGroups(filterStr, true));
 
-        ImGui::InputText(" Search ", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PushItemWidth(-1);
+        ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PopItemWidth();
 
         ImGui::Spacing();
         ImGui::Spacing();
@@ -123,18 +127,46 @@ namespace kbf {
         ImGui::BeginChild("PresetGroupChild", ImVec2(0, 150), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+        const float selectableHeight = ImGui::GetTextLineHeight();
 
-        if (ImGui::Selectable("Default", playerOverride.presetGroup.empty())) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.365f, 0.678f, 0.886f, 0.8f));
+        if (ImGui::Selectable("Default", false, 0, ImVec2(0.0f, selectableHeight))) {
             playerOverride.presetGroup = "";
         }
+        ImGui::PopStyleColor();
 
         if (presetGroups.size() > 0) ImGui::Separator();
 
         for (const PresetGroup* group : presetGroups)
         {
-            if (ImGui::Selectable(group->name.c_str(), group->uuid == playerOverride.presetGroup)) {
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+
+            if (ImGui::Selectable(("##" + group->name).c_str(), false, 0, ImVec2(0.0f, selectableHeight))) {
                 playerOverride.presetGroup = group->uuid;
             }
+
+            // Sex Mark
+            std::string sexMarkSymbol = group->female ? WS_FONT_FEMALE : WS_FONT_MALE;
+            ImVec4 sexMarkerCol = group->female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+            ImGui::PushFont(wsSymbolFont);
+
+            constexpr float sexMarkerSpacingAfter = 5.0f;
+            constexpr float sexMarkerVerticalAlignOffset = 5.0f;
+            ImVec2 sexMarkerSize = ImGui::CalcTextSize(sexMarkSymbol.c_str());
+            ImVec2 sexMarkerPos;
+            sexMarkerPos.x = pos.x + ImGui::GetStyle().ItemSpacing.x;
+            sexMarkerPos.y = pos.y + (selectableHeight - sexMarkerSize.y) * 0.5f + sexMarkerVerticalAlignOffset;
+            ImGui::GetWindowDrawList()->AddText(sexMarkerPos, ImGui::GetColorU32(sexMarkerCol), sexMarkSymbol.c_str());
+
+            ImGui::PopFont();
+
+            // Group name
+            ImVec2 presetGroupNameSize = ImGui::CalcTextSize(group->name.c_str());
+            ImVec2 presetGroupNamePos;
+            presetGroupNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
+            presetGroupNamePos.y = pos.y + (selectableHeight - presetGroupNameSize.y) * 0.5f;
+            ImGui::GetWindowDrawList()->AddText(presetGroupNamePos, ImGui::GetColorU32(ImGuiCol_Text), group->name.c_str());
 
             std::string presetCountStr;
             if (group->presets.size() == 0) presetCountStr = "Empty";

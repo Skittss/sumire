@@ -79,7 +79,9 @@ namespace kbf {
 
         drawArmourList(filterStr);
 
-        ImGui::InputText(" Search ", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PushItemWidth(-1);
+        ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PopItemWidth();
 
         ImGui::Spacing();
         ImGui::Spacing();
