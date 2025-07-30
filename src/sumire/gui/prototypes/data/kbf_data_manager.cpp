@@ -219,12 +219,14 @@ namespace kbf {
 		if (!std::filesystem::exists(currPresetPath)) {
 			DEBUG_STACK.push(std::format("Deleted preset {} ({}) locally, but no corresponding .json file exists.", presetName, uuid), DebugStack::Color::WARNING);
 			presets.erase(uuid);
+			validateObjectsUsingPresets();
 			return;
 		}
 
 		if (deleteJsonFile(currPresetPath.string())) {
 			DEBUG_STACK.push(std::format("Deleted preset {} ({})", presetName, uuid), DebugStack::Color::SUCCESS);
 			presets.erase(uuid);
+			validateObjectsUsingPresets();
 		}
 	}
 
@@ -434,12 +436,12 @@ namespace kbf {
 
 		// Outfits 
 		parseString(config, ALMA_HANDLERS_OUTFIT_ID, ALMA_HANDLERS_OUTFIT_ID, &out->handlersOutfit);
-		parseString(config, ALMA_NEW_WORLD_COMISSION_ID, ALMA_NEW_WORLD_COMISSION_ID, &out->newWorldComission);
+		parseString(config, ALMA_NEW_WORLD_COMISSION_ID, ALMA_NEW_WORLD_COMISSION_ID, &out->newWorldCommission);
 		parseString(config, ALMA_SCRIVENERS_COAT_ID, ALMA_SCRIVENERS_COAT_ID, &out->scrivenersCoat);
 		parseString(config, ALMA_SPRING_BLOSSOM_KIMONO_ID, ALMA_SPRING_BLOSSOM_KIMONO_ID, &out->springBlossomKimono);
 		parseString(config, ALMA_CHUN_LI_OUTFIT_ID, ALMA_CHUN_LI_OUTFIT_ID, &out->chunLiOutfit);
 		parseString(config, ALMA_CAMMY_OUTFIT_ID, ALMA_CAMMY_OUTFIT_ID, &out->cammyOutfit);
-		parseString(config, ALMA_SUMMER_PONCHO_ID, ALMA_SUMMER_PONCHO_ID, &out->cammyOutfit);
+		parseString(config, ALMA_SUMMER_PONCHO_ID, ALMA_SUMMER_PONCHO_ID, &out->summerPoncho);
 
 		DEBUG_STACK.push(std::format("Loaded Alma config from {}", almaConfigPath.string()), DebugStack::Color::SUCCESS);
 		return true;
@@ -453,7 +455,7 @@ namespace kbf {
 		writer.Key(ALMA_HANDLERS_OUTFIT_ID);
 		writer.String(out.handlersOutfit.c_str());
 		writer.Key(ALMA_NEW_WORLD_COMISSION_ID);
-		writer.String(out.newWorldComission.c_str());
+		writer.String(out.newWorldCommission.c_str());
 		writer.Key(ALMA_SCRIVENERS_COAT_ID);
 		writer.String(out.scrivenersCoat.c_str());
 		writer.Key(ALMA_SPRING_BLOSSOM_KIMONO_ID);
@@ -857,15 +859,17 @@ namespace kbf {
 		std::unordered_set<std::string> badUUIDs;
 
 		PlayerDefaults& player = presetGroupDefaults.player;
-		if (!validatePresetGroup(player.male))   badUUIDs.insert(player.male);
-		if (!validatePresetGroup(player.female)) badUUIDs.insert(player.female);
+		const std::string playerMaleBefore   = player.male;
+		const std::string playerFemaleBefore = player.female;
+		if (!validatePresetGroupExists(player.male))   badUUIDs.insert(playerMaleBefore);
+		if (!validatePresetGroupExists(player.female)) badUUIDs.insert(playerFemaleBefore);
 
 		if (badUUIDs.size() > 0) {
 			std::string errStr = "Player defaults had invalid preset group(s):\n";
 			for (const auto& id : badUUIDs) {
-				errStr += " - " + id + "\n";
+				errStr += "   - " + id + "\n";
 			}
-			errStr += " Which may have been deleted. Reverting to default...";
+			errStr += "   Which may have been deleted. Reverting to default...";
 			DEBUG_STACK.push(errStr, DebugStack::Color::WARNING);
 			writePlayerConfig(player);
 		}
@@ -875,21 +879,23 @@ namespace kbf {
 		DEBUG_STACK.push("Validating NPC Defaults...", DebugStack::Color::DEBUG);
 
 		NpcDefaults& npc = presetGroupDefaults.npc;
-		if (!validatePresetGroup(npc.male))   badUUIDs.insert(npc.male);
-		if (!validatePresetGroup(npc.female)) badUUIDs.insert(npc.female);
+		const std::string npcMaleBefore   = npc.male;
+		const std::string npcFemaleBefore = npc.female;
+		if (!validatePresetGroupExists(npc.male))   badUUIDs.insert(npcMaleBefore);
+		if (!validatePresetGroupExists(npc.female)) badUUIDs.insert(npcFemaleBefore);
 
 		if (badUUIDs.size() > 0) {
 			std::string errStr = "NPC defaults had invalid preset group(s):\n";
 			for (const auto& id : badUUIDs) {
-				errStr += " - " + id + "\n";
+				errStr += "   - " + id + "\n";
 			}
-			errStr += " Which may have been deleted. Reverting to default...";
+			errStr += "   Which may have been deleted. Reverting to default...";
 			DEBUG_STACK.push(errStr, DebugStack::Color::WARNING);
 			writeNpcConfig(npc);
 		}
 	}
 
-	bool KBFDataManager::validatePresetGroup(std::string& uuid) const {
+	bool KBFDataManager::validatePresetGroupExists(std::string& uuid) const {
 		if (!uuid.empty() && getPresetGroupByUUID(uuid) == nullptr) {
 			uuid = "";
 			return false;
@@ -897,5 +903,134 @@ namespace kbf {
 		return true;
 	}
 
+
+	void KBFDataManager::validateObjectsUsingPresets() {
+		validatePresetGroups();
+		validateDefaultConfigs_Presets();
+	}
+
+	void KBFDataManager::validatePresetGroups() {
+		DEBUG_STACK.push("Validating Preset Groups...", DebugStack::Color::DEBUG);
+		for (auto& [uuid, presetGroup] : presetGroups) {
+			PresetGroup* newPresetGroup = nullptr;
+			size_t defaultCount = 0;
+			size_t invalidCount = 1;
+
+			for (auto& [armourSet, preset] : presetGroup.presets) {
+				bool isDefault = preset.uuid.empty();
+				bool isInvalid = getPresetByUUID(preset.uuid) == nullptr;
+
+				if (isDefault || isInvalid) {
+					if (!newPresetGroup) {
+						newPresetGroup = new PresetGroup{ presetGroup };
+					}
+
+					// remove the entry
+					newPresetGroup->presets.erase(armourSet);
+
+					if      (isDefault) defaultCount++;
+					else if (isInvalid) invalidCount++;
+				}
+			}
+
+			if (newPresetGroup) {
+				DEBUG_STACK.push(std::format("Validated Preset Group {} ({}): Cleaned {} defaults and reverted {} invalid presets to default.", 
+					presetGroup.name,
+					presetGroup.uuid,
+					defaultCount,
+					invalidCount
+				), DebugStack::Color::WARNING);
+
+				updatePresetGroup(presetGroup.uuid, *newPresetGroup);
+				delete newPresetGroup;
+			}
+		}
+	}
+
+	void KBFDataManager::validateDefaultConfigs_Presets() {
+		// Alma
+		DEBUG_STACK.push("Validating Alma Config...", DebugStack::Color::DEBUG);
+		std::unordered_set<std::string> badUUIDs;
+
+		{
+			AlmaDefaults& alma = presetDefaults.alma;
+			const std::string handlersOutfitBefore      = alma.handlersOutfit;
+			const std::string newWorldCommissionBefore  = alma.newWorldCommission;
+			const std::string scrivenersCoatBefore      = alma.scrivenersCoat;
+			const std::string springBlossomKimonoBefore = alma.springBlossomKimono;
+			const std::string chunLiOutfitBefore        = alma.chunLiOutfit;
+			const std::string cammyOutfitBefore         = alma.cammyOutfit;
+			const std::string summerPonchoBefore        = alma.summerPoncho;
+			if (!validatePresetExists(alma.handlersOutfit))      badUUIDs.insert(handlersOutfitBefore     );
+			if (!validatePresetExists(alma.newWorldCommission))  badUUIDs.insert(newWorldCommissionBefore );
+			if (!validatePresetExists(alma.scrivenersCoat))      badUUIDs.insert(scrivenersCoatBefore     );
+			if (!validatePresetExists(alma.springBlossomKimono)) badUUIDs.insert(springBlossomKimonoBefore);
+			if (!validatePresetExists(alma.chunLiOutfit))        badUUIDs.insert(chunLiOutfitBefore       );
+			if (!validatePresetExists(alma.cammyOutfit))         badUUIDs.insert(cammyOutfitBefore        );
+			if (!validatePresetExists(alma.summerPoncho))        badUUIDs.insert(summerPonchoBefore       );
+
+			if (badUUIDs.size() > 0) {
+				std::string errStr = "Alma config had invalid preset group(s):\n";
+				for (const auto& id : badUUIDs) {
+					errStr += "   - " + id + "\n";
+				}
+				errStr += "   Which may have been deleted. Reverting to default...";
+				DEBUG_STACK.push(errStr, DebugStack::Color::WARNING);
+				writeAlmaConfig(alma);
+			}
+		}
+
+		// Gemma
+		{
+			badUUIDs.clear();
+			DEBUG_STACK.push("Validating Gemma Config...", DebugStack::Color::DEBUG);
+
+			GemmaDefaults& gemma = presetDefaults.gemma;
+			const std::string smithysOutfitBefore   = gemma.smithysOutfit;
+			const std::string summerCoverallsBefore = gemma.summerCoveralls;
+			if (!validatePresetExists(gemma.smithysOutfit))   badUUIDs.insert(smithysOutfitBefore  );
+			if (!validatePresetExists(gemma.summerCoveralls)) badUUIDs.insert(summerCoverallsBefore);
+
+			if (badUUIDs.size() > 0) {
+				std::string errStr = "Gemma config had invalid preset group(s):\n";
+				for (const auto& id : badUUIDs) {
+					errStr += "   - " + id + "\n";
+				}
+				errStr += "   Which may have been deleted. Reverting to default...";
+				DEBUG_STACK.push(errStr, DebugStack::Color::WARNING);
+				writeGemmaConfig(gemma);
+			}
+		}
+
+		// Erik
+		{
+			badUUIDs.clear();
+			DEBUG_STACK.push("Validating Erik Config...", DebugStack::Color::DEBUG);
+
+			ErikDefaults& erik = presetDefaults.erik;
+			const std::string handlersOutfitBefore = erik.handlersOutfit;
+			const std::string summerHatBefore      = erik.summerHat;
+			if (!validatePresetExists(erik.handlersOutfit))   badUUIDs.insert(handlersOutfitBefore);
+			if (!validatePresetExists(erik.summerHat))        badUUIDs.insert(summerHatBefore     );
+
+			if (badUUIDs.size() > 0) {
+				std::string errStr = "Erik config had invalid preset group(s):\n";
+				for (const auto& id : badUUIDs) {
+					errStr += "   - " + id + "\n";
+				}
+				errStr += "   Which may have been deleted. Reverting to default...";
+				DEBUG_STACK.push(errStr, DebugStack::Color::WARNING);
+				writeErikConfig(erik);
+			}
+		}
+	}
+
+	bool KBFDataManager::validatePresetExists(std::string& uuid) const {
+		if (!uuid.empty() && getPresetByUUID(uuid) == nullptr) {
+			uuid = "";
+			return false;
+		}
+		return true;
+	}
 
 }

@@ -24,11 +24,28 @@ namespace kbf {
 
 		PlayerDefaults& playerDefaults() { return presetGroupDefaults.player; }
 		NpcDefaults& npcDefaults() { return presetGroupDefaults.npc; }
+		AlmaDefaults& almaConfig() { return presetDefaults.alma; }
+		GemmaDefaults& gemmaConfig() { return presetDefaults.gemma; }
+		ErikDefaults& erikConfig() { return presetDefaults.erik; }
 
-		void setPlayerConfig_Male(std::string presetUUID) { playerDefaults().male = presetUUID; writePlayerConfig(playerDefaults()); }
+		void setPlayerConfig_Male  (std::string presetUUID) { playerDefaults().male   = presetUUID; writePlayerConfig(playerDefaults()); }
 		void setPlayerConfig_Female(std::string presetUUID) { playerDefaults().female = presetUUID; writePlayerConfig(playerDefaults()); }
-		void setNpcConfig_Male(std::string presetUUID) { npcDefaults().male = presetUUID; writeNpcConfig(npcDefaults()); }
-		void setNpcConfig_Female(std::string presetUUID) { npcDefaults().female = presetUUID; writeNpcConfig(npcDefaults()); }
+		void setNpcConfig_Male     (std::string presetUUID) { npcDefaults().male      = presetUUID; writeNpcConfig(npcDefaults()); }
+		void setNpcConfig_Female   (std::string presetUUID) { npcDefaults().female    = presetUUID; writeNpcConfig(npcDefaults()); }
+
+		void setAlmaConfig_HandlersOutfit     (std::string presetUUID) { almaConfig().handlersOutfit      = presetUUID; writeAlmaConfig(almaConfig()); }
+		void setAlmaConfig_NewWorldCommission (std::string presetUUID) { almaConfig().newWorldCommission  = presetUUID; writeAlmaConfig(almaConfig()); }
+		void setAlmaConfig_ScrivenersCoat     (std::string presetUUID) { almaConfig().scrivenersCoat      = presetUUID; writeAlmaConfig(almaConfig()); }
+		void setAlmaConfig_SpringBlossomKimono(std::string presetUUID) { almaConfig().springBlossomKimono = presetUUID; writeAlmaConfig(almaConfig()); }
+		void setAlmaConfig_ChunLiOutfit       (std::string presetUUID) { almaConfig().chunLiOutfit        = presetUUID; writeAlmaConfig(almaConfig()); }
+		void setAlmaConfig_CammyOutfit        (std::string presetUUID) { almaConfig().cammyOutfit         = presetUUID; writeAlmaConfig(almaConfig()); }
+		void setAlmaConfig_SummerPoncho       (std::string presetUUID) { almaConfig().summerPoncho        = presetUUID; writeAlmaConfig(almaConfig()); }
+
+		void setGemmaConfig_SmithysOutfit     (std::string presetUUID) { gemmaConfig().smithysOutfit   = presetUUID; writeGemmaConfig(gemmaConfig()); }
+		void setGemmaConfig_SummerCoveralls   (std::string presetUUID) { gemmaConfig().summerCoveralls = presetUUID; writeGemmaConfig(gemmaConfig()); }
+
+		void setErikConfig_HandlersOutfit     (std::string presetUUID) { erikConfig().handlersOutfit = presetUUID; writeErikConfig(erikConfig()); }
+		void setErikConfig_SummerHat          (std::string presetUUID) { erikConfig().summerHat      = presetUUID; writeErikConfig(erikConfig()); }
 
 		bool presetExists(const std::string& name) const;
 		bool presetGroupExists(const std::string& name) const;
@@ -118,12 +135,12 @@ namespace kbf {
 		void validateObjectsUsingPresetGroups();
 		void validatePlayerOverrides();
 		void validateDefaultConfigs_PresetGroups();
-		bool validatePresetGroup(std::string& uuid) const;
+		bool validatePresetGroupExists(std::string& uuid) const;
 
 		void validateObjectsUsingPresets();
 		void validatePresetGroups();
 		void validateDefaultConfigs_Presets();
-
+		bool validatePresetExists(std::string& uuid) const;
 	};
 
 }
