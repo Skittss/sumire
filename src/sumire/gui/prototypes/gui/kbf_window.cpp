@@ -71,7 +71,7 @@ namespace kbf {
 
         ImGui::SetNextWindowSize(ImVec2(600, 800), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSizeConstraints(ImVec2(600, 500), ImVec2(FLT_MAX, FLT_MAX));
-        ImGui::Begin("Kana's Body Framework", nullptr, ImGuiWindowFlags_MenuBar);
+        ImGui::Begin("Kana's Body Framework", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse);
         ImGui::PushFont(mainFont);
 
         drawMenuBar();
