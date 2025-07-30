@@ -8,38 +8,83 @@ namespace kbf {
 
 	void NpcTab::draw() {
         constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_PadOuterX;
+        constexpr float namedNpcSelectableHeight = 40.0f;
 
         drawTabBarSeparator("Alma", "NpcTabAlma");
 
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, LIST_PADDING);
 
-        ImGui::BeginTable("##AlmaPresetList", 2, tableFlags);
-        drawPresetSelectTableEntry("##AlmaPresetCombo_HandlersOutfit", "Handler's Outfit");
-        drawPresetSelectTableEntry("##AlmaPresetCombo_NewWorldComission", "New World Comission");
-        drawPresetSelectTableEntry("##AlmaPresetCombo_ScrivenersCoat", "Scrivener's Coat");
-        drawPresetSelectTableEntry("##AlmaPresetCombo_SpringBlossomKimono", "Spring Blossom Kimono");
-        drawPresetSelectTableEntry("##AlmaPresetCombo_ChunLiOutfit", "Chun-li Outfit");
-        drawPresetSelectTableEntry("##AlmaPresetCombo_CammyOutfit", "Cammy Outfit");
-        drawPresetSelectTableEntry("##AlmaPresetCombo_SummerPoncho", "Summer Poncho");
+        ImGui::BeginTable("##AlmaPresetList", 1, tableFlags);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##AlmaPresetCombo_HandlersOutfit", "Handler's Outfit",
+            dataManager.getPresetByUUID(dataManager.almaConfig().handlersOutfit),
+            editAlmaHandlersOutfitCb,
+            namedNpcSelectableHeight);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##AlmaPresetCombo_NewWorldCommission", "New World Commission",
+            dataManager.getPresetByUUID(dataManager.almaConfig().newWorldCommission),
+            editAlmaNewWorldCommissionCb,
+            namedNpcSelectableHeight);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##AlmaPresetCombo_ScrivenersCoat", "Scrivener's Coat",
+            dataManager.getPresetByUUID(dataManager.almaConfig().scrivenersCoat),
+            editAlmaScrivenersCoatCb,
+            namedNpcSelectableHeight);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##AlmaPresetCombo_SpringBlossomKimono", "Spring Blossom Kimono",
+            dataManager.getPresetByUUID(dataManager.almaConfig().springBlossomKimono),
+            editAlmaSpringBlossomKimonoCb,
+            namedNpcSelectableHeight);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##AlmaPresetCombo_ChunLiOutfit", "Chun-li Outfit",
+            dataManager.getPresetByUUID(dataManager.almaConfig().chunLiOutfit),
+            editAlmaChunLiOutfitCb,
+            namedNpcSelectableHeight);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##AlmaPresetCombo_CammyOutfit", "Cammy Outfit",
+            dataManager.getPresetByUUID(dataManager.almaConfig().cammyOutfit),
+            editAlmaCammyOutfitCb,
+            namedNpcSelectableHeight);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##AlmaPresetCombo_SummerPoncho", "Summer Poncho",
+            dataManager.getPresetByUUID(dataManager.almaConfig().summerPoncho),
+            editAlmaSummerPonchoCb,
+            namedNpcSelectableHeight);
         ImGui::EndTable();
 
         drawTabBarSeparator("Gemma", "NpcTabGemma");
 
-        ImGui::BeginTable("##GemmaPresetList", 2, tableFlags);
-        drawPresetSelectTableEntry("##GemmaPresetCombo_SmithysOutfit", "Smithy's Outfit");
-        drawPresetSelectTableEntry("##GemmaPresetCombo_SummerCoveralls", "Summer Coveralls");
+        ImGui::BeginTable("##GemmaPresetList", 1, tableFlags);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##GemmaPresetCombo_SmithysOutfit", "Smithy's Outfit",
+            dataManager.getPresetByUUID(dataManager.gemmaConfig().smithysOutfit),
+            editGemmaSmithysOutfitCb,
+            namedNpcSelectableHeight);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##GemmaPresetCombo_SummerCoveralls", "Summer Coveralls",
+            dataManager.getPresetByUUID(dataManager.gemmaConfig().summerCoveralls),
+            editGemmaSummerCoverallsCb,
+            namedNpcSelectableHeight);
         ImGui::EndTable();
 
         drawTabBarSeparator("Erik", "NpcTabErik");
 
-        ImGui::BeginTable("##ErikPresetList", 2, tableFlags);
-        drawPresetSelectTableEntry("##ErikPresetCombo_HandlersOutfit", "Handler's Outfit");
-        drawPresetSelectTableEntry("##ErikPresetCombo_SummerHat", "Summer Hat");
+        ImGui::BeginTable("##ErikPresetList", 1, tableFlags);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##ErikPresetCombo_HandlersOutfit", "Handler's Outfit",
+            dataManager.getPresetByUUID(dataManager.erikConfig().handlersOutfit),
+            editErikHandlersOutfitCb,
+            namedNpcSelectableHeight);
+        drawPresetSelectTableEntry(wsSymbolFont,
+            "##ErikPresetCombo_SummerHat", "Summer Hat",
+            dataManager.getPresetByUUID(dataManager.erikConfig().summerHat),
+            editErikSummerHatCb,
+            namedNpcSelectableHeight);
         ImGui::EndTable();
 
         drawTabBarSeparator("Unnamed NPCs", "NpcTabUnnamed");
 
-        ImGui::BeginTable("##UnnamedNpcPresetGroupList", 2, tableFlags);
+        ImGui::BeginTable("##UnnamedNpcPresetGroupList", 1, tableFlags);
         drawPresetGroupSelectTableEntry(wsSymbolFont, 
             "##UnnamedNpcPresetGroup_Male", "Male",
             dataManager.getPresetGroupByUUID(dataManager.npcDefaults().male),
@@ -54,17 +99,28 @@ namespace kbf {
 	}
 
 	void NpcTab::drawPopouts() {
+        editPanel.draw();
         editDefaultPanel.draw();
     };
 
     void NpcTab::openEditDefaultPanel(const std::function<void(std::string)>& onSelect) {
-        editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_PlayerTab", dataManager, wsSymbolFont, wsArmourFont);
+        editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_NpcTab", dataManager, wsSymbolFont, wsArmourFont);
         editDefaultPanel.get()->focus();
 
         editDefaultPanel.get()->onSelectPresetGroup([&](std::string uuid) {
             INVOKE_REQUIRED_CALLBACK(onSelect, uuid);
             editDefaultPanel.close();
-            });
+        });
+    }
+
+    void NpcTab::openEditPanel(const std::function<void(std::string)>& onSelect) {
+        editPanel.openNew("Select Preset", "EditPanel_NpcTab", dataManager, wsSymbolFont, wsArmourFont);
+        editPanel.get()->focus();
+
+        editPanel.get()->onSelectPreset([&](std::string uuid) {
+            INVOKE_REQUIRED_CALLBACK(onSelect, uuid);
+            editPanel.close();
+        });
     }
 
 }

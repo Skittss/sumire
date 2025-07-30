@@ -21,6 +21,7 @@ namespace kbf {
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, LIST_PADDING);
 
         drawDefaults();
+        ImGui::Spacing();
         drawTabBarSeparator("Overrides", "PlayerTabOverrides");
         drawOverrideList();
 
@@ -35,7 +36,9 @@ namespace kbf {
 
     void PlayerTab::drawDefaults() {
         constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_PadOuterX;
-        ImGui::BeginTable("##PlayerDefaultPresetGroupList", 2, tableFlags);
+
+        ImGui::BeginTable("##PlayerDefaultPresetGroupList", 1, tableFlags);
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, 0.0f));
 
         drawPresetGroupSelectTableEntry(wsSymbolFont, 
             "##PlayerPresetGroup_Male", "Male",  
@@ -46,7 +49,9 @@ namespace kbf {
             dataManager.getPresetGroupByUUID(dataManager.playerDefaults().female),
             editFemaleCb);
 
+        ImGui::PopStyleVar();
         ImGui::EndTable();
+
     }
 
     void PlayerTab::drawOverrideList() {
@@ -141,7 +146,7 @@ namespace kbf {
 
                 ImGui::PopFont();
 
-                // Group name... floating because imgui has no vertical alignment STILL :(
+                // Player name
                 constexpr float playerNameSpacingAfter = 5.0f;
                 ImVec2 playerNameSize = ImGui::CalcTextSize(override->player.name.c_str());
                 ImVec2 playerNamePos;
@@ -149,27 +154,50 @@ namespace kbf {
                 playerNamePos.y = pos.y + (selectableHeight - playerNameSize.y) * 0.5f;
                 ImGui::GetWindowDrawList()->AddText(playerNamePos, ImGui::GetColorU32(ImGuiCol_Text), override->player.name.c_str());
 
-                // Active group
+                // Preset Group
                 const PresetGroup* activeGroup = dataManager.getPresetGroupByUUID(override->presetGroup);
 
+                // Sex Mark
+                bool female = false;
+                float presetGroupSexMarkSpacing = ImGui::GetStyle().ItemSpacing.x;
+                float endPos = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+                if (activeGroup) {
+                    bool female = activeGroup->female;
+                    presetGroupSexMarkSpacing = 30.0f;
+
+                    std::string presetGroupSexMarkSymbol = female ? WS_FONT_FEMALE : WS_FONT_MALE;
+                    ImVec4 presetGroupSexMarkerCol = female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+                    ImVec2 presetGroupSexMarkerSize = ImGui::CalcTextSize(presetGroupSexMarkSymbol.c_str());
+                    ImVec2 presetGroupSexMarkerPos;
+                    presetGroupSexMarkerPos.x = endPos - presetGroupSexMarkerSize.x - ImGui::GetStyle().ItemSpacing.x;
+                    presetGroupSexMarkerPos.y = pos.y + (selectableHeight - presetGroupSexMarkerSize.y) * 0.5f;
+
+                    ImGui::PushFont(wsSymbolFont);
+                    ImGui::GetWindowDrawList()->AddText(presetGroupSexMarkerPos, ImGui::GetColorU32(presetGroupSexMarkerCol), presetGroupSexMarkSymbol.c_str());
+                    ImGui::PopFont();
+                }
+
+                // Group Name
                 std::string presetGroupName = override->presetGroup.empty() || activeGroup == nullptr ? "Default" : activeGroup->name;
-                std::string currentGroupStr = "(" + presetGroupName + ")";
-                ImVec2 currentGroupStrSize = ImGui::CalcTextSize(currentGroupStr.c_str());
+                ImVec2 currentGroupStrSize = ImGui::CalcTextSize(presetGroupName.c_str());
                 ImVec2 currentGroupStrPos;
-                currentGroupStrPos.x = playerNamePos.x + playerNameSize.x + playerNameSpacingAfter;
+                currentGroupStrPos.x = endPos - (currentGroupStrSize.x + presetGroupSexMarkSpacing);
                 currentGroupStrPos.y = pos.y + (selectableHeight - currentGroupStrSize.y) * 0.5f;
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-                ImGui::GetWindowDrawList()->AddText(currentGroupStrPos, ImGui::GetColorU32(ImGuiCol_Text), currentGroupStr.c_str());
+
+                ImVec4 presetGroupCol = activeGroup == nullptr ? ImVec4(0.365f, 0.678f, 0.886f, 0.8f) : ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+                ImGui::PushStyleColor(ImGuiCol_Text, presetGroupCol);
+                ImGui::GetWindowDrawList()->AddText(currentGroupStrPos, ImGui::GetColorU32(ImGuiCol_Text), presetGroupName.c_str());
                 ImGui::PopStyleColor();
 
                 // Hunter ID
-                ImVec2 hunterIdSize = ImGui::CalcTextSize(override->player.hunterId.c_str());
-                ImVec2 hunterIdPos;
-                hunterIdPos.x = ImGui::GetCursorScreenPos().x + contentRegionWidth - hunterIdSize.x - ImGui::GetStyle().ItemSpacing.x;
-                hunterIdPos.y = pos.y + (selectableHeight - hunterIdSize.y) * 0.5f;
-
+                std::string hunterIdStr = "(" + override->player.hunterId + ")";
+                ImVec2 hunterIdStrSize = ImGui::CalcTextSize(hunterIdStr.c_str());
+                ImVec2 hunterIdStrPos;
+                hunterIdStrPos.x = playerNamePos.x + playerNameSize.x + playerNameSpacingAfter;
+                hunterIdStrPos.y = pos.y + (selectableHeight - hunterIdStrSize.y) * 0.5f;
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-                ImGui::GetWindowDrawList()->AddText(hunterIdPos, ImGui::GetColorU32(ImGuiCol_Text), override->player.hunterId.c_str());
+                ImGui::GetWindowDrawList()->AddText(hunterIdStrPos, ImGui::GetColorU32(ImGuiCol_Text), hunterIdStr.c_str());
                 ImGui::PopStyleColor();
             }
 
@@ -209,7 +237,8 @@ namespace kbf {
     }
 
     void PlayerTab::openEditPlayerOverridePanel(const PlayerData& playerData) {
-        editPlayerOverridePanel.openNew(playerData, "Edit Player Override", "EditPlayerOverridePanel", dataManager);
+        std::string windowName = std::format("Edit Player Override - {}", playerData.name);
+        editPlayerOverridePanel.openNew(playerData, windowName, "EditPlayerOverridePanel", dataManager, wsSymbolFont);
 
         editPlayerOverridePanel.get()->focus();
 

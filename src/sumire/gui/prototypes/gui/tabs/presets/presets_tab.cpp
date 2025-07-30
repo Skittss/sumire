@@ -360,7 +360,9 @@ namespace kbf {
     }
 
     void PresetsTab::openEditPresetPanel(const std::string& presetUUID) {
-        editPresetPanel.openNew(presetUUID, "Edit Preset", "EditPresetPanel", dataManager, wsSymbolFont, wsArmourFont);
+        const Preset* preset = dataManager.getPresetByUUID(presetUUID);
+        std::string windowName = std::format("Edit Preset - {}", preset ? preset->name : "Unknown");
+        editPresetPanel.openNew(presetUUID, windowName, "EditPresetPanel", dataManager, wsSymbolFont, wsArmourFont);
         editPresetPanel.get()->focus();
 
         editPresetPanel.get()->onDelete([&](const std::string& presetUUID) {
