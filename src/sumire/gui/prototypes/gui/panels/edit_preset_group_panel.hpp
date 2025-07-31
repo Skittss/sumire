@@ -23,6 +23,7 @@ namespace kbf {
 		void onDelete(std::function<void(const std::string&)> callback) { deleteCallback = callback; }
 		void onUpdate(std::function<void(const std::string&, PresetGroup)> callback) { updateCallback = callback; }
 		void onCancel(std::function<void()> callback) { cancelCallback = callback; }
+		void onOpenEditor(std::function<void(std::string)> callback) { openEditorCallback = callback; }
 
 	private:
 		const KBFDataManager& dataManager;
@@ -34,6 +35,7 @@ namespace kbf {
 		std::function<void(const std::string&)>              deleteCallback;
 		std::function<void(const std::string&, PresetGroup)> updateCallback;
 		std::function<void()>                                cancelCallback;
+		std::function<void(std::string)>                     openEditorCallback;
 
 		ImFont* wsSymbolFont;
 	};

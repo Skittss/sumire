@@ -124,7 +124,7 @@ namespace kbf {
         ImGui::SameLine();
 
         if (ImGui::Button(kEditorLabel)) {
-            //TODO
+            INVOKE_REQUIRED_CALLBACK(openEditorCallback, presetUUID);
         }
         ImGui::SetItemTooltip("Edit all values, e.g. bone modifiers");
 

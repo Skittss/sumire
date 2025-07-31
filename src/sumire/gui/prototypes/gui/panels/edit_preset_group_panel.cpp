@@ -92,7 +92,7 @@ namespace kbf {
         ImGui::SameLine();
 
         if (ImGui::Button(kEditorLabel)) {
-            //TODO
+            INVOKE_REQUIRED_CALLBACK(openEditorCallback, presetGroupUUID);
         }
         ImGui::SetItemTooltip("Edit presets used per armour set, etc.");
 
@@ -107,8 +107,8 @@ namespace kbf {
             INVOKE_REQUIRED_CALLBACK(updateCallback, presetGroupUUID, presetGroup);
         }
         if (disableUpdateButton) ImGui::EndDisabled();
-        if (nameEmpty) ImGui::SetItemTooltip("Please provide a preset name");
-        else if (alreadyExists) ImGui::SetItemTooltip("Preset name already taken");
+        if (nameEmpty) ImGui::SetItemTooltip("Please provide a group name");
+        else if (alreadyExists) ImGui::SetItemTooltip("Group name already taken");
 
         ImGui::End();
         ImGui::PopStyleVar();
