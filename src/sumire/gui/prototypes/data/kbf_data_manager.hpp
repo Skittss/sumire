@@ -51,9 +51,12 @@ namespace kbf {
 		bool presetGroupExists(const std::string& name) const;
 		bool playerOverrideExists(const PlayerData& player) const;
 
-		const Preset* getPresetByUUID(const std::string& uuid) const;
-		const PresetGroup* getPresetGroupByUUID(const std::string& uuid) const;
-		const PlayerOverride* getPlayerOverride(const PlayerData& player) const;
+		Preset* getPresetByUUID(const std::string& uuid);
+		PresetGroup* getPresetGroupByUUID(const std::string& uuid);
+		PlayerOverride* getPlayerOverride(const PlayerData& player);
+		const Preset* getPresetByUUID(const std::string& uuid) const { return const_cast<KBFDataManager*>(this)->getPresetByUUID(uuid); }
+		const PresetGroup* getPresetGroupByUUID(const std::string& uuid) const { return const_cast<KBFDataManager*>(this)->getPresetGroupByUUID(uuid); }
+		const PlayerOverride* getPlayerOverride(const PlayerData& player) const { return const_cast<KBFDataManager*>(this)->getPlayerOverride(player); }
 
 		std::vector<const Preset*> getPresets(const std::string& filter = "", bool sort = false) const;
 		std::vector<const PresetGroup*> getPresetGroups(const std::string& filter = "", bool sort = false) const;

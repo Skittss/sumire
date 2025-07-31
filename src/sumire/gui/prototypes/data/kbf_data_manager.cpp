@@ -63,17 +63,17 @@ namespace kbf {
 	}
 
 
-	const Preset* KBFDataManager::getPresetByUUID(const std::string& uuid) const {
+	Preset* KBFDataManager::getPresetByUUID(const std::string& uuid) {
 		if (presets.find(uuid) != presets.end()) return &presets.at(uuid);
 		return nullptr;
 	}
 
-	const PresetGroup* KBFDataManager::getPresetGroupByUUID(const std::string& uuid) const {
+	PresetGroup* KBFDataManager::getPresetGroupByUUID(const std::string& uuid) {
 		if (presetGroups.find(uuid) != presetGroups.end()) return &presetGroups.at(uuid);
 		return nullptr;
 	}
 
-	const PlayerOverride* KBFDataManager::getPlayerOverride(const PlayerData& player) const {
+	PlayerOverride* KBFDataManager::getPlayerOverride(const PlayerData& player) {
 		if (playerOverrides.find(player) != playerOverrides.end()) return &playerOverrides.at(player);
 		return nullptr;
 	}
