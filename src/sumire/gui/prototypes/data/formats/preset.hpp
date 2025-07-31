@@ -13,6 +13,14 @@ namespace kbf {
 		glm::vec3 scale;
 		glm::vec3 position;
 		glm::vec3 rotation;
+
+		bool operator==(const BoneModifier& other) const {
+			return (
+				scale == other.scale &&
+				position == other.position &&
+				rotation == other.rotation
+			);
+		}
 	};
 
 	struct Preset {
@@ -24,6 +32,17 @@ namespace kbf {
 		bool hasLegs;
 		ArmourSet armour;
 		std::map<std::string, BoneModifier> boneModifiers;
+
+		bool operator==(const Preset& other) const {
+			return (
+				uuid == other.uuid &&
+				name == other.name &&
+				bundle == other.bundle &&
+				female == other.female &&
+				armour == other.armour &&
+				boneModifiers == other.boneModifiers
+			);
+		}
 	};
 
 }

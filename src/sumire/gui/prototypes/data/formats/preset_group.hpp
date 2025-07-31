@@ -12,6 +12,14 @@ namespace kbf {
 		std::string name;
 		bool female;
 		std::unordered_map<std::string, Preset> presets;
+
+		bool operator==(const PresetGroup& other) const {
+			return (
+				uuid == other.uuid &&
+				name == other.name &&
+				female == other.female &&
+				presets == other.presets);
+		}
 	};
 
 }
