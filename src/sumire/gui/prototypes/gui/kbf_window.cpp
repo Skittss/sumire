@@ -21,6 +21,14 @@ namespace kbf {
     void KBFWindow::initialize() {
         initializeFonts();
 
+        // Set required callbacks
+        presetsTab.onOpenPresetInEditor([&](std::string uuid) { 
+            editorTab.editPreset(dataManager.getPresetByUUID(uuid)); 
+            tab = KBFTab::Editor; });
+        presetGroupsTab.onOpenPresetGroupInEditor([&](std::string uuid) { 
+            editorTab.editPresetGroup(dataManager.getPresetGroupByUUID(uuid)); 
+            tab = KBFTab::Editor; });
+
 		DEBUG_STACK.push("Hello from Kana! Framework initialized.", DebugStack::Color::INFO);
     }
 
@@ -59,6 +67,8 @@ namespace kbf {
         presetGroupsTab.setSymbolFont(wildsSymbolsFont);
         presetsTab.setSymbolFont(wildsSymbolsFont);
         presetsTab.setArmourFont(wildsArmourFont);
+        editorTab.setSymbolFont(wildsSymbolsFont);
+        editorTab.setArmourFont(wildsArmourFont);
         debugTab.setMonoFont(monoFont);
         aboutTab.setAsciiFont(monoFontTiny);
     }

@@ -48,7 +48,7 @@ namespace kbf {
 		NpcTab          npcTab{ dataManager };
 		PresetGroupsTab presetGroupsTab{ dataManager };
 		PresetsTab      presetsTab{ dataManager };
-		EditorTab       editorTab;
+		EditorTab       editorTab{ dataManager };
 		SettingsTab     settingsTab;
 		DebugTab        debugTab;
 		AboutTab        aboutTab;
