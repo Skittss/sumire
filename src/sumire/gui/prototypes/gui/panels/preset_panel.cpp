@@ -16,9 +16,13 @@ namespace kbf {
         const std::string& strID,
         const KBFDataManager& dataManager,
         ImFont* wsSymbolFont,
-        ImFont* wsArmourFont
-    ) : iPanel(name, strID), dataManager{ dataManager }, wsSymbolFont{ wsSymbolFont }, wsArmourFont{ wsArmourFont } {
-    }
+        ImFont* wsArmourFont,
+        bool showDefaultAsOption
+    ) : iPanel(name, strID), 
+        dataManager{ dataManager }, 
+        wsSymbolFont{ wsSymbolFont }, 
+        wsArmourFont{ wsArmourFont },
+        showDefaultAsOption{ showDefaultAsOption } {}
 
     bool PresetPanel::draw() {
         bool open = true;
@@ -57,13 +61,15 @@ namespace kbf {
         float contentRegionWidth = ImGui::GetContentRegionAvail().x;
         const float selectableHeight = ImGui::GetTextLineHeight();
 
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.365f, 0.678f, 0.886f, 0.8f));
-        if (ImGui::Selectable("Default", false, 0, ImVec2(0.0f, selectableHeight))) {
-            INVOKE_REQUIRED_CALLBACK(selectCallback, "");
-        }
-        ImGui::PopStyleColor();
+        if (showDefaultAsOption) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.365f, 0.678f, 0.886f, 0.8f));
+            if (ImGui::Selectable("Default", false, 0, ImVec2(0.0f, selectableHeight))) {
+                INVOKE_REQUIRED_CALLBACK(selectCallback, "");
+            }
+            ImGui::PopStyleColor();
 
-        if (presets.size() > 0) ImGui::Separator();
+            if (presets.size() > 0) ImGui::Separator();
+        }
 
         for (const Preset* preset : presets)
         {
