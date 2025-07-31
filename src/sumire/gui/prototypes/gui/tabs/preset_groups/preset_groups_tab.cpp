@@ -5,6 +5,7 @@
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_group.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
+#include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 
 #include <vector>
 #include <algorithm>
@@ -181,6 +182,11 @@ namespace kbf {
         editPresetGroupPanel.get()->onUpdate([&](const std::string& presetGroupUUID, PresetGroup presetGroup) {
             dataManager.updatePresetGroup(presetGroupUUID, presetGroup);
             editPresetGroupPanel.close();
+        });
+
+        editPresetGroupPanel.get()->onOpenEditor([&](std::string presetGroupUUID) {
+            editPresetGroupPanel.close();
+            INVOKE_REQUIRED_CALLBACK(openPresetGroupInEditorCb, presetGroupUUID);
         });
     }
 

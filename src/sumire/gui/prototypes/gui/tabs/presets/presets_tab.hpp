@@ -25,6 +25,8 @@ namespace kbf {
 		void draw() override;
 		void drawPopouts() override;
 
+		void onOpenPresetInEditor(std::function<void(std::string)> callback) { openPresetInEditorCb = callback; }
+
 	private:
 		void drawBundleTab();
 		void drawBundleList();
@@ -40,6 +42,8 @@ namespace kbf {
 		KBFDataManager& dataManager;
 		ImFont* wsSymbolFont;
 		ImFont* wsArmourFont;
+
+		std::function<void(std::string)> openPresetInEditorCb;
 	};
 
 }

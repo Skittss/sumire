@@ -5,6 +5,7 @@
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/data/ids/special_armour_ids.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
+#include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 
 #include <format>
 
@@ -377,6 +378,11 @@ namespace kbf {
         editPresetPanel.get()->onUpdate([&](const std::string& presetUUID, Preset preset) {
             dataManager.updatePreset(presetUUID, preset);
             editPresetPanel.close();
+        });
+
+        editPresetPanel.get()->onOpenEditor([&](std::string presetUUID) {
+            editPresetPanel.close();
+            INVOKE_REQUIRED_CALLBACK(openPresetInEditorCb, presetUUID);
         });
     }
 
