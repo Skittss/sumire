@@ -17,7 +17,8 @@ namespace kbf {
 			const std::string& strID,
 			const KBFDataManager& dataManager,
 			ImFont* wsSymbolFont,
-			ImFont* wsArmourFont);
+			ImFont* wsArmourFont,
+			bool showDefaultAsOption = true);
 
 		bool draw() override;
 		void onSelectPresetGroup(std::function<void(std::string)> callback) { selectCallback = callback; }
@@ -30,6 +31,7 @@ namespace kbf {
 		const KBFDataManager& dataManager;
 		ImFont* wsSymbolFont;
 		ImFont* wsArmourFont;
+		bool showDefaultAsOption;
 	};
 
 }
