@@ -14,11 +14,18 @@ namespace kbf {
 		glm::vec3 position;
 		glm::vec3 rotation;
 
+		bool scaleLinked    = false;
+		bool positionLinked = false;
+		bool rotationLinked = false;
+
 		bool operator==(const BoneModifier& other) const {
 			return (
 				scale == other.scale &&
 				position == other.position &&
-				rotation == other.rotation
+				rotation == other.rotation &&
+				scaleLinked == other.scaleLinked &&
+				positionLinked == other.positionLinked &&
+				rotationLinked == other.rotationLinked
 			);
 		}
 	};
@@ -31,7 +38,13 @@ namespace kbf {
 		bool hasBody;
 		bool hasLegs;
 		ArmourSet armour;
-		std::map<std::string, BoneModifier> boneModifiers;
+
+		std::map<std::string, BoneModifier> bodyBoneModifiers;
+		std::map<std::string, BoneModifier> legsBoneModifiers;
+		float legsModLimit = 1.0f;
+		float bodyModLimit = 1.0f;
+		bool  compactMode = true;
+		bool  useSymmetry = true;
 
 		bool operator==(const Preset& other) const {
 			return (
@@ -40,7 +53,11 @@ namespace kbf {
 				bundle == other.bundle &&
 				female == other.female &&
 				armour == other.armour &&
-				boneModifiers == other.boneModifiers
+				bodyBoneModifiers == other.bodyBoneModifiers &&
+				legsBoneModifiers == other.legsBoneModifiers &&
+				legsModLimit == other.legsModLimit &&
+				bodyModLimit == other.bodyModLimit &&
+				compactMode == other.compactMode
 			);
 		}
 	};
