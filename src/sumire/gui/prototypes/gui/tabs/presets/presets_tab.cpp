@@ -52,8 +52,7 @@ namespace kbf {
             drawBundleList();
         }
         else {
-            constexpr const char* kBackLabel = "<";
-            if (ImGui::Button(kBackLabel)) {
+            if (ImGui::ArrowButton("##bundleBackButton", ImGuiDir_Left)) {
                 bundleViewed = "";
             }
             ImGui::SameLine();

@@ -207,7 +207,7 @@ namespace kbf {
     }
 
     void PlayerTab::openEditDefaultPanel(const std::function<void(std::string)>& onSelect) {
-        editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_PlayerTab", dataManager, wsSymbolFont, wsArmourFont);
+        editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_PlayerTab", dataManager, wsSymbolFont);
         editDefaultPanel.get()->focus();
 
         editDefaultPanel.get()->onSelectPresetGroup([&](std::string uuid) {

@@ -104,7 +104,8 @@ namespace kbf {
     };
 
     void NpcTab::openEditDefaultPanel(const std::function<void(std::string)>& onSelect) {
-        editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_NpcTab", dataManager, wsSymbolFont, wsArmourFont);
+        editPanel.close(); // Close the other panel if its open
+        editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_NpcTab", dataManager, wsSymbolFont);
         editDefaultPanel.get()->focus();
 
         editDefaultPanel.get()->onSelectPresetGroup([&](std::string uuid) {
@@ -114,6 +115,7 @@ namespace kbf {
     }
 
     void NpcTab::openEditPanel(const std::function<void(std::string)>& onSelect) {
+        editDefaultPanel.close(); // Close the other panel if its open
         editPanel.openNew("Select Preset", "EditPanel_NpcTab", dataManager, wsSymbolFont, wsArmourFont);
         editPanel.get()->focus();
 

@@ -22,6 +22,9 @@ namespace kbf {
             if (ImGui::BeginTabItem("Player List")) {
                 ImGui::EndTabItem();
             }
+            if (ImGui::BeginTabItem("Joint Cache")) {
+                ImGui::EndTabItem();
+            }
             if (ImGui::BeginTabItem("Other")) {
                 ImGui::EndTabItem();
             }
@@ -34,7 +37,7 @@ namespace kbf {
     void DebugTab::drawDebugTab() {
         constexpr float padding = 5.0f;
 
-        ImGui::Checkbox("Autoscroll?", &consoleAutoscroll);
+        ImGui::Checkbox("Autoscroll", &consoleAutoscroll);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
         if (ImGui::BeginChild("DebugLogScrollWindow")) {
