@@ -27,12 +27,15 @@ namespace kbf {
                 return a.name < b.name;
             });
 
-
         return filteredSets;
 	}
 
+    bool ArmourList::isValidArmourSet(const std::string& name, bool female) {
+        return mapping.find(ArmourSet{ name, female }) != mapping.end();
+    }
+
 	const std::map<ArmourSet, ArmourID> ArmourList::mapping = {
-        // Name                      // Female?  // Body ID           // Legs ID
+        // Name                          // Female?  // Body ID         // Legs ID
         { { ANY_ARMOUR_ID                , false } , { ANY_ARMOUR_ID    ANY_ARMOUR_ID   } },
         { { "Innerwear 0"                , false } , { "ch03_002_0002", "ch03_002_0004" } },
         { { "Innerwear 0"                , true  } , { "ch03_002_0012", "ch03_002_0014" } },
@@ -58,8 +61,8 @@ namespace kbf {
         { { "Alloy 0"                    , true  } , { "ch03_010_0012", "ch03_010_0014" } },
         { { "Piragill 0/1"               , false } , { ""             , "ch03_011_0004" } },
         { { "Piragill 0/1"               , true  } , { ""             , "ch03_011_0014" } },
-        { { "Lala Barina 0/1"                 , false } , { "ch03_012_0002", "ch03_012_0004" } },
-        { { "Lala Barina 0/1"                 , true  } , { "ch03_012_0012", "ch03_012_0014" } },
+        { { "Lala Barina 0/1"            , false } , { "ch03_012_0002", "ch03_012_0004" } },
+        { { "Lala Barina 0/1"            , true  } , { "ch03_012_0012", "ch03_012_0014" } },
         { { "Vespoid 0/1"                , false } , { "ch03_028_0002", "ch03_028_0004" } },
         { { "Vespoid 0/1"                , true  } , { "ch03_028_0012", "ch03_028_0014" } },
         { { "Conga Mail 0/1"             , false } , { "ch03_013_0002", "ch03_013_0004" } },
