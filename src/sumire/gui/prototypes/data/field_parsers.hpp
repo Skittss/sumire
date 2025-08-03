@@ -22,7 +22,7 @@
 
 namespace kbf {
 
-    bool parseObject(
+    inline bool parseObject(
         const rapidjson::Value& config,
         const std::string& memberName,
         const std::string& errorName
@@ -37,7 +37,7 @@ namespace kbf {
         }
     }
 
-    bool parseBool(
+    inline bool parseBool(
         const rapidjson::Value& config,
         const std::string& memberName, 
         const std::string& errorName,
@@ -54,7 +54,7 @@ namespace kbf {
         }
     }
 
-    bool parseString(
+    inline bool parseString(
         const rapidjson::Value& config,
         const std::string& memberName,
         const std::string& errorName,
@@ -71,7 +71,38 @@ namespace kbf {
         }
     }
 
-    bool parseUint(
+    inline bool parseStringArray(
+        const rapidjson::Value& config,
+        const std::string& memberName,
+        const std::string& errorName,
+        std::vector<std::string>* out
+    ) {
+        assert(out != nullptr);
+        out->clear();
+
+        const char* cstrName = memberName.c_str();
+
+        if (config.HasMember(cstrName) && config[cstrName].IsArray()) {
+            const rapidjson::Value& arr = config[cstrName];
+
+            for (rapidjson::Value::ConstValueIterator itr = arr.Begin(); itr != arr.End(); ++itr) {
+                const rapidjson::Value& val = *itr;
+                if (!val.IsString()) {
+                    DEBUG_STACK.push(KBF_FIELD_PARSE_WARNING_STR(errorName), DebugStack::Color::WARNING);
+                    return false;
+                }
+                out->emplace_back(val.GetString());
+            }
+
+            return true;
+        }
+        else {
+            DEBUG_STACK.push(KBF_FIELD_PARSE_WARNING_STR(errorName), DebugStack::Color::WARNING);
+            return false;
+        }
+    }
+
+    inline bool parseUint(
         const rapidjson::Value& config, 
         const std::string& memberName,
         const std::string& errorName,
@@ -88,7 +119,7 @@ namespace kbf {
         }
     }
 
-    bool parseInt(
+    inline bool parseInt(
         const rapidjson::Value& config,
         const std::string& memberName,
         const std::string& errorName,
