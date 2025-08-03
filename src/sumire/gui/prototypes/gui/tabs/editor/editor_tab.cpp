@@ -6,6 +6,9 @@
 #include <sumire/gui/prototypes/data/armour/armour_list.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/styling_consts.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
+#include <sumire/gui/prototypes/debug/debug_stack.hpp>
+#include <sumire/gui/prototypes/gui/tabs/shared/delete_button.hpp>
+#include <sumire/gui/prototypes/gui/tabs/shared/bone_slider.hpp>
 
 #include <format>
 
@@ -30,11 +33,23 @@ namespace kbf {
 
     void EditorTab::editPresetGroup(PresetGroup* presetGroup) { 
         openObject.setPresetGroup(presetGroup);
-        strcpy(presetGroupNameBuffer, presetGroup->name.c_str());
+        presetPanel.close();
+        presetGroupPanel.close();
+        initializePresetGroupBuffers(presetGroup);
     }
 
     void EditorTab::editPreset(Preset* preset) { 
         openObject.setPreset(preset); 
+        presetPanel.close();
+        presetGroupPanel.close();
+        initializePresetBuffers(preset);
+    }
+
+    void EditorTab::initializePresetGroupBuffers(const PresetGroup* presetGroup) {
+        strcpy(presetGroupNameBuffer, presetGroup->name.c_str());
+    }
+
+    void EditorTab::initializePresetBuffers(const Preset* preset) {
         strcpy(presetNameBuffer, preset->name.c_str());
         strcpy(presetBundleBuffer, preset->bundle.c_str());
     }
@@ -44,11 +59,11 @@ namespace kbf {
 
         const ImVec2 buttonSize = ImVec2(ImGui::GetContentRegionAvail().x, 0.0f);
         if (ImGui::Button("Edit a Preset", buttonSize)) {
-            openPresetPanel();
+            openSelectPresetPanel();
         }
 
         if (ImGui::Button("Edit a Preset Group", buttonSize)) {
-            openPresetGroupPanel();
+            openSelectPresetGroupPanel();
         }
         ImGui::Spacing();
 
@@ -62,7 +77,7 @@ namespace kbf {
         ImGui::PopStyleVar();
 	}
 
-    void EditorTab::openPresetPanel() {
+    void EditorTab::openSelectPresetPanel() {
         presetPanel.openNew("Select Preset", "EditPanel_NpcTab", dataManager, wsSymbolFont, wsArmourFont, false);
         presetPanel.get()->focus();
 
@@ -72,8 +87,8 @@ namespace kbf {
         });
     }
 
-    void EditorTab::openPresetGroupPanel() {
-        presetGroupPanel.openNew("Select Default Preset Group", "EditDefaultPanel_NpcTab", dataManager, wsSymbolFont, wsArmourFont, false);
+    void EditorTab::openSelectPresetGroupPanel() {
+        presetGroupPanel.openNew("Select Default Preset Group", "EditDefaultPanel_NpcTab", dataManager, wsSymbolFont, false);
         presetGroupPanel.get()->focus();
 
         presetGroupPanel.get()->onSelectPresetGroup([&](std::string uuid) {
@@ -82,32 +97,78 @@ namespace kbf {
         });
     }
 
+    void EditorTab::openCopyPresetGroupPanel() {
+        presetGroupPanel.openNew("Copy Existing Preset Group", "EditPresetGroupPanel_CopyPanel", dataManager, wsSymbolFont, false);
+        presetGroupPanel.get()->focus();
+
+        presetGroupPanel.get()->onSelectPresetGroup([&](std::string uuid) {
+            const PresetGroup* copyPresetGroup = dataManager.getPresetGroupByUUID(uuid);
+            if (copyPresetGroup) {
+                openObject.setPresetGroupCurrent(copyPresetGroup);
+                openObject.ptrAfter.presetGroup->uuid = openObject.ptrBefore.presetGroup->uuid;
+                openObject.ptrAfter.presetGroup->name += " (copy)";
+                initializePresetGroupBuffers(openObject.ptrAfter.presetGroup);
+            }
+            else {
+                DEBUG_STACK.push(std::format("Could not find preset group with UUID {} while trying to make a copy.", uuid), DebugStack::Color::ERROR);
+            }
+            presetGroupPanel.close();
+        });
+    }
+
+    void EditorTab::openCopyPresetPanel() {
+        presetPanel.openNew("Copy Existing Preset", "EditPresetPanel_CopyPanel", dataManager, wsSymbolFont, wsArmourFont, false);
+        presetPanel.get()->focus();
+
+        presetPanel.get()->onSelectPreset([&](std::string uuid) {
+            const Preset* copyPreset = dataManager.getPresetByUUID(uuid);
+            if (copyPreset) {
+                openObject.setPresetCurrent(copyPreset);
+                openObject.ptrAfter.preset->uuid = openObject.ptrBefore.preset->uuid;
+                openObject.ptrAfter.preset->name += " (copy)";
+                initializePresetBuffers(openObject.ptrAfter.preset);
+            }
+            else {
+                DEBUG_STACK.push(std::format("Could not find preset with UUID {} while trying to make a copy.", uuid), DebugStack::Color::ERROR);
+            }
+            presetPanel.close();
+            });
+    }
+
     void EditorTab::drawPresetGroupEditor() {
         assert(openObject.type == EditableObject::ObjectType::PRESET_GROUP && openObject.ptrAfter.presetGroup != nullptr);
-        PresetGroup& presetGroup = *openObject.ptrAfter.presetGroup;
+        const PresetGroup& presetGroupBefore = *openObject.ptrBefore.presetGroup;
 
         bool drawTabContent = drawStickyNavigationWidget(
-            std::format("Editing Preset Group \"{}\"", presetGroup.name),
+            std::format("Editing Preset Group \"{}\"", presetGroupBefore.name),
             // Callback funcs
             [&]() { return *openObject.ptrBefore.presetGroup != *openObject.ptrAfter.presetGroup; },
-            [&]() { openObject.revertPresetGroup(); },
+            [&]() { openObject.revertPresetGroup(); initializePresetGroupBuffers(openObject.ptrAfter.presetGroup); },
             [&](std::string& errMsg) { return canSavePresetGroup(errMsg); },
             [&]() { dataManager.updatePresetGroup(openObject.ptrBefore.presetGroup->uuid, *openObject.ptrAfter.presetGroup); });
 
         if (!drawTabContent) return;
 
+        if (ImGui::Button("Copy Existing Preset Group", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            openCopyPresetGroupPanel();
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
         if (ImGui::BeginTabBar("PresetEditorTabs")) {
             if (ImGui::BeginTabItem("Properties")) {
                 ImGui::BeginChild("PropertiesContent");
                 ImGui::Spacing();
-                drawPresetGroupEditor_Properties(presetGroup);
+                drawPresetGroupEditor_Properties(&openObject.ptrAfter.presetGroup);
                 ImGui::EndChild();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Assigned Presets")) {
                 ImGui::BeginChild("PresetContent");
                 ImGui::Spacing();
-                drawPresetGroupEditor_AssignedPresets(presetGroup);
+                drawPresetGroupEditor_AssignedPresets(&openObject.ptrAfter.presetGroup);
                 ImGui::EndChild();
                 ImGui::EndTabItem();
             }
@@ -115,25 +176,25 @@ namespace kbf {
         }
     }
 
-    void EditorTab::drawPresetGroupEditor_Properties(PresetGroup& presetGroup) {
+    void EditorTab::drawPresetGroupEditor_Properties(PresetGroup** presetGroup) {
         ImGui::InputText(" Name ", presetGroupNameBuffer, IM_ARRAYSIZE(presetGroupNameBuffer));
-        presetGroup.name = std::string{ presetGroupNameBuffer };
+        (**presetGroup).name = std::string{ presetGroupNameBuffer };
 
         ImGui::Spacing();
-        std::string sexComboValue = presetGroup.female ? "Female" : "Male";
+        std::string sexComboValue = (**presetGroup).female ? "Female" : "Male";
         if (ImGui::BeginCombo(" Sex ", sexComboValue.c_str())) {
             if (ImGui::Selectable("Male")) {
-                presetGroup.female = false;
+                (**presetGroup).female = false;
             }
             if (ImGui::Selectable("Female")) {
-                presetGroup.female = true;
+                (**presetGroup).female = true;
             };
             ImGui::EndCombo();
         }
         ImGui::SetItemTooltip("Suggested character sex to use with (not a hard restriction)");
     }
 
-    void EditorTab::drawPresetGroupEditor_AssignedPresets(PresetGroup& presetGroup) {
+    void EditorTab::drawPresetGroupEditor_AssignedPresets(PresetGroup** presetGroup) {
 
     }
 
@@ -156,38 +217,45 @@ namespace kbf {
 
 	void EditorTab::drawPresetEditor() {
         assert(openObject.type == EditableObject::ObjectType::PRESET && openObject.ptrAfter.preset != nullptr);
-        Preset& preset = *openObject.ptrAfter.preset;
+        const Preset& presetBefore = *openObject.ptrBefore.preset;
 
         bool drawTabContent = drawStickyNavigationWidget(
-            std::format("Editing Preset \"{}\"", preset.name),
+            std::format("Editing Preset \"{}\"", presetBefore.name),
             // Callback funcs
             [&]() { return *openObject.ptrBefore.preset != *openObject.ptrAfter.preset; },
-            [&]() { openObject.revertPreset(); },
+            [&]() { openObject.revertPreset(); initializePresetBuffers(openObject.ptrAfter.preset); },
             [&](std::string& errMsg) { return canSavePreset(errMsg); },
             [&]() { dataManager.updatePreset(openObject.ptrBefore.preset->uuid, *openObject.ptrAfter.preset); });
 
-
         if (!drawTabContent) return;
+
+        if (ImGui::Button("Copy Existing Preset", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            openCopyPresetPanel();
+        }
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
 
         if (ImGui::BeginTabBar("PresetEditorTabs")) {
             if (ImGui::BeginTabItem("Properties")) {
                 ImGui::BeginChild("PropertiesContent");
                 ImGui::Spacing();
-                drawPresetEditor_Properties(preset);
+                drawPresetEditor_Properties(&openObject.ptrAfter.preset);
                 ImGui::EndChild();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Body Modifiers")) {
                 ImGui::BeginChild("BoneContentBody");
                 ImGui::Spacing();
-                drawPresetEditor_BoneModifiersBody(preset);
+                drawPresetEditor_BoneModifiersBody(&openObject.ptrAfter.preset);
                 ImGui::EndChild();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Leg Modifiers")) {
                 ImGui::BeginChild("BoneContentLeg");
                 ImGui::Spacing();
-                drawPresetEditor_BoneModifiersLegs(preset);
+                drawPresetEditor_BoneModifiersLegs(&openObject.ptrAfter.preset);
                 ImGui::EndChild();
                 ImGui::EndTabItem();
             }
@@ -195,23 +263,23 @@ namespace kbf {
         }
 	}
 
-    void EditorTab::drawPresetEditor_Properties(Preset& preset) {
+    void EditorTab::drawPresetEditor_Properties(Preset** preset) {
         ImGui::InputText(" Name ", presetNameBuffer, IM_ARRAYSIZE(presetNameBuffer));
-        preset.name = std::string{ presetNameBuffer };
+        (**preset).name = std::string{ presetNameBuffer };
 
         ImGui::Spacing();
         ImGui::InputText(" Bundle ", presetBundleBuffer, IM_ARRAYSIZE(presetBundleBuffer));
-        preset.bundle = std::string{ presetBundleBuffer };
+        (**preset).bundle = std::string{ presetBundleBuffer };
         ImGui::SetItemTooltip("Enables sorting similar presets under one title");
 
         ImGui::Spacing();
-        std::string sexComboValue = preset.female ? "Female" : "Male";
+        std::string sexComboValue = (**preset).female ? "Female" : "Male";
         if (ImGui::BeginCombo(" Sex ", sexComboValue.c_str())) {
             if (ImGui::Selectable("Male")) {
-                preset.female = false;
+                (**preset).female = false;
             }
             if (ImGui::Selectable("Female")) {
-                preset.female = true;
+                (**preset).female = true;
             };
             ImGui::EndCombo();
         }
@@ -229,87 +297,135 @@ namespace kbf {
         ImGui::PopStyleVar();
         ImGui::SetItemTooltip("Suggested armour set to use with (not a hard restriction)");
 
-        drawArmourSetName(preset.armour, 10.0f, 17.5f);
+        drawArmourSetName((**preset).armour, 10.0f, 17.5f);
 
         ImGui::Spacing();
 
         static char filterBuffer[128] = "";
         std::string filterStr{ filterBuffer };
 
-        drawArmourList(preset, filterStr);
+        drawArmourList((**preset), filterStr);
 
         ImGui::PushItemWidth(-1);
         ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
         ImGui::PopItemWidth();
-
-        //ImGui::Spacing();
-        //ImGui::Spacing();
-        //static constexpr const char* kDeleteLabel = "Delete";
-        //static constexpr const char* kCancelLabel = "Cancel";
-        //static constexpr const char* kEditorLabel = "Open In Editor";
-        //static constexpr const char* kUpdateLabel = "Update";
-
-        //ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f)); // Muted red
-        //ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
-        //ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-        //if (ImGui::Button(kDeleteLabel)) {
-        //    INVOKE_REQUIRED_CALLBACK(deleteCallback, presetUUID);
-        //}
-        //ImGui::PopStyleColor(3);
-
-        //float availableWidth = ImGui::GetContentRegionAvail().x;
-        //float spacing = ImGui::GetStyle().ItemSpacing.x;
-        //float cancelButtonWidth = ImGui::CalcTextSize(kCancelLabel).x + ImGui::GetStyle().FramePadding.x * 2;
-        //float editorButtonWidth = ImGui::CalcTextSize(kEditorLabel).x + ImGui::GetStyle().FramePadding.x * 2;
-        //float updateButtonWidth = ImGui::CalcTextSize(kUpdateLabel).x + ImGui::GetStyle().FramePadding.x * 2;
-        //float totalWidth = updateButtonWidth + editorButtonWidth + cancelButtonWidth + spacing;
-
-        //// Cancel Button
-        //ImGui::SameLine();
-
-        //float cancelButtonPos = availableWidth - totalWidth;
-        //ImGui::SetCursorPosX(cancelButtonPos);
-        //ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
-        //ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.20f, 0.20f, 1.0f));
-        //ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.10f, 0.10f, 0.10f, 1.0f));
-
-        //if (ImGui::Button(kCancelLabel)) {
-        //    INVOKE_REQUIRED_CALLBACK(cancelCallback);
-        //}
-
-        //ImGui::PopStyleColor(3);
-
-        //// Editor Button
-        //ImGui::SameLine();
-
-        //if (ImGui::Button(kEditorLabel)) {
-        //    INVOKE_REQUIRED_CALLBACK(openEditorCallback, presetUUID);
-        //}
-        //ImGui::SetItemTooltip("Edit all values, e.g. bone modifiers");
-
-        //// Update Button
-        //ImGui::SameLine();
-
-        //const bool nameEmpty = preset.name.empty();
-        //const bool bundleEmpty = preset.bundle.empty();
-        //const bool alreadyExists = preset.name != presetBefore.name && dataManager.presetExists(preset.name);
-        //const bool disableUpdateButton = nameEmpty || bundleEmpty || alreadyExists;
-        //if (disableUpdateButton) ImGui::BeginDisabled();
-        //if (ImGui::Button(kUpdateLabel)) {
-        //    INVOKE_REQUIRED_CALLBACK(updateCallback, presetUUID, preset);
-        //}
-        //if (disableUpdateButton) ImGui::EndDisabled();
-        //if (nameEmpty) ImGui::SetItemTooltip("Please provide a preset name");
-        //if (bundleEmpty) ImGui::SetItemTooltip("Please provide a bundle name");
-        //else if (alreadyExists) ImGui::SetItemTooltip("Preset name already taken");
     }
 
-    void EditorTab::drawPresetEditor_BoneModifiersBody(Preset& preset) {
+    void EditorTab::drawPresetEditor_BoneModifiersBody(Preset** preset) {
+        ImGui::Button("Add bone", ImVec2(ImGui::GetContentRegionAvail().x, 0));
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::Checkbox(" Compact Mode ", &(**preset).compactMode);
+        ImGui::SetItemTooltip("Compact: per-bone, vertical sliders in a single line.\nStandard: per-bone, horizontal sliders in 3 lines, and you can type exact values.");
+        ImGui::SameLine();
+        ImGui::Checkbox(" L/R Symmetry ", &(**preset).useSymmetry);
+        ImGui::SetItemTooltip("When enabled, bones with left (L) & right (R) pairs will be combined into one set of sliders.\n Any modifiers applied to the set will be reflected on the opposite bones.");
+        ImGui::SameLine();
+        constexpr const char* modLimitLabel = " Mod Limit ";
+        float reservedWidth = ImGui::CalcTextSize(modLimitLabel).x;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - reservedWidth);
+        ImGui::DragFloat(modLimitLabel, &(**preset).bodyModLimit, 0.01f, 0.0f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SetItemTooltip("The maximum value of any bone modifier for this preset.\nSet this to your expected max modifier to see differences more clearly.");
+        ImGui::Spacing();
+
+        constexpr const char* hintText = "Note: Right click a modifier to set it to zero. Hold shift to edit x,y,z all at once.";
+        const float hintWidth = ImGui::CalcTextSize(hintText).x;
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (ImGui::GetContentRegionAvail().x - hintWidth) * 0.5f);
+        ImGui::Text(hintText);
+        ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        if ((**preset).bodyBoneModifiers.size() == 0) {
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+            constexpr char const* noBoneStr = "No modified bones found - add some above!";
+            preAlignCellContentHorizontal(noBoneStr);
+            ImGui::Text(noBoneStr);
+            ImGui::PopStyleColor();
+        }
+        else {
+            constexpr float deleteButtonScale = 1.2f;
+            constexpr float linkButtonScale   = 1.0f;
+            constexpr float sliderHeight      = 48.0f; // Sliders will need changing in drawCompactBoneMidiferGroup() if you change these.
+            constexpr float sliderWidth       = 18.0f;
+            constexpr float tableVpad         = 5.0f;
+
+            constexpr ImGuiTableFlags boneModTableFlags =
+                ImGuiTableFlags_RowBg
+                | ImGuiTableFlags_PadOuterX
+                | ImGuiTableFlags_Sortable;
+            ImGui::BeginTable("##BoneModifierList", 5, boneModTableFlags);
+
+            constexpr ImGuiTableColumnFlags stretchSortFlags =
+                ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
+            constexpr ImGuiTableColumnFlags fixedNoSortFlags =
+                ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed;
+
+            ImGui::TableSetupColumn("",         fixedNoSortFlags, 0.0f);
+            ImGui::TableSetupColumn("Bone",     stretchSortFlags, 0.0f);
+            ImGui::TableSetupColumn("Scale",    fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
+            ImGui::TableSetupColumn("Position", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
+            ImGui::TableSetupColumn("Rotation", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
+            ImGui::TableHeadersRow();
+
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, tableVpad));
+
+            float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+
+            for (auto& [boneName, modifiers] : (**preset).bodyBoneModifiers) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (sliderHeight + tableVpad - ImGui::GetFontSize() * deleteButtonScale) * 0.5f);
+                if (ImDeleteButton(("##del_" + boneName).c_str(), deleteButtonScale)) {
+
+                }
+                ImGui::PopStyleColor(2);
+
+                ImGui::TableNextColumn();
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (sliderHeight + tableVpad - ImGui::CalcTextSize(boneName.c_str()).y) * 0.5f);
+                ImGui::Text(boneName.c_str());
+
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 4));
+
+                ImGui::TableNextColumn();
+                drawCompactBoneModifierGroup(boneName + "_scale_", preset, modifiers.scale);
+                ImGui::TableNextColumn();
+                drawCompactBoneModifierGroup(boneName + "_position_", preset, modifiers.position);
+                ImGui::TableNextColumn();
+                drawCompactBoneModifierGroup(boneName + "_rotation_", preset, modifiers.rotation);
+
+                ImGui::PopStyleVar();
+            }
+
+            ImGui::PopStyleVar();
+            ImGui::EndTable();
+        }
+    }
+
+    void EditorTab::drawPresetEditor_BoneModifiersLegs(Preset** preset) {
 
     }
 
-    void EditorTab::drawPresetEditor_BoneModifiersLegs(Preset& preset) {
+    void EditorTab::drawCompactBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group) {
+        bool changedX = ImBoneSlider(("##" + strID + "x").c_str(), ImVec2(18, 48), &group.x, (**preset).bodyModLimit, "", "x: %.2f");
+        ImGui::SameLine();
+        bool changedY = ImBoneSlider(("##" + strID + "y").c_str(), ImVec2(18, 48), &group.y, (**preset).bodyModLimit, "", "y: %.2f");
+        ImGui::SameLine();
+        bool changedZ = ImBoneSlider(("##" + strID + "z").c_str(), ImVec2(18, 48), &group.z, (**preset).bodyModLimit, "", "z: %.2f");
 
+        if (changedX && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.y = group.x; group.z = group.x; }
+        if (changedY && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.y; group.z = group.y; }
+        if (changedZ && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.z; group.y = group.z; }
     }
 
     bool EditorTab::canSavePreset(std::string& errMsg) const {
@@ -411,9 +527,10 @@ namespace kbf {
         float availableWidth = ImGui::GetContentRegionAvail().x;
         float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-        constexpr const char* kBackLabel = "<";
-        if (ImGui::Button(kBackLabel)) {
+        if (ImGui::ArrowButton("##navBackButton", ImGuiDir_Left)) {
             editNone();
+            presetPanel.close();
+            presetGroupPanel.close();
             ImGui::EndChild();
             return false;
         }
@@ -461,6 +578,9 @@ namespace kbf {
         if (!canSave) ImGui::EndDisabled();
         if (!canRevert) ImGui::SetItemTooltip("Preset is unchanged.");
         else if (!canSave) ImGui::SetItemTooltip(errMsg.c_str());
+
+        ImGui::Spacing();
+        ImGui::Separator();
 
         ImGui::EndChild();
 

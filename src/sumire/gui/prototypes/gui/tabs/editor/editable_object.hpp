@@ -79,6 +79,14 @@ namespace kbf {
 
 		void setNone() { clear(); type = ObjectType::NONE; }
 
+        void setPresetCurrent(const Preset* preset) {
+            if (preset == nullptr) return;
+            if (type != ObjectType::PRESET) return;
+
+            clear();
+            ptrAfter.preset = new Preset(*preset);
+        }
+
 		void setPreset(Preset* preset) { 
 			if (preset == nullptr) return setNone();
 			clear();
@@ -86,10 +94,19 @@ namespace kbf {
 			ptrBefore.preset = preset;
 			ptrAfter.preset = new Preset(*preset);
 		}
+
         void revertPreset() {
             if (type != ObjectType::PRESET) return;
             clear();
             ptrAfter.preset = new Preset(*ptrBefore.preset);
+        }
+
+        void setPresetGroupCurrent(const PresetGroup* presetGroup) {
+            if (presetGroup == nullptr) return;
+            if (type != ObjectType::PRESET_GROUP) return;
+
+            clear();
+            ptrAfter.presetGroup = new PresetGroup(*presetGroup);
         }
 
 		void setPresetGroup(PresetGroup* presetGroup) { 
@@ -99,6 +116,7 @@ namespace kbf {
 			ptrBefore.presetGroup = presetGroup;
 			ptrAfter.presetGroup  = new PresetGroup(*presetGroup);
 		}
+
         void revertPresetGroup() {
             if (type != ObjectType::PRESET_GROUP) return;
             clear();

@@ -38,27 +38,35 @@ namespace kbf {
 		ImFont* wsArmourFont;
 
 		void drawNoEditor();
-		void openPresetPanel();
-		void openPresetGroupPanel();
+		void openSelectPresetPanel();
+		void openSelectPresetGroupPanel();
+		void openCopyPresetPanel();
+		void openCopyPresetGroupPanel();
+		//void open
 		UniquePanel<PresetPanel>      presetPanel;
 		UniquePanel<PresetGroupPanel> presetGroupPanel;
 		UniquePanel<InfoPopupPanel>   generateCachePanel;
 
 		// Preset Group Editor
 		void drawPresetGroupEditor();
-		void drawPresetGroupEditor_Properties(PresetGroup& presetGroup);
-		void drawPresetGroupEditor_AssignedPresets(PresetGroup& presetGroup);
+		void drawPresetGroupEditor_Properties(PresetGroup** presetGroup);
+		void drawPresetGroupEditor_AssignedPresets(PresetGroup** presetGroup);
 		bool canSavePresetGroup(std::string& errMsg) const;
+
+		void initializePresetGroupBuffers(const PresetGroup* presetGroup);
 		char presetGroupNameBuffer[128] = "";
 
 		// Preset Editor
 		void drawPresetEditor();
-		void drawPresetEditor_Properties(Preset& preset);
-		void drawPresetEditor_BoneModifiersBody(Preset& preset);
-		void drawPresetEditor_BoneModifiersLegs(Preset& preset);
+		void drawPresetEditor_Properties(Preset** preset);
+		void drawPresetEditor_BoneModifiersBody(Preset** preset);
+		void drawPresetEditor_BoneModifiersLegs(Preset** preset);
+		void drawCompactBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3 & group);
 		bool canSavePreset(std::string& errMsg) const;
 		void drawArmourList(Preset& preset, const std::string& filter);
 		void drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter);
+
+		void initializePresetBuffers(const Preset* preset);
 		char presetNameBuffer[128]   = "";
 		char presetBundleBuffer[128] = "";
 
