@@ -38,9 +38,9 @@ namespace kbf {
 
         drawTabBarSeparator("Support", "Support");
         ImGui::TextWrapped(
-            "A lot of time and effort went into making this plugin. It needed to be written from scratch in c++ for performance and functionality reasons, and was much more difficult that lua scripting.");
+            "A lot of time and effort went into making this plugin. It needed to be written from scratch in c++ for performance and functionality reasons, and was subsequently much more difficult than making a lua script.");
         ImGui::TextWrapped(
-            "Nobody should ever be forced to pay for mods - but - if you like it, please consider dropping me some change on Ko-fi! c:"
+            "Nobody should ever be forced to pay for mods - but - if you like KBF, please consider dropping me some change on Ko-fi! c:"
         );
 
         ImGui::Button("Ko-Fi", ImVec2(ImGui::GetContentRegionAvail().x, 0));
@@ -51,17 +51,21 @@ namespace kbf {
         ImGui::TextWrapped(
             "I created Kana's Body Framework (KBF) for two main reasons:"
         );
+
+        ImGui::Indent();
         WRAP_BULLET("1.", "As a successor to my mod Female Body Sliders For Everyone (FBS4all).");
         WRAP_BULLET("2.", "As a more efficient & flexible alternative to Ridog8's Female Body Sliders (FBS).");
-        ImGui::Spacing();
+        ImGui::Unindent();
+
         ImGui::TextWrapped(
             "If you use FBS only for the bone-modifying or part-enabling functionality, this framework will serve as a more "
-            "efficient and flexible replacement for it."
+            "efficient and flexible replacement for it (see \"Migrating from FBS\" tutorial)."
         );
         ImGui::TextWrapped(
             "Additionally, you can manually update the list of armours supported by KBF when new content drops if you find me too slow in updating it (see \"Manually Updating KBF\" tutorial) - "
             "This was one of my main issues with FBS."
         );
+        ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
 
@@ -77,18 +81,13 @@ namespace kbf {
             "If you have friends that also use KBF, you can share your presets with each other (see \"Sharing Presets\" tutorial) to see eachothers desired body types locally!"
         );
         ImGui::Spacing();
-        ImGui::TextWrapped(
-            "This plugin needed to be re-written from scratch in C++ to enable the functionality I wanted, and also to be performant."
-            " Modifying hundreds of bones per-frame without noticeable performance impact is simply not possible with a lua script."
-        );
-        ImGui::Spacing();
 
         drawTabBarSeparator("Bug Reports", "Bug Reports");
         ImGui::TextWrapped(
             "If you encounter any persistent or reoccurring bugs, please submit them on the mod's BUGS PAGE on nexusmods. I may move this to GitHub at a later date."
         );
         ImGui::TextWrapped(
-            "When doing so, please include at least steps to reproduce the bug, or any error messages in pop-ups, or in KBF's console (Debug > Logs)."
+            "When doing so, please include at least steps to reproduce the bug, or any error messages in pop-ups / KBF's console (Debug > Logs)."
         );
         ImGui::TextWrapped(
             "Without this information, bug fixing will potentially be very difficult and I may just have to ignore the bug."
@@ -104,6 +103,7 @@ namespace kbf {
 
     void AboutTab::drawTutorialsTab() {
         ImGui::Spacing();
+        drawTabBarSeparator("Migrating from FBS", "FBSmigrate");
         drawTabBarSeparator("Sharing Presets", "SharingPresets");
         drawTabBarSeparator("Manually Updating KBF", "ManualUpdate");
     }
