@@ -39,7 +39,7 @@ namespace kbf {
 		}
 
 		// Close that waits until next draw to complete (else synchronization issues may occur)
-		inline void close() { needsClose = true; }
+		inline void close() { if (panel != nullptr) needsClose = true; }
 		inline void forceClose() { panel = nullptr; }
 
 		void draw() {
