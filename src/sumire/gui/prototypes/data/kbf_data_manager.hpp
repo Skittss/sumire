@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sumire/gui/prototypes/data/bones/bone_cache_manager.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_group.hpp>
 #include <sumire/gui/prototypes/data/formats/preset.hpp>
 #include <sumire/gui/prototypes/data/formats/player_override.hpp>
@@ -21,6 +22,8 @@ namespace kbf {
 
 		// TODO: If can ever be bothered, most of this can be abstracted to 3 
 		//        JSON handler classes that derive from some base.
+
+		BoneCacheManager& boneCache() { return boneCacheManager; }
 
 		PlayerDefaults& playerDefaults() { return presetGroupDefaults.player; }
 		NpcDefaults& npcDefaults() { return presetGroupDefaults.npc; }
@@ -122,7 +125,6 @@ namespace kbf {
 		bool loadPreset(const std::filesystem::path& path, Preset* out);
 		bool writePreset(const std::filesystem::path& path, const Preset& preset) const;
 		bool loadPresets();
-		//bool writePresets();
 
 		std::unordered_map<std::string, PresetGroup> presetGroups;
 		bool loadPresetGroup(const std::filesystem::path& path, PresetGroup* out);
@@ -144,6 +146,8 @@ namespace kbf {
 		void validatePresetGroups();
 		void validateDefaultConfigs_Presets();
 		bool validatePresetExists(std::string& uuid) const;
+
+		BoneCacheManager boneCacheManager;
 	};
 
 }
