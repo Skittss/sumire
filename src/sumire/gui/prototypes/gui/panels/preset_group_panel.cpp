@@ -15,12 +15,10 @@ namespace kbf {
         const std::string& strID,
         const KBFDataManager& dataManager,
         ImFont* wsSymbolFont,
-        ImFont* wsArmourFont,
         bool showDefaultAsOption
     ) : iPanel(name, strID), 
         dataManager{ dataManager }, 
         wsSymbolFont{ wsSymbolFont }, 
-        wsArmourFont{ wsArmourFont },
         showDefaultAsOption{ showDefaultAsOption } {}
 
     bool PresetGroupPanel::draw() {

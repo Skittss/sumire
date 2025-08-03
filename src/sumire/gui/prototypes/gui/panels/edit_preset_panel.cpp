@@ -5,6 +5,7 @@
 #include <sumire/gui/prototypes/data/armour/armour_list.hpp>
 #include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
+#include <sumire/gui/prototypes/debug/debug_stack.hpp>
 
 #include <format>
 
@@ -27,6 +28,10 @@ namespace kbf {
         presetBefore = *presetPtr;
         preset       = *presetPtr;
 
+        initializeBuffers();
+    }
+
+    void EditPresetPanel::initializeBuffers() {
         std::strcpy(presetNameBuffer, preset.name.c_str());
         std::strcpy(presetBundleBuffer, preset.bundle.c_str());
     }
@@ -34,8 +39,19 @@ namespace kbf {
     bool EditPresetPanel::draw() {
         bool open = true;
         processFocus();
+
+        copyPresetPanel.draw();
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
         ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+
+        if (ImGui::Button("Copy Existing Preset", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            openCopyPresetPanel();
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
 
         ImGui::InputText(" Name ", presetNameBuffer, IM_ARRAYSIZE(presetNameBuffer));
         preset.name = std::string{ presetNameBuffer };
@@ -59,6 +75,7 @@ namespace kbf {
         ImGui::SetItemTooltip("Suggested character sex to use with (not a hard restriction)");
 
         ImGui::Spacing();
+        ImGui::Separator();
         ImGui::Spacing();
 
         static char dummyStrBuffer[8] = "";
@@ -213,6 +230,25 @@ namespace kbf {
         ImGui::PushFont(wsArmourFont);
         ImGui::GetWindowDrawList()->AddText(ImVec2(armourNameCursorPosX, armourNameCursorPosY), ImGui::GetColorU32(ImGuiCol_Text), armourSet.name.c_str());
         ImGui::PopFont();
+    }
+
+    void EditPresetPanel::openCopyPresetPanel() {
+        copyPresetPanel.openNew("Copy Existing Preset", "CreatePresetPanel_CopyPanel", dataManager, wsSymbolFont, wsArmourFont, false);
+        copyPresetPanel.get()->focus();
+
+        copyPresetPanel.get()->onSelectPreset([&](std::string uuid) {
+            const Preset* copyPreset = dataManager.getPresetByUUID(uuid);
+            if (copyPreset) {
+                preset = *copyPreset;
+                preset.uuid = presetBefore.uuid; // Make sure UUID remains the same.
+                preset.name += " (copy)";
+                initializeBuffers();
+            }
+            else {
+                DEBUG_STACK.push(std::format("Could not find preset with UUID {} while trying to make a copy.", uuid), DebugStack::Color::ERROR);
+            }
+            copyPresetPanel.close();
+            });
     }
 
 }

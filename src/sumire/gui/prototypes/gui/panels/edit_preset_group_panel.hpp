@@ -3,6 +3,8 @@
 #include <sumire/gui/prototypes/gui/panels/i_panel.hpp>
 #include <sumire/gui/prototypes/data/formats/preset.hpp>
 #include <sumire/gui/prototypes/data/kbf_data_manager.hpp>
+#include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/preset_group_panel.hpp>
 
 #include <imgui.h>
 
@@ -30,7 +32,12 @@ namespace kbf {
 		std::string presetGroupUUID;
 		PresetGroup presetGroupBefore;
 		PresetGroup presetGroup;
+
+		void initializeBuffers();
 		char presetGroupNameBuffer[128];
+
+		UniquePanel<PresetGroupPanel> copyPresetGroupPanel;
+		void openCopyPresetGroupPanel();
 
 		std::function<void(const std::string&)>              deleteCallback;
 		std::function<void(const std::string&, PresetGroup)> updateCallback;

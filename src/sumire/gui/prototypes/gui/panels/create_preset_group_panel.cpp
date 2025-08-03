@@ -6,6 +6,7 @@
 #include <sumire/gui/prototypes/data/armour/armour_list.hpp>
 #include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
+#include <sumire/gui/prototypes/debug/debug_stack.hpp>
 
 #include <format>
 
@@ -18,17 +19,33 @@ namespace kbf {
         ImFont* wsSymbolFont
     ) : iPanel(name, strID), dataManager{ dataManager }, wsSymbolFont{ wsSymbolFont } {
         presetGroup = PresetGroup{};
+        presetGroup.name = "New Preset Group";
         presetGroup.uuid = uuid::v4::UUID::New().String();
         presetGroup.female = true;
 
-        std::strcpy(presetGroupNameBuffer, "New Preset Group");
+        initializeBuffers();
+    }
+
+    void CreatePresetGroupPanel::initializeBuffers() {
+        std::strcpy(presetGroupNameBuffer, presetGroup.name.c_str());
     }
 
     bool CreatePresetGroupPanel::draw() {
         bool open = true;
         processFocus();
+
+        copyPresetGroupPanel.draw();
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
         ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+
+        if (ImGui::Button("Copy Existing Preset Group", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            openCopyPresetGroupPanel();
+        }
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
 
         ImGui::InputText(" Name ", presetGroupNameBuffer, IM_ARRAYSIZE(presetGroupNameBuffer));
         presetGroup.name = std::string{ presetGroupNameBuffer };
@@ -87,6 +104,25 @@ namespace kbf {
         ImGui::PopStyleVar();
 
         return open;
+    }
+
+    void CreatePresetGroupPanel::openCopyPresetGroupPanel() {
+        copyPresetGroupPanel.openNew("Copy Existing Preset Group", "CreatePresetPanel_CopyPanel", dataManager, wsSymbolFont, false);
+        copyPresetGroupPanel.get()->focus();
+
+        copyPresetGroupPanel.get()->onSelectPresetGroup([&](std::string uuid) {
+            const PresetGroup* copyPresetGroup = dataManager.getPresetGroupByUUID(uuid);
+            if (copyPresetGroup) {
+                presetGroup = *copyPresetGroup;
+                presetGroup.uuid = uuid::v4::UUID::New().String(); // Make sure to change the UUID.
+                presetGroup.name += " (copy)";
+                initializeBuffers();
+            }
+            else {
+                DEBUG_STACK.push(std::format("Could not find preset group with UUID {} while trying to make a copy.", uuid), DebugStack::Color::ERROR);
+            }
+            copyPresetGroupPanel.close();
+        });
     }
 
 }

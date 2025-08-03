@@ -17,7 +17,6 @@ namespace kbf {
 			const std::string& strID,
 			const KBFDataManager& dataManager,
 			ImFont* wsSymbolFont,
-			ImFont* wsArmourFont,
 			bool showDefaultAsOption = true);
 
 		bool draw() override;
