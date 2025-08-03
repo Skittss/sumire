@@ -134,6 +134,7 @@ SET(SUMIRE_SOURCES
     "${SUMIRE_SRC_DIR}/core/windowing/sumi_window.cpp "
     "${SUMIRE_SRC_DIR}/core/sumire.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/data/armour/armour_list.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/data/bones/bone_cache_manager.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/data/kbf_data_manager.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/create_preset_group_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/create_preset_panel.cpp "
