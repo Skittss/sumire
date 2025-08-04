@@ -35,16 +35,14 @@ namespace kbf {
 		std::string name;
 		std::string bundle;
 		bool female;
-		bool hasBody;
-		bool hasLegs;
 		ArmourSet armour;
 
 		std::map<std::string, BoneModifier> bodyBoneModifiers;
 		std::map<std::string, BoneModifier> legsBoneModifiers;
 		float legsModLimit = 1.0f;
 		float bodyModLimit = 1.0f;
-		bool  compactMode = true;
-		bool  useSymmetry = true;
+		bool  bodyUseSymmetry = true;
+		bool  legsUseSymmetry = true;
 
 		bool operator==(const Preset& other) const {
 			return (
@@ -57,9 +55,13 @@ namespace kbf {
 				legsBoneModifiers == other.legsBoneModifiers &&
 				legsModLimit == other.legsModLimit &&
 				bodyModLimit == other.bodyModLimit &&
-				compactMode == other.compactMode
+				bodyUseSymmetry == other.bodyUseSymmetry &&
+				legsUseSymmetry == other.legsUseSymmetry
 			);
 		}
+
+		bool hasLegs() const { return legsBoneModifiers.size() > 0; }
+		bool hasBody() const { return bodyBoneModifiers.size() > 0; }
 	};
 
 }

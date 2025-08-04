@@ -295,7 +295,7 @@ namespace kbf {
                 legMarkPos.x = ImGui::GetCursorScreenPos().x + contentRegionWidth - legMarkSize.x - ImGui::GetStyle().ItemSpacing.x;
                 legMarkPos.y = pos.y + (selectableHeight - legMarkSize.y) * 0.5f + armourVerticalAlignOffset;
 
-                ImGui::PushStyleColor(ImGuiCol_Text, preset->hasLegs ? armourPresentCol : armourMissingCol);
+                ImGui::PushStyleColor(ImGuiCol_Text, preset->hasLegs() ? armourPresentCol : armourMissingCol);
                 ImGui::GetWindowDrawList()->AddText(legMarkPos, ImGui::GetColorU32(ImGuiCol_Text), WS_FONT_LEGS);
                 ImGui::PopStyleColor();
 
@@ -305,7 +305,7 @@ namespace kbf {
                 bodyMarkPos.x = legMarkPos.x - bodyMarkSize.x - ImGui::GetStyle().ItemSpacing.x;
                 bodyMarkPos.y = pos.y + (selectableHeight - bodyMarkSize.y) * 0.5f + armourVerticalAlignOffset;
 
-                ImGui::PushStyleColor(ImGuiCol_Text, preset->hasBody ? armourPresentCol : armourMissingCol);
+                ImGui::PushStyleColor(ImGuiCol_Text, preset->hasBody() ? armourPresentCol : armourMissingCol);
                 ImGui::GetWindowDrawList()->AddText(bodyMarkPos, ImGui::GetColorU32(ImGuiCol_Text), WS_FONT_BODY);
                 ImGui::PopStyleColor();
 
