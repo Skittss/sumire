@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <sumire/gui/prototypes/gui/panels/i_panel.hpp>
+#include <sumire/gui/prototypes/data/kbf_data_manager.hpp>
 
 #include <imgui.h>
 
@@ -13,20 +14,29 @@ namespace kbf {
 		BonePanel(
 			const std::string& label,
 			const std::string& strID,
+			KBFDataManager& dataManager,
+			Preset** preset,
+			bool body,
 			ImFont* wsSymbolFont);
 
 		bool draw() override;
-		void onSelectBone(std::function<void(PlayerData)> callback) { selectCallback = callback; }
+		void onSelectBone(std::function<void(std::string)> callback) { selectCallback = callback; }
+		void onCheckBoneDisabled(std::function<bool(std::string)> callback) { checkDisableBoneCallback = callback; }
+		void onAddDefaults(std::function<void(void)> callback) { addDefaultsCallback = callback; }
 
 	private:
-		std::vector<BoneData> filterPlayerList(
-			const std::string& filter,
-			const std::vector<PlayerData>& playerList);
-		void drawPlayerList(const std::vector<PlayerData>& playerList);
+		KBFDataManager& dataManager;
+		Preset** preset;
+		bool body;
 
-		std::function<void(PlayerData)> selectCallback;
-		std::function<bool(PlayerData)> checkDisablePlayerCallback;
-		std::function<std::string()> requestDisabledPlayerTooltipCallback;
+		std::vector<std::string> filterBoneList(
+			const std::string& filter,
+			const std::vector<std::string>& boneList);
+		void drawBoneList(const std::vector<std::string>& boneList);
+
+		std::function<void(std::string)> selectCallback;
+		std::function<bool(std::string)> checkDisableBoneCallback;
+		std::function<void(void)>        addDefaultsCallback;
 
 		ImFont* wsSymbolFont;
 	};

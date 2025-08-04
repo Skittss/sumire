@@ -9,6 +9,9 @@
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/delete_button.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/bone_slider.hpp>
+#include <sumire/gui/prototypes/data/bones/default_bones.hpp>
+
+#include <sumire/gui/prototypes/util/string/to_lower.hpp>
 
 #include <format>
 
@@ -29,6 +32,8 @@ namespace kbf {
 	void EditorTab::drawPopouts() {
         presetPanel.draw();
         presetGroupPanel.draw();
+        selectBonePanel.draw();
+        navWarnUnsavedPanel.draw();
     }
 
     void EditorTab::editPresetGroup(PresetGroup* presetGroup) { 
@@ -40,6 +45,8 @@ namespace kbf {
 
     void EditorTab::editPreset(Preset* preset) { 
         openObject.setPreset(preset); 
+        bodyBoneInfoWidget.onAddBoneModifier([&]() { openSelectBonePanel(true); });
+        legsBoneInfoWidget.onAddBoneModifier([&]() { openSelectBonePanel(false); });
         presetPanel.close();
         presetGroupPanel.close();
         initializePresetBuffers(preset);
@@ -106,7 +113,7 @@ namespace kbf {
             if (copyPresetGroup) {
                 openObject.setPresetGroupCurrent(copyPresetGroup);
                 openObject.ptrAfter.presetGroup->uuid = openObject.ptrBefore.presetGroup->uuid;
-                openObject.ptrAfter.presetGroup->name += " (copy)";
+                openObject.ptrAfter.presetGroup->name = openObject.ptrBefore.presetGroup->name;
                 initializePresetGroupBuffers(openObject.ptrAfter.presetGroup);
             }
             else {
@@ -125,7 +132,7 @@ namespace kbf {
             if (copyPreset) {
                 openObject.setPresetCurrent(copyPreset);
                 openObject.ptrAfter.preset->uuid = openObject.ptrBefore.preset->uuid;
-                openObject.ptrAfter.preset->name += " (copy)";
+                openObject.ptrAfter.preset->name = openObject.ptrBefore.preset->name;
                 initializePresetBuffers(openObject.ptrAfter.preset);
             }
             else {
@@ -133,6 +140,42 @@ namespace kbf {
             }
             presetPanel.close();
             });
+    }
+
+    void EditorTab::openSelectBonePanel(bool body) {
+        selectBonePanel.openNew("Add Bone Modifier", "EditPreset_BoneModifierPanel", dataManager, &openObject.ptrAfter.preset, body, wsSymbolFont);
+        selectBonePanel.get()->focus();
+
+        selectBonePanel.get()->onSelectBone([&](std::string name) {
+            if (body) {
+                openObject.ptrAfter.preset->bodyBoneModifiers.emplace(name, BoneModifier{});
+            }
+            else {
+                openObject.ptrAfter.preset->legsBoneModifiers.emplace(name, BoneModifier{});
+            }
+            selectBonePanel.close();
+        });
+
+        selectBonePanel.get()->onCheckBoneDisabled([&](std::string name) {
+            if (body) return openObject.ptrAfter.preset->bodyBoneModifiers.find(name) != openObject.ptrAfter.preset->bodyBoneModifiers.end();
+            return openObject.ptrAfter.preset->legsBoneModifiers.find(name) != openObject.ptrAfter.preset->legsBoneModifiers.end();
+        });
+
+        selectBonePanel.get()->onAddDefaults([&]() {
+            std::set<std::string> defaultBones = openObject.ptrAfter.preset->female
+                ? (body ? DEFAULT_BONES_FEMALE_BODY : DEFAULT_BONES_FEMALE_LEGS)
+                : (body ? DEFAULT_BONES_MALE_BODY : DEFAULT_BONES_MALE_LEGS);
+
+            for (const std::string& bone : defaultBones) {
+                if (body) {
+                    openObject.ptrAfter.preset->bodyBoneModifiers.emplace(bone, BoneModifier{});
+                }
+                else {
+                    openObject.ptrAfter.preset->legsBoneModifiers.emplace(bone, BoneModifier{});
+                }
+            }
+            selectBonePanel.close();
+        });
     }
 
     void EditorTab::drawPresetGroupEditor() {
@@ -145,7 +188,7 @@ namespace kbf {
             [&]() { return *openObject.ptrBefore.presetGroup != *openObject.ptrAfter.presetGroup; },
             [&]() { openObject.revertPresetGroup(); initializePresetGroupBuffers(openObject.ptrAfter.presetGroup); },
             [&](std::string& errMsg) { return canSavePresetGroup(errMsg); },
-            [&]() { dataManager.updatePresetGroup(openObject.ptrBefore.presetGroup->uuid, *openObject.ptrAfter.presetGroup); });
+            savePresetGroupCb);
 
         if (!drawTabContent) return;
 
@@ -156,17 +199,17 @@ namespace kbf {
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
 
         if (ImGui::BeginTabBar("PresetEditorTabs")) {
             if (ImGui::BeginTabItem("Properties")) {
-                ImGui::BeginChild("PropertiesContent");
                 ImGui::Spacing();
                 drawPresetGroupEditor_Properties(&openObject.ptrAfter.presetGroup);
                 ImGui::EndChild();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Assigned Presets")) {
-                ImGui::BeginChild("PresetContent");
                 ImGui::Spacing();
                 drawPresetGroupEditor_AssignedPresets(&openObject.ptrAfter.presetGroup);
                 ImGui::EndChild();
@@ -177,6 +220,7 @@ namespace kbf {
     }
 
     void EditorTab::drawPresetGroupEditor_Properties(PresetGroup** presetGroup) {
+        ImGui::BeginChild("PresetGroupProperties");
         ImGui::InputText(" Name ", presetGroupNameBuffer, IM_ARRAYSIZE(presetGroupNameBuffer));
         (**presetGroup).name = std::string{ presetGroupNameBuffer };
 
@@ -192,6 +236,7 @@ namespace kbf {
             ImGui::EndCombo();
         }
         ImGui::SetItemTooltip("Suggested character sex to use with (not a hard restriction)");
+        ImGui::EndChild();
     }
 
     void EditorTab::drawPresetGroupEditor_AssignedPresets(PresetGroup** presetGroup) {
@@ -225,7 +270,7 @@ namespace kbf {
             [&]() { return *openObject.ptrBefore.preset != *openObject.ptrAfter.preset; },
             [&]() { openObject.revertPreset(); initializePresetBuffers(openObject.ptrAfter.preset); },
             [&](std::string& errMsg) { return canSavePreset(errMsg); },
-            [&]() { dataManager.updatePreset(openObject.ptrBefore.preset->uuid, *openObject.ptrAfter.preset); });
+            savePresetCb);
 
         if (!drawTabContent) return;
 
@@ -236,34 +281,34 @@ namespace kbf {
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
 
         if (ImGui::BeginTabBar("PresetEditorTabs")) {
             if (ImGui::BeginTabItem("Properties")) {
-                ImGui::BeginChild("PropertiesContent");
                 ImGui::Spacing();
                 drawPresetEditor_Properties(&openObject.ptrAfter.preset);
-                ImGui::EndChild();
                 ImGui::EndTabItem();
             }
+            if (ImGui::IsItemClicked()) selectBonePanel.close();
             if (ImGui::BeginTabItem("Body Modifiers")) {
-                ImGui::BeginChild("BoneContentBody");
                 ImGui::Spacing();
                 drawPresetEditor_BoneModifiersBody(&openObject.ptrAfter.preset);
-                ImGui::EndChild();
                 ImGui::EndTabItem();
             }
+            if (ImGui::IsItemClicked()) selectBonePanel.close();
             if (ImGui::BeginTabItem("Leg Modifiers")) {
-                ImGui::BeginChild("BoneContentLeg");
                 ImGui::Spacing();
                 drawPresetEditor_BoneModifiersLegs(&openObject.ptrAfter.preset);
-                ImGui::EndChild();
                 ImGui::EndTabItem();
             }
+            if (ImGui::IsItemClicked()) selectBonePanel.close();
             ImGui::EndTabBar();
         }
 	}
 
     void EditorTab::drawPresetEditor_Properties(Preset** preset) {
+        ImGui::BeginChild("PresetProperties");
         ImGui::InputText(" Name ", presetNameBuffer, IM_ARRAYSIZE(presetNameBuffer));
         (**preset).name = std::string{ presetNameBuffer };
 
@@ -309,38 +354,19 @@ namespace kbf {
         ImGui::PushItemWidth(-1);
         ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
         ImGui::PopItemWidth();
+
+        ImGui::EndChild();
     }
 
     void EditorTab::drawPresetEditor_BoneModifiersBody(Preset** preset) {
-        ImGui::Button("Add bone", ImVec2(ImGui::GetContentRegionAvail().x, 0));
+        static bool compactMode = true;
+        static bool categorizeBones = true;
 
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::BeginChild("StickyBoneControlsWidget", ImVec2(0, 110.0f), false, ImGuiWindowFlags_NoScrollbar);
+        bodyBoneInfoWidget.draw(&compactMode, &categorizeBones, &(**preset).bodyUseSymmetry, &(**preset).bodyModLimit);
+        ImGui::EndChild();
 
-        ImGui::Checkbox(" Compact Mode ", &(**preset).compactMode);
-        ImGui::SetItemTooltip("Compact: per-bone, vertical sliders in a single line.\nStandard: per-bone, horizontal sliders in 3 lines, and you can type exact values.");
-        ImGui::SameLine();
-        ImGui::Checkbox(" L/R Symmetry ", &(**preset).useSymmetry);
-        ImGui::SetItemTooltip("When enabled, bones with left (L) & right (R) pairs will be combined into one set of sliders.\n Any modifiers applied to the set will be reflected on the opposite bones.");
-        ImGui::SameLine();
-        constexpr const char* modLimitLabel = " Mod Limit ";
-        float reservedWidth = ImGui::CalcTextSize(modLimitLabel).x;
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - reservedWidth);
-        ImGui::DragFloat(modLimitLabel, &(**preset).bodyModLimit, 0.01f, 0.0f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::SetItemTooltip("The maximum value of any bone modifier for this preset.\nSet this to your expected max modifier to see differences more clearly.");
-        ImGui::Spacing();
-
-        constexpr const char* hintText = "Note: Right click a modifier to set it to zero. Hold shift to edit x,y,z all at once.";
-        const float hintWidth = ImGui::CalcTextSize(hintText).x;
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (ImGui::GetContentRegionAvail().x - hintWidth) * 0.5f);
-        ImGui::Text(hintText);
-        ImGui::PopStyleColor();
-
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::BeginChild("BoneModifiersListBody");
 
         if ((**preset).bodyBoneModifiers.size() == 0) {
             ImGui::Spacing();
@@ -351,77 +377,262 @@ namespace kbf {
             ImGui::PopStyleColor();
         }
         else {
-            constexpr float deleteButtonScale = 1.2f;
-            constexpr float linkButtonScale   = 1.0f;
-            constexpr float sliderHeight      = 48.0f; // Sliders will need changing in drawCompactBoneMidiferGroup() if you change these.
-            constexpr float sliderWidth       = 18.0f;
-            constexpr float tableVpad         = 5.0f;
-
-            constexpr ImGuiTableFlags boneModTableFlags =
-                ImGuiTableFlags_RowBg
-                | ImGuiTableFlags_PadOuterX
-                | ImGuiTableFlags_Sortable;
-            ImGui::BeginTable("##BoneModifierList", 5, boneModTableFlags);
-
-            constexpr ImGuiTableColumnFlags stretchSortFlags =
-                ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
-            constexpr ImGuiTableColumnFlags fixedNoSortFlags =
-                ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed;
-
-            ImGui::TableSetupColumn("",         fixedNoSortFlags, 0.0f);
-            ImGui::TableSetupColumn("Bone",     stretchSortFlags, 0.0f);
-            ImGui::TableSetupColumn("Scale",    fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
-            ImGui::TableSetupColumn("Position", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
-            ImGui::TableSetupColumn("Rotation", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
-            ImGui::TableHeadersRow();
-
-            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, tableVpad));
-
-            float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-
-            for (auto& [boneName, modifiers] : (**preset).bodyBoneModifiers) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (sliderHeight + tableVpad - ImGui::GetFontSize() * deleteButtonScale) * 0.5f);
-                if (ImDeleteButton(("##del_" + boneName).c_str(), deleteButtonScale)) {
-
-                }
-                ImGui::PopStyleColor(2);
-
-                ImGui::TableNextColumn();
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (sliderHeight + tableVpad - ImGui::CalcTextSize(boneName.c_str()).y) * 0.5f);
-                ImGui::Text(boneName.c_str());
-
-                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 4));
-
-                ImGui::TableNextColumn();
-                drawCompactBoneModifierGroup(boneName + "_scale_", preset, modifiers.scale);
-                ImGui::TableNextColumn();
-                drawCompactBoneModifierGroup(boneName + "_position_", preset, modifiers.position);
-                ImGui::TableNextColumn();
-                drawCompactBoneModifierGroup(boneName + "_rotation_", preset, modifiers.rotation);
-
-                ImGui::PopStyleVar();
+            if (compactMode) {
+                drawCompactBoneModifierTable_Body(preset);
             }
-
-            ImGui::PopStyleVar();
-            ImGui::EndTable();
+            else {
+                drawBoneModifierTable_Body(preset);
+            }
         }
+
+        ImGui::EndChild();
     }
 
     void EditorTab::drawPresetEditor_BoneModifiersLegs(Preset** preset) {
 
     }
 
-    void EditorTab::drawCompactBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group) {
+    void EditorTab::drawCompactBoneModifierTable_Body(Preset** preset) {
+        constexpr float deleteButtonScale = 1.2f;
+        constexpr float linkButtonScale = 1.0f;
+        constexpr float sliderHeight = 48.0f;
+        constexpr float sliderWidth = 18.0f;
+        constexpr float tableVpad = 5.0f;
+
+        constexpr ImGuiTableFlags boneModTableFlags =
+            ImGuiTableFlags_RowBg
+            | ImGuiTableFlags_PadOuterX
+            | ImGuiTableFlags_Sortable;
+        ImGui::BeginTable("##BoneModifierList", 5, boneModTableFlags);
+
+        constexpr ImGuiTableColumnFlags stretchSortFlags =
+            ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
+        constexpr ImGuiTableColumnFlags fixedNoSortFlags =
+            ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed;
+
+        ImGui::TableSetupColumn("", fixedNoSortFlags, 0.0f);
+        ImGui::TableSetupColumn("Bone", stretchSortFlags, 0.0f);
+        ImGui::TableSetupColumn("Scale", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
+        ImGui::TableSetupColumn("Position", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
+        ImGui::TableSetupColumn("Rotation", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
+        ImGui::TableHeadersRow();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, tableVpad));
+
+        float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+
+        // Sort - this is kinda horrible.
+        static bool sortDirAscending = true;
+        static bool sort = false;
+        struct SortableModifier {
+            std::string name;
+            BoneModifier* modifier;
+        };
+
+        std::vector<SortableModifier> modifiers;
+        for (auto& [boneName, modifier] : (**preset).bodyBoneModifiers) { modifiers.push_back({ boneName, &modifier }); }
+
+        if (sort) {
+            std::sort(modifiers.begin(), modifiers.end(), [&](const SortableModifier& a, const SortableModifier& b) {
+                std::string lowa = toLower(a.name); std::string lowb = toLower(b.name);
+                return sortDirAscending ? lowa < lowb : lowa > lowb;
+                });
+        }
+
+        if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs()) {
+            if (sort_specs->SpecsDirty && sort_specs->SpecsCount > 0) {
+                const ImGuiTableColumnSortSpecs& sort_spec = sort_specs->Specs[0];
+                sortDirAscending = sort_spec.SortDirection == ImGuiSortDirection_Ascending;
+
+                switch (sort_spec.ColumnIndex)
+                {
+                case 1: sort = true;
+                }
+
+                sort_specs->SpecsDirty = false;
+            }
+        }
+
+        std::vector<std::string> bonesToDelete{};
+        for (const SortableModifier& bone : modifiers) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (sliderHeight + tableVpad - ImGui::GetFontSize() * deleteButtonScale) * 0.5f);
+            if (ImDeleteButton(("##del_" + bone.name).c_str(), deleteButtonScale)) {
+                bonesToDelete.push_back(bone.name);
+            }
+            ImGui::PopStyleColor(2);
+
+            ImGui::TableNextColumn();
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (sliderHeight + tableVpad - ImGui::CalcTextSize(bone.name.c_str()).y) * 0.5f);
+            ImGui::Text(bone.name.c_str());
+
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 4));
+
+            const ImVec2 size{ sliderWidth, sliderHeight };
+            ImGui::TableNextColumn();
+            drawCompactBoneModifierGroup(bone.name + "_scale_", preset, bone.modifier->scale, size);
+            ImGui::TableNextColumn();
+            drawCompactBoneModifierGroup(bone.name + "_position_", preset, bone.modifier->position, size);
+            ImGui::TableNextColumn();
+            drawCompactBoneModifierGroup(bone.name + "_rotation_", preset, bone.modifier->rotation, size);
+
+            ImGui::PopStyleVar();
+        }
+
+        for (const std::string& bone : bonesToDelete) {
+            (**preset).bodyBoneModifiers.erase(bone);
+        }
+
+        ImGui::PopStyleVar();
+        ImGui::EndTable();
+    }
+
+    void EditorTab::drawBoneModifierTable_Body(Preset** preset) {
+        constexpr float deleteButtonScale = 1.2f;
+        constexpr float linkButtonScale = 1.0f;
+        constexpr float sliderWidth = 80.0f;
+        constexpr float sliderSpeed = 0.01f;
+        constexpr float tableVpad = 2.5f;
+
+        constexpr ImGuiTableFlags boneModTableFlags =
+            ImGuiTableFlags_PadOuterX
+            | ImGuiTableFlags_Sortable;
+        ImGui::BeginTable("##BoneModifierList", 4, boneModTableFlags);
+
+        constexpr ImGuiTableColumnFlags stretchSortFlags =
+            ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
+        constexpr ImGuiTableColumnFlags fixedNoSortFlags =
+            ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed;
+
+        ImGui::TableSetupColumn("", fixedNoSortFlags, 0.0f);
+        ImGui::TableSetupColumn("Bone", stretchSortFlags, 0.0f);
+        ImGui::TableSetupColumn("", fixedNoSortFlags, ImGui::CalcTextSize("Position").x + 4.0f);
+        ImGui::TableSetupColumn("", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
+        ImGui::TableHeadersRow();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, tableVpad));
+
+        float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+
+        // Sort - this is kinda horrible.
+        static bool sortDirAscending = true;
+        static bool sort = false;
+        struct SortableModifier {
+            std::string name;
+            BoneModifier* modifier;
+        };
+
+        std::vector<SortableModifier> modifiers;
+        for (auto& [boneName, modifier] : (**preset).bodyBoneModifiers) { modifiers.push_back({ boneName, &modifier }); }
+
+        if (sort) {
+            std::sort(modifiers.begin(), modifiers.end(), [&](const SortableModifier& a, const SortableModifier& b) {
+                std::string lowa = toLower(a.name); std::string lowb = toLower(b.name);
+                return sortDirAscending ? lowa < lowb : lowa > lowb;
+                });
+        }
+
+        if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs()) {
+            if (sort_specs->SpecsDirty && sort_specs->SpecsCount > 0) {
+                const ImGuiTableColumnSortSpecs& sort_spec = sort_specs->Specs[0];
+                sortDirAscending = sort_spec.SortDirection == ImGuiSortDirection_Ascending;
+
+                switch (sort_spec.ColumnIndex)
+                {
+                case 1: sort = true;
+                }
+
+                sort_specs->SpecsDirty = false;
+            }
+        }
+
+        std::vector<std::string> bonesToDelete{};
+        size_t i = 0;
+        for (const SortableModifier& bone : modifiers) {
+            const ImU32 rowCol = i % 2 == 0 ? ImGui::GetColorU32(ImGuiCol_TableRowBg) : ImGui::GetColorU32(ImGuiCol_TableRowBgAlt);
+
+            // Top Row
+            ImGui::TableNextRow();
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, rowCol);
+
+            ImGui::TableSetColumnIndex(2);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetFrameHeight() - ImGui::GetTextLineHeight()) * 0.5f);
+            ImGui::Text("Scale");
+            ImGui::TableSetColumnIndex(3);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
+            drawBoneModifierGroup(bone.name + "_scale_", preset, bone.modifier->scale, sliderWidth, sliderSpeed);
+            ImGui::PopStyleVar();
+
+            // Middle Row
+            ImGui::TableNextRow();
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, rowCol);
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetFrameHeight() - ImGui::GetFontSize() * deleteButtonScale) * 0.5f);
+            if (ImDeleteButton(("##del_" + bone.name).c_str(), deleteButtonScale)) {
+                bonesToDelete.push_back(bone.name);
+            }
+            ImGui::PopStyleColor(2);
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetFrameHeight() - ImGui::GetTextLineHeight()) * 0.5f);
+            ImGui::Text(bone.name.c_str());
+
+            ImGui::TableSetColumnIndex(2);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetFrameHeight() - ImGui::GetTextLineHeight()) * 0.5f);
+            ImGui::Text("Position");
+            ImGui::TableSetColumnIndex(3);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
+            drawBoneModifierGroup(bone.name + "_position_", preset, bone.modifier->position, sliderWidth, sliderSpeed);
+            ImGui::PopStyleVar();
+
+            // Bottom Row
+            ImGui::TableNextRow();
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, rowCol);
+
+            ImGui::TableSetColumnIndex(2);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetFrameHeight() - ImGui::GetTextLineHeight()) * 0.5f);
+            ImGui::Text("Rotation");
+            ImGui::TableSetColumnIndex(3);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
+            drawBoneModifierGroup(bone.name + "_rotation_", preset, bone.modifier->rotation, sliderWidth, sliderSpeed);
+            ImGui::PopStyleVar();
+
+            i++;
+        }
+
+        for (const std::string& bone : bonesToDelete) {
+            (**preset).bodyBoneModifiers.erase(bone);
+        }
+
+        ImGui::PopStyleVar();
+        ImGui::EndTable();
+    }
+
+    void EditorTab::drawCompactBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group, ImVec2 size) {
         bool changedX = ImBoneSlider(("##" + strID + "x").c_str(), ImVec2(18, 48), &group.x, (**preset).bodyModLimit, "", "x: %.2f");
         ImGui::SameLine();
         bool changedY = ImBoneSlider(("##" + strID + "y").c_str(), ImVec2(18, 48), &group.y, (**preset).bodyModLimit, "", "y: %.2f");
         ImGui::SameLine();
         bool changedZ = ImBoneSlider(("##" + strID + "z").c_str(), ImVec2(18, 48), &group.z, (**preset).bodyModLimit, "", "z: %.2f");
+
+        if (changedX && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.y = group.x; group.z = group.x; }
+        if (changedY && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.y; group.z = group.y; }
+        if (changedZ && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.z; group.y = group.z; }
+    }
+
+    void EditorTab::drawBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group, float width, float speed) {
+        bool changedX = ImBoneSliderH(("##" + strID + "x").c_str(), width, &group.x, speed, (**preset).bodyModLimit, "x: %.2f");
+        ImGui::SameLine();
+        bool changedY = ImBoneSliderH(("##" + strID + "y").c_str(), width, &group.y, speed, (**preset).bodyModLimit, "y: %.2f");
+        ImGui::SameLine();
+        bool changedZ = ImBoneSliderH(("##" + strID + "z").c_str(), width, &group.z, speed, (**preset).bodyModLimit, "z: %.2f");
 
         if (changedX && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.y = group.x; group.z = group.x; }
         if (changedY && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.y; group.z = group.y; }
@@ -527,12 +738,32 @@ namespace kbf {
         float availableWidth = ImGui::GetContentRegionAvail().x;
         float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-        if (ImGui::ArrowButton("##navBackButton", ImGuiDir_Left)) {
+        const auto navigateBack = [&]() {
             editNone();
             presetPanel.close();
             presetGroupPanel.close();
-            ImGui::EndChild();
-            return false;
+            navWarnUnsavedPanel.close();
+        };
+
+        // Check update state of object
+        bool canRevert = INVOKE_REQUIRED_CALLBACK(canRevertCb);
+
+        std::string errMsg = "";
+        bool canSave = INVOKE_REQUIRED_CALLBACK(canSaveCb, errMsg);
+        canSave &= canRevert;
+
+        if (ImGui::ArrowButton("##navBackButton", ImGuiDir_Left)) {
+            if (canSave) {
+                navWarnUnsavedPanel.openNew("Warning: Unsaved Changes", "SaveConfirmInfoPanel", "You have unsaved changes - save now?", "Save", "Revert");
+                navWarnUnsavedPanel.get()->focus();
+                navWarnUnsavedPanel.get()->onCancel(navigateBack);
+                navWarnUnsavedPanel.get()->onOk([saveCb, navigateBack]() { saveCb(); navigateBack(); });
+            }
+            else {
+                navigateBack();
+                ImGui::EndChild();
+                return false;
+            }
         }
         ImGui::SameLine();
 
@@ -556,7 +787,6 @@ namespace kbf {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.20f, 0.20f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.10f, 0.10f, 0.10f, 1.0f));
 
-        bool canRevert = INVOKE_REQUIRED_CALLBACK(canRevertCb);
         if (!canRevert) ImGui::BeginDisabled();
         if (ImGui::Button(kRevertLabel)) {
             INVOKE_REQUIRED_CALLBACK(revertCb);
@@ -566,10 +796,6 @@ namespace kbf {
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-
-        std::string errMsg = "";
-        bool canSave = INVOKE_REQUIRED_CALLBACK(canSaveCb, errMsg);
-        canSave &= canRevert;
 
         if (!canSave) ImGui::BeginDisabled();
         if (ImGui::Button(kSaveLabel)) {

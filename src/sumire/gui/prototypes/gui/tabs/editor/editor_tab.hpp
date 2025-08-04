@@ -2,12 +2,14 @@
 
 #include <sumire/gui/prototypes/gui/tabs/i_tab.hpp>
 #include <sumire/gui/prototypes/gui/tabs/editor/editable_object.hpp>
+#include <sumire/gui/prototypes/gui/tabs/editor/bone_modifier_info_widget.hpp>
 #include <sumire/gui/prototypes/data/kbf_data_manager.hpp>
 
 #include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/preset_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/preset_group_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/info_popup_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/bone_panel.hpp>
 
 #include <imgui.h>
 
@@ -19,7 +21,8 @@ namespace kbf {
 			KBFDataManager& dataManager,
 			ImFont* wsSymbolFont = nullptr,
 			ImFont* wsArmourFont = nullptr
-		) : dataManager{ dataManager }, wsSymbolFont{ wsSymbolFont }, wsArmourFont{ wsArmourFont } {}
+		) : dataManager{ dataManager }, wsSymbolFont{ wsSymbolFont }, wsArmourFont{ wsArmourFont } {
+		}
 
 		void setSymbolFont(ImFont* font) { wsSymbolFont = font; }
 		void setArmourFont(ImFont* font) { wsArmourFont = font; }
@@ -42,10 +45,11 @@ namespace kbf {
 		void openSelectPresetGroupPanel();
 		void openCopyPresetPanel();
 		void openCopyPresetGroupPanel();
-		//void open
+		void openSelectBonePanel(bool body);
 		UniquePanel<PresetPanel>      presetPanel;
 		UniquePanel<PresetGroupPanel> presetGroupPanel;
-		UniquePanel<InfoPopupPanel>   generateCachePanel;
+		UniquePanel<BonePanel>        selectBonePanel;
+		//UniquePanel<InfoPopupPanel>   generateCachePanel;
 
 		// Preset Group Editor
 		void drawPresetGroupEditor();
@@ -61,13 +65,18 @@ namespace kbf {
 		void drawPresetEditor_Properties(Preset** preset);
 		void drawPresetEditor_BoneModifiersBody(Preset** preset);
 		void drawPresetEditor_BoneModifiersLegs(Preset** preset);
-		void drawCompactBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3 & group);
+		void drawCompactBoneModifierTable_Body(Preset** preset);
+		void drawBoneModifierTable_Body(Preset** preset);
+		void drawCompactBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group, ImVec2 size);
+		void drawBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group, float width, float speed);
 		bool canSavePreset(std::string& errMsg) const;
 		void drawArmourList(Preset& preset, const std::string& filter);
 		void drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter);
+		BoneModifierInfoWidget bodyBoneInfoWidget{};
+		BoneModifierInfoWidget legsBoneInfoWidget{};
 
 		void initializePresetBuffers(const Preset* preset);
-		char presetNameBuffer[128]   = "";
+		char presetNameBuffer[128] = "";
 		char presetBundleBuffer[128] = "";
 
 		bool drawStickyNavigationWidget(
@@ -76,6 +85,11 @@ namespace kbf {
 			std::function<void()> revertCb,
 			std::function<bool(std::string&)> canSaveCb,
 			std::function<void()> saveCb);
+		UniquePanel<InfoPopupPanel> navWarnUnsavedPanel;
+
+		// Moving here to make sure lifecycle works with unsavedPanels
+		std::function<void(void)> savePresetGroupCb = [&]() { dataManager.updatePresetGroup(openObject.ptrBefore.presetGroup->uuid, *openObject.ptrAfter.presetGroup); };
+		std::function<void(void)> savePresetCb = [&]() { dataManager.updatePreset(openObject.ptrBefore.preset->uuid, *openObject.ptrAfter.preset); };
 
 	};
 
