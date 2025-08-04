@@ -215,9 +215,10 @@ namespace kbf {
         copyPresetPanel.get()->onSelectPreset([&](std::string uuid) {
             const Preset* copyPreset = dataManager.getPresetByUUID(uuid);
             if (copyPreset) {
+                std::string nameBefore = preset.name;
                 preset = *copyPreset;
                 preset.uuid = uuid::v4::UUID::New().String(); // Make sure to change the UUID.
-                preset.name += " (copy)";
+                preset.name = nameBefore;
                 initializeBuffers();
             }
             else {

@@ -139,9 +139,10 @@ namespace kbf {
         copyPresetGroupPanel.get()->onSelectPresetGroup([&](std::string uuid) {
             const PresetGroup* copyPresetGroup = dataManager.getPresetGroupByUUID(uuid);
             if (copyPresetGroup) {
+                std::string nameBefore = presetGroup.name;
                 presetGroup = *copyPresetGroup;
                 presetGroup.uuid = presetGroupBefore.uuid; // Make sure UUID remains the same.
-                presetGroup.name += " (copy)";
+                presetGroup.name = nameBefore;
                 initializeBuffers();
 
                 initializeBuffers();
