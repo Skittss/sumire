@@ -6,11 +6,15 @@
 namespace kbf {
 
 	// TODO: Make these male specific
-	inline std::set<std::string> DEFAULT_BONES_MALE = {
+	inline std::set<std::string> DEFAULT_BONES_MALE_BODY = {
 
 	};
 
-	inline std::set<std::string> DEFAULT_BONES_FEMALE = {
+	inline std::set<std::string> DEFAULT_BONES_MALE_LEGS = {
+
+	};
+
+	inline std::set<std::string> DEFAULT_BONES_FEMALE_BODY = {
 		// Chest
 		"L_Pec_HJ_00",
 		"R_Pec_HJ_00",
@@ -51,5 +55,11 @@ namespace kbf {
 		"Spine_1_HJ_00",
 		"Spine_2_HJ_00"
 	};
+
+	inline std::set<std::string> DEFAULT_BONES_FEMALE_LEGS = {
+
+	};
+
+	// TODO: Legs
 
 }
