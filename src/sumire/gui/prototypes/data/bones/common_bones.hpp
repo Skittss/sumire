@@ -2,6 +2,13 @@
 
 #include <string>
 #include <set>
+#include <unordered_map>
+
+#define COMMON_BONE_CATEGORY_CHEST  "Chest Bones"
+#define COMMON_BONE_CATEGORY_ARMS   "Arm Bones"
+#define COMMON_BONE_CATEGORY_SPINE  "Spine Bones"
+#define COMMON_BONE_CATEGORY_CUSTOM "Common Custom Bones"
+#define COMMON_BONE_CATEGORY_OTHER  "Other Bones"
 
 namespace kbf {
 
@@ -75,5 +82,21 @@ namespace kbf {
 		"CustomBone15",
 		"CustomBone16",
 	};
+
+	inline const std::unordered_map<std::string, const std::set<std::string>*> BONE_CATEGORIES = {
+		{ COMMON_BONE_CATEGORY_CHEST,  &COMMON_CHEST_BONES },
+		{ COMMON_BONE_CATEGORY_ARMS,   &COMMON_ARM_BONES },
+		{ COMMON_BONE_CATEGORY_SPINE,  &COMMON_SPINE_BONES },
+		{ COMMON_BONE_CATEGORY_CUSTOM, &COMMON_CUSTOM_BONES }
+	};
+
+	inline std::string getCommonBoneCategory(const std::string& boneName) {
+		for (const auto& [category, boneSet] : BONE_CATEGORIES) {
+			if (boneSet->find(boneName) != boneSet->end()) {
+				return category;
+			}
+		}
+		return COMMON_BONE_CATEGORY_OTHER;
+	}
 
 }
