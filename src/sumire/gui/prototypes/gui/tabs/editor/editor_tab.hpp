@@ -10,6 +10,7 @@
 #include <sumire/gui/prototypes/gui/panels/preset_group_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/info_popup_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/bone_panel.hpp>
+#include <sumire/gui/prototypes/data/bones/sortable_bone_modifier.hpp>
 
 #include <imgui.h>
 
@@ -65,10 +66,10 @@ namespace kbf {
 		void drawPresetEditor_Properties(Preset** preset);
 		void drawPresetEditor_BoneModifiersBody(Preset** preset);
 		void drawPresetEditor_BoneModifiersLegs(Preset** preset);
-		void drawCompactBoneModifierTable_Body(Preset** preset);
-		void drawBoneModifierTable_Body(Preset** preset);
-		void drawCompactBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group, ImVec2 size);
-		void drawBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group, float width, float speed);
+		void drawCompactBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers);
+		void drawBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers);
+		void drawCompactBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, ImVec2 size, std::string fmtPrefix = "");
+		void drawBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, float width, float speed);
 		bool canSavePreset(std::string& errMsg) const;
 		void drawArmourList(Preset& preset, const std::string& filter);
 		void drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter);

@@ -10,6 +10,7 @@
 #include <sumire/gui/prototypes/gui/tabs/shared/delete_button.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/bone_slider.hpp>
 #include <sumire/gui/prototypes/data/bones/default_bones.hpp>
+#include <sumire/gui/prototypes/data/bones/common_bones.hpp>
 
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 
@@ -161,10 +162,15 @@ namespace kbf {
             return openObject.ptrAfter.preset->legsBoneModifiers.find(name) != openObject.ptrAfter.preset->legsBoneModifiers.end();
         });
 
-        selectBonePanel.get()->onAddDefaults([&]() {
-            std::set<std::string> defaultBones = openObject.ptrAfter.preset->female
-                ? (body ? DEFAULT_BONES_FEMALE_BODY : DEFAULT_BONES_FEMALE_LEGS)
-                : (body ? DEFAULT_BONES_MALE_BODY : DEFAULT_BONES_MALE_LEGS);
+        selectBonePanel.get()->onAddDefaults([&, body]() {
+            std::set<std::string> defaultBones;
+            
+            if (openObject.ptrAfter.preset->female) {
+                defaultBones = body ? DEFAULT_BONES_FEMALE_BODY : DEFAULT_BONES_FEMALE_LEGS;
+            }
+            else {
+                defaultBones = body ? DEFAULT_BONES_MALE_BODY : DEFAULT_BONES_MALE_LEGS;
+            }
 
             for (const std::string& bone : defaultBones) {
                 if (body) {
@@ -362,11 +368,11 @@ namespace kbf {
         static bool compactMode = true;
         static bool categorizeBones = true;
 
-        ImGui::BeginChild("StickyBoneControlsWidget", ImVec2(0, 110.0f), false, ImGuiWindowFlags_NoScrollbar);
+        ImGui::BeginChild("StickyBoneControlsWidget", ImVec2(0, 110.0f), 0, ImGuiWindowFlags_NoScrollbar);
         bodyBoneInfoWidget.draw(&compactMode, &categorizeBones, &(**preset).bodyUseSymmetry, &(**preset).bodyModLimit);
         ImGui::EndChild();
 
-        ImGui::BeginChild("BoneModifiersListBody");
+        ImGui::BeginChild("BoneModifiersListBody", ImVec2(0, 0), 0, ImGuiWindowFlags_NoScrollbar);
 
         if ((**preset).bodyBoneModifiers.size() == 0) {
             ImGui::Spacing();
@@ -377,11 +383,28 @@ namespace kbf {
             ImGui::PopStyleColor();
         }
         else {
-            if (compactMode) {
-                drawCompactBoneModifierTable_Body(preset);
+            std::unordered_map<std::string, std::vector<SortableBoneModifier>> categorizedModifiers;
+            if (categorizeBones) {
+                for (auto& [boneName, modifier] : (**preset).bodyBoneModifiers)
+					// Sort into category vectors
+					categorizedModifiers[getCommonBoneCategory(boneName)].emplace_back(SortableBoneModifier{ boneName, &modifier });
             }
             else {
-                drawBoneModifierTable_Body(preset);
+                for (auto& [boneName, modifier] : (**preset).bodyBoneModifiers)
+                    categorizedModifiers[getCommonBoneCategory("Bones")].emplace_back(SortableBoneModifier{ boneName, &modifier });
+            }
+
+            for (auto& [categoryName, sortableModifiers] : categorizedModifiers) {
+                bool display = true;
+				if (categorizeBones) display = ImGui::CollapsingHeader(categoryName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
+                if (display) {
+                    if (compactMode) {
+                        drawCompactBoneModifierTable_Body(preset, categoryName, sortableModifiers);
+                    }
+                    else {
+                        drawBoneModifierTable_Body(preset, categoryName, sortableModifiers);
+                    }
+                }
             }
         }
 
@@ -392,18 +415,18 @@ namespace kbf {
 
     }
 
-    void EditorTab::drawCompactBoneModifierTable_Body(Preset** preset) {
+    void EditorTab::drawCompactBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers) {
         constexpr float deleteButtonScale = 1.2f;
         constexpr float linkButtonScale = 1.0f;
-        constexpr float sliderHeight = 48.0f;
-        constexpr float sliderWidth = 18.0f;
+        constexpr float sliderHeight = 66.0f;
+        constexpr float sliderWidth = 22.0f;
         constexpr float tableVpad = 5.0f;
 
         constexpr ImGuiTableFlags boneModTableFlags =
             ImGuiTableFlags_RowBg
             | ImGuiTableFlags_PadOuterX
             | ImGuiTableFlags_Sortable;
-        ImGui::BeginTable("##BoneModifierList", 5, boneModTableFlags);
+        ImGui::BeginTable(("##BoneModifierList_" + tableName).c_str(), 5, boneModTableFlags);
 
         constexpr ImGuiTableColumnFlags stretchSortFlags =
             ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
@@ -415,6 +438,7 @@ namespace kbf {
         ImGui::TableSetupColumn("Scale", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
         ImGui::TableSetupColumn("Position", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
         ImGui::TableSetupColumn("Rotation", fixedNoSortFlags, sliderWidth * 3.0f + 2.0f);
+        ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
 
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, tableVpad));
@@ -424,16 +448,9 @@ namespace kbf {
         // Sort - this is kinda horrible.
         static bool sortDirAscending = true;
         static bool sort = false;
-        struct SortableModifier {
-            std::string name;
-            BoneModifier* modifier;
-        };
-
-        std::vector<SortableModifier> modifiers;
-        for (auto& [boneName, modifier] : (**preset).bodyBoneModifiers) { modifiers.push_back({ boneName, &modifier }); }
 
         if (sort) {
-            std::sort(modifiers.begin(), modifiers.end(), [&](const SortableModifier& a, const SortableModifier& b) {
+            std::sort(modifiers.begin(), modifiers.end(), [&](const SortableBoneModifier& a, const SortableBoneModifier& b) {
                 std::string lowa = toLower(a.name); std::string lowb = toLower(b.name);
                 return sortDirAscending ? lowa < lowb : lowa > lowb;
                 });
@@ -454,7 +471,7 @@ namespace kbf {
         }
 
         std::vector<std::string> bonesToDelete{};
-        for (const SortableModifier& bone : modifiers) {
+        for (const SortableBoneModifier& bone : modifiers) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
 
@@ -474,11 +491,11 @@ namespace kbf {
 
             const ImVec2 size{ sliderWidth, sliderHeight };
             ImGui::TableNextColumn();
-            drawCompactBoneModifierGroup(bone.name + "_scale_", preset, bone.modifier->scale, size);
+            drawCompactBoneModifierGroup(bone.name + "_scale_", bone.modifier->scale, (**preset).bodyModLimit, size, "Scale ");
             ImGui::TableNextColumn();
-            drawCompactBoneModifierGroup(bone.name + "_position_", preset, bone.modifier->position, size);
+            drawCompactBoneModifierGroup(bone.name + "_position_", bone.modifier->position, (**preset).bodyModLimit, size, "Pos ");
             ImGui::TableNextColumn();
-            drawCompactBoneModifierGroup(bone.name + "_rotation_", preset, bone.modifier->rotation, size);
+            drawCompactBoneModifierGroup(bone.name + "_rotation_", bone.modifier->rotation, (**preset).bodyModLimit, size, "Rot ");
 
             ImGui::PopStyleVar();
         }
@@ -491,7 +508,7 @@ namespace kbf {
         ImGui::EndTable();
     }
 
-    void EditorTab::drawBoneModifierTable_Body(Preset** preset) {
+    void EditorTab::drawBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers) {
         constexpr float deleteButtonScale = 1.2f;
         constexpr float linkButtonScale = 1.0f;
         constexpr float sliderWidth = 80.0f;
@@ -521,16 +538,9 @@ namespace kbf {
         // Sort - this is kinda horrible.
         static bool sortDirAscending = true;
         static bool sort = false;
-        struct SortableModifier {
-            std::string name;
-            BoneModifier* modifier;
-        };
-
-        std::vector<SortableModifier> modifiers;
-        for (auto& [boneName, modifier] : (**preset).bodyBoneModifiers) { modifiers.push_back({ boneName, &modifier }); }
 
         if (sort) {
-            std::sort(modifiers.begin(), modifiers.end(), [&](const SortableModifier& a, const SortableModifier& b) {
+            std::sort(modifiers.begin(), modifiers.end(), [&](const SortableBoneModifier& a, const SortableBoneModifier& b) {
                 std::string lowa = toLower(a.name); std::string lowb = toLower(b.name);
                 return sortDirAscending ? lowa < lowb : lowa > lowb;
                 });
@@ -552,7 +562,7 @@ namespace kbf {
 
         std::vector<std::string> bonesToDelete{};
         size_t i = 0;
-        for (const SortableModifier& bone : modifiers) {
+        for (const SortableBoneModifier& bone : modifiers) {
             const ImU32 rowCol = i % 2 == 0 ? ImGui::GetColorU32(ImGuiCol_TableRowBg) : ImGui::GetColorU32(ImGuiCol_TableRowBgAlt);
 
             // Top Row
@@ -564,7 +574,7 @@ namespace kbf {
             ImGui::Text("Scale");
             ImGui::TableSetColumnIndex(3);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
-            drawBoneModifierGroup(bone.name + "_scale_", preset, bone.modifier->scale, sliderWidth, sliderSpeed);
+            drawBoneModifierGroup(bone.name + "_scale_", bone.modifier->scale, (**preset).bodyModLimit, sliderWidth, sliderSpeed);
             ImGui::PopStyleVar();
 
             // Middle Row
@@ -589,7 +599,7 @@ namespace kbf {
             ImGui::Text("Position");
             ImGui::TableSetColumnIndex(3);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
-            drawBoneModifierGroup(bone.name + "_position_", preset, bone.modifier->position, sliderWidth, sliderSpeed);
+            drawBoneModifierGroup(bone.name + "_position_", bone.modifier->position, (**preset).bodyModLimit, sliderWidth, sliderSpeed);
             ImGui::PopStyleVar();
 
             // Bottom Row
@@ -601,7 +611,7 @@ namespace kbf {
             ImGui::Text("Rotation");
             ImGui::TableSetColumnIndex(3);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
-            drawBoneModifierGroup(bone.name + "_rotation_", preset, bone.modifier->rotation, sliderWidth, sliderSpeed);
+            drawBoneModifierGroup(bone.name + "_rotation_", bone.modifier->rotation, (**preset).bodyModLimit, sliderWidth, sliderSpeed);
             ImGui::PopStyleVar();
 
             i++;
@@ -615,24 +625,24 @@ namespace kbf {
         ImGui::EndTable();
     }
 
-    void EditorTab::drawCompactBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group, ImVec2 size) {
-        bool changedX = ImBoneSlider(("##" + strID + "x").c_str(), ImVec2(18, 48), &group.x, (**preset).bodyModLimit, "", "x: %.2f");
+    void EditorTab::drawCompactBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, ImVec2 size, std::string fmtPrefix) {
+        bool changedX = ImBoneSlider(("##" + strID + "x").c_str(), size, &group.x, limit, "", (fmtPrefix + "x: %.2f").c_str());
         ImGui::SameLine();
-        bool changedY = ImBoneSlider(("##" + strID + "y").c_str(), ImVec2(18, 48), &group.y, (**preset).bodyModLimit, "", "y: %.2f");
+        bool changedY = ImBoneSlider(("##" + strID + "y").c_str(), size, &group.y, limit, "", (fmtPrefix + "y: %.2f").c_str());
         ImGui::SameLine();
-        bool changedZ = ImBoneSlider(("##" + strID + "z").c_str(), ImVec2(18, 48), &group.z, (**preset).bodyModLimit, "", "z: %.2f");
+        bool changedZ = ImBoneSlider(("##" + strID + "z").c_str(), size, &group.z, limit, "", (fmtPrefix + "z: %.2f").c_str());
 
         if (changedX && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.y = group.x; group.z = group.x; }
         if (changedY && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.y; group.z = group.y; }
         if (changedZ && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.z; group.y = group.z; }
     }
 
-    void EditorTab::drawBoneModifierGroup(const std::string& strID, Preset** preset, glm::vec3& group, float width, float speed) {
-        bool changedX = ImBoneSliderH(("##" + strID + "x").c_str(), width, &group.x, speed, (**preset).bodyModLimit, "x: %.2f");
+    void EditorTab::drawBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, float width, float speed) {
+        bool changedX = ImBoneSliderH(("##" + strID + "x").c_str(), width, &group.x, speed, limit, "x: %.2f");
         ImGui::SameLine();
-        bool changedY = ImBoneSliderH(("##" + strID + "y").c_str(), width, &group.y, speed, (**preset).bodyModLimit, "y: %.2f");
+        bool changedY = ImBoneSliderH(("##" + strID + "y").c_str(), width, &group.y, speed, limit, "y: %.2f");
         ImGui::SameLine();
-        bool changedZ = ImBoneSliderH(("##" + strID + "z").c_str(), width, &group.z, speed, (**preset).bodyModLimit, "z: %.2f");
+        bool changedZ = ImBoneSliderH(("##" + strID + "z").c_str(), width, &group.z, speed, limit, "z: %.2f");
 
         if (changedX && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.y = group.x; group.z = group.x; }
         if (changedY && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.y; group.z = group.y; }
