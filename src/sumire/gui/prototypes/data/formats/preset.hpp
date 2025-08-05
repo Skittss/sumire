@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sumire/gui/prototypes/data/armour/armour_set.hpp>
+#include <sumire/gui/prototypes/data/bones/bone_modifier.hpp>
 
 #include <glm/glm.hpp>
 
@@ -8,20 +9,6 @@
 #include <map>
 
 namespace kbf {
-
-	struct BoneModifier {
-		glm::vec3 scale;
-		glm::vec3 position;
-		glm::vec3 rotation;
-
-		bool operator==(const BoneModifier& other) const {
-			return (
-				scale == other.scale &&
-				position == other.position &&
-				rotation == other.rotation
-			);
-		}
-	};
 
 	struct Preset {
 		std::string uuid;
