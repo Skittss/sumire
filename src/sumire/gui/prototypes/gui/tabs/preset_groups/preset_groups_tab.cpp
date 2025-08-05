@@ -13,9 +13,7 @@
 namespace kbf {
 
 	void PresetGroupsTab::draw() {
-        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, LIST_PADDING);
 
-        // TODO: Func this
         const ImVec2 buttonSize = ImVec2(ImGui::GetContentRegionAvail().x, 0.0f);
         if (ImGui::Button("Create Preset Group", buttonSize)) {
             openCreatePresetGroupPanel();
@@ -26,9 +24,9 @@ namespace kbf {
         }
         ImGui::Spacing();
 
+        ImGui::BeginChild("PresetGroupListChild");
         drawPresetGroupList();
-
-        ImGui::PopStyleVar();
+        ImGui::EndChild();
 	}
 
 	void PresetGroupsTab::drawPopouts() {
@@ -64,17 +62,21 @@ namespace kbf {
             ImGui::PopStyleColor();
         }
         else {
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, LIST_PADDING);
+
             constexpr ImGuiTableFlags presetGroupTableFlags =
                 ImGuiTableFlags_BordersInnerH
                 | ImGuiTableFlags_BordersInnerV
                 | ImGuiTableFlags_PadOuterX
-                | ImGuiTableFlags_Sortable;
+                | ImGuiTableFlags_Sortable
+                | ImGuiTableFlags_ScrollY;
             ImGui::BeginTable("##PresetGroupList", 1, presetGroupTableFlags);
 
             constexpr ImGuiTableColumnFlags stretchSortFlags =
                 ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
 
             ImGui::TableSetupColumn("Preset Group", stretchSortFlags, 0.0f);
+            ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableHeadersRow();
 
             // Sorting for preset group name
@@ -94,11 +96,11 @@ namespace kbf {
                 }
             }
 
+            ImGui::PopStyleVar();
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, 0.0f));
 
             for (const PresetGroup* group : presetGroups) {
                 ImGui::TableNextRow();
-
                 ImGui::TableNextColumn();
 
                 constexpr float selectableHeight = 60.0f;
@@ -148,7 +150,7 @@ namespace kbf {
             }
 
             ImGui::EndTable();
-            ImGui::PopStyleVar(1);
+            ImGui::PopStyleVar();
         }
     }
 

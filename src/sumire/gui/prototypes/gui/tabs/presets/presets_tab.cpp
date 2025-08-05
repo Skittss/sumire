@@ -98,13 +98,15 @@ namespace kbf {
                 ImGuiTableFlags_BordersInnerH
                 | ImGuiTableFlags_BordersInnerV
                 | ImGuiTableFlags_PadOuterX
-                | ImGuiTableFlags_Sortable;
+                | ImGuiTableFlags_Sortable
+                | ImGuiTableFlags_ScrollY;
             ImGui::BeginTable("#PresetTab_BundleList", 1, bundleTableFlags);
 
             constexpr ImGuiTableColumnFlags stretchSortFlags =
                 ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
 
             ImGui::TableSetupColumn("Bundle", stretchSortFlags, 0.0f);
+            ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableHeadersRow();
 
             // Sorting for preset name
@@ -210,13 +212,15 @@ namespace kbf {
                 ImGuiTableFlags_BordersInnerH
                 | ImGuiTableFlags_BordersInnerV
                 | ImGuiTableFlags_PadOuterX
-                | ImGuiTableFlags_Sortable;
+                | ImGuiTableFlags_Sortable
+                | ImGuiTableFlags_ScrollY;
             ImGui::BeginTable("#PresetTab_PresetList", 1, presetTableFlags);
 
             constexpr ImGuiTableColumnFlags stretchSortFlags =
                 ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
 
             ImGui::TableSetupColumn("Preset", stretchSortFlags, 0.0f);
+            ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableHeadersRow();
 
             // Sorting for preset name

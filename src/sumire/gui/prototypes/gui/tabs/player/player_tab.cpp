@@ -91,13 +91,15 @@ namespace kbf {
                 ImGuiTableFlags_BordersInnerH
                 | ImGuiTableFlags_BordersInnerV
                 | ImGuiTableFlags_PadOuterX
-                | ImGuiTableFlags_Sortable;
+                | ImGuiTableFlags_Sortable
+                | ImGuiTableFlags_ScrollY;
             ImGui::BeginTable("##PlayerOverrideList", 1, playerOverrideTableFlags);
 
             constexpr ImGuiTableColumnFlags stretchSortFlags =
                 ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
 
             ImGui::TableSetupColumn("Player", stretchSortFlags, 0.0f);
+            ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableHeadersRow();
 
             // Sorting for preset group name
