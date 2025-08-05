@@ -30,9 +30,6 @@ namespace kbf {
 		loadPresets();
 		loadPresetGroups();
 		loadPlayerOverrides();
-
-		//loadPresetGroup();
-		//loadPlayerOverride();
 	}
 
 	bool KBFDataManager::presetExists(const std::string& name) const {
@@ -640,20 +637,139 @@ namespace kbf {
 		out->name = path.stem().string();
 
 		bool parsed = true;
+		// Metadata
 		parsed &= parseString(presetDoc, PRESET_UUID_ID, PRESET_UUID_ID, &out->uuid);
 		parsed &= parseString(presetDoc, PRESET_BUNDLE_ID, PRESET_BUNDLE_ID, &out->bundle);
 		parsed &= parseString(presetDoc, PRESET_ARMOUR_NAME_ID, PRESET_ARMOUR_NAME_ID, &out->armour.name);
 		parsed &= parseBool(presetDoc, PRESET_ARMOUR_FEMALE_ID, PRESET_ARMOUR_FEMALE_ID, &out->armour.female);
 		parsed &= parseBool(presetDoc, PRESET_FEMALE_ID, PRESET_FEMALE_ID, &out->female);
+		parsed &= parseFloat(presetDoc, PRESET_BODY_MOD_LIMIT_ID, PRESET_BODY_MOD_LIMIT_ID, &out->bodyModLimit);
+		parsed &= parseFloat(presetDoc, PRESET_LEGS_MOD_LIMIT_ID, PRESET_LEGS_MOD_LIMIT_ID, &out->legsModLimit);
+		parsed &= parseBool(presetDoc, PRESET_BODY_USE_SYMMETRY_ID, PRESET_BODY_USE_SYMMETRY_ID, &out->bodyUseSymmetry);
+		parsed &= parseBool(presetDoc, PRESET_LEGS_USE_SYMMETRY_ID, PRESET_LEGS_USE_SYMMETRY_ID, &out->legsUseSymmetry);
+
+		// Body bone Bone modifiers
+		parsed &= parseObject(presetDoc, PRESET_BONE_MODIFIERS_BODY_ID, PRESET_BONE_MODIFIERS_BODY_ID);
+		if (parsed) {
+			const rapidjson::Value& boneModifiers = presetDoc[PRESET_BONE_MODIFIERS_BODY_ID];
+			parsed &= loadBoneModifiers(boneModifiers, &out->bodyBoneModifiers);
+		}
+
+		// Legs bone Bone modifiers
+		parsed &= parseObject(presetDoc, PRESET_BONE_MODIFIERS_LEGS_ID, PRESET_BONE_MODIFIERS_LEGS_ID);
+		if (parsed) {
+			const rapidjson::Value& legsBoneModifiers = presetDoc[PRESET_BONE_MODIFIERS_LEGS_ID];
+			parsed &= loadBoneModifiers(legsBoneModifiers, &out->legsBoneModifiers);
+		}
 
 		if (!parsed) {
-			DEBUG_STACK.push(std::format("Failed to parse preset {}. One or more required values were missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
+			DEBUG_STACK.push(std::format("Failed to parse preset {}. One or more required values were invalid / missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
+		}
+
+		return parsed;
+	}
+
+	bool KBFDataManager::loadBoneModifiers(const rapidjson::Value& object, std::map<std::string, BoneModifier>* out) {
+		assert(out != nullptr);
+
+		bool parsed = true;
+
+		for (const auto& bone : object.GetObject()) {
+			std::string boneName = bone.name.GetString();
+			if (bone.value.IsObject()) {
+				BoneModifier modifier{};
+
+				parsed &= parseVec3(bone.value, PRESET_BONE_MODIFIERS_SCALE_ID, PRESET_BONE_MODIFIERS_SCALE_ID, &modifier.scale);
+				parsed &= parseVec3(bone.value, PRESET_BONE_MODIFIERS_POSITION_ID, PRESET_BONE_MODIFIERS_POSITION_ID, &modifier.position);
+				parsed &= parseVec3(bone.value, PRESET_BONE_MODIFIERS_ROTATION_ID, PRESET_BONE_MODIFIERS_ROTATION_ID, &modifier.rotation);
+
+				out->emplace(boneName, modifier);
+			}
+			else {
+				DEBUG_STACK.push(std::format("Failed to parse bone modifier for bone {}. Expected an object, but got a different type.", boneName), DebugStack::Color::ERROR);
+			}
 		}
 
 		return parsed;
 	}
 
 	bool KBFDataManager::writePreset(const std::filesystem::path& path, const Preset& preset) const {
+		//rapidjson::StringBuffer s;
+		//rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+
+		//writer.StartObject();
+		//writer.Key(PRESET_UUID_ID);
+		//writer.String(preset.uuid.c_str());
+		//writer.Key(PRESET_BUNDLE_ID);
+		//writer.String(preset.bundle.c_str());
+		//writer.Key(PRESET_ARMOUR_NAME_ID);
+		//writer.String(preset.armour.name.c_str());
+		//writer.Key(PRESET_ARMOUR_FEMALE_ID);
+		//writer.Bool(preset.armour.female);
+		//writer.Key(PRESET_FEMALE_ID);
+		//writer.Bool(preset.female);
+		//writer.Key(PRESET_BODY_MOD_LIMIT_ID);
+		//writer.Double(preset.bodyModLimit);
+		//writer.Key(PRESET_LEGS_MOD_LIMIT_ID);
+		//writer.Double(preset.legsModLimit);
+		//writer.Key(PRESET_BODY_USE_SYMMETRY_ID);
+		//writer.Bool(preset.bodyUseSymmetry);
+		//writer.Key(PRESET_LEGS_USE_SYMMETRY_ID);
+		//writer.Bool(preset.legsUseSymmetry);
+		//writer.Key(PRESET_BONE_MODIFIERS_BODY_ID);
+		//writer.StartObject();
+		//for (const auto& [boneName, modifier] : preset.bodyBoneModifiers) {
+		//	writer.Key(boneName.c_str());
+		//	writer.StartObject();
+		//	writer.Key(PRESET_BONE_MODIFIERS_SCALE_ID);
+		//	writer.StartArray();
+		//	writer.Double(modifier.scale.x);
+		//	writer.Double(modifier.scale.y);
+		//	writer.Double(modifier.scale.z);
+		//	writer.EndArray();
+		//	writer.Key(PRESET_BONE_MODIFIERS_POSITION_ID);
+		//	writer.StartArray();
+		//	writer.Double(modifier.position.x);
+		//	writer.Double(modifier.position.y);
+		//	writer.Double(modifier.position.z);
+		//	writer.EndArray();
+		//	writer.Key(PRESET_BONE_MODIFIERS_ROTATION_ID);
+		//	writer.StartArray();
+		//	writer.Double(modifier.rotation.x);
+		//	writer.Double(modifier.rotation.y);
+		//	writer.Double(modifier.rotation.z);
+		//	writer.EndArray();
+		//	writer.EndObject();
+		//}
+		//writer.EndObject();
+		//writer.Key(PRESET_BONE_MODIFIERS_LEGS_ID);
+		//writer.StartObject();
+		//for (const auto& [boneName, modifier] : preset.legsBoneModifiers) {
+		//	writer.Key(boneName.c_str());
+		//	writer.StartObject();
+		//	writer.Key(PRESET_BONE_MODIFIERS_SCALE_ID);
+		//	writer.StartArray();
+		//	writer.Double(modifier.scale.x);
+		//	writer.Double(modifier.scale.y);
+		//	writer.Double(modifier.scale.z);
+		//	writer.EndArray();
+		//	writer.Key(PRESET_BONE_MODIFIERS_POSITION_ID);
+		//	writer.StartArray();
+		//	writer.Double(modifier.position.x);
+		//	writer.Double(modifier.position.y);
+		//	writer.Double(modifier.position.z);
+		//	writer.EndArray();
+		//	writer.Key(PRESET_BONE_MODIFIERS_ROTATION_ID);
+		//	writer.StartArray();
+		//	writer.Double(modifier.rotation.x);
+		//	writer.Double(modifier.rotation.y);
+		//	writer.Double(modifier.rotation.z);
+		//	writer.EndArray();
+		//	writer.EndObject();
+		//}
+		//writer.EndObject();
+		//writer.EndObject();
+
 		rapidjson::StringBuffer s;
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
@@ -668,7 +784,70 @@ namespace kbf {
 		writer.Bool(preset.armour.female);
 		writer.Key(PRESET_FEMALE_ID);
 		writer.Bool(preset.female);
+		writer.Key(PRESET_BODY_MOD_LIMIT_ID);
+		writer.Double(preset.bodyModLimit);
+		writer.Key(PRESET_LEGS_MOD_LIMIT_ID);
+		writer.Double(preset.legsModLimit);
+		writer.Key(PRESET_BODY_USE_SYMMETRY_ID);
+		writer.Bool(preset.bodyUseSymmetry);
+		writer.Key(PRESET_LEGS_USE_SYMMETRY_ID);
+		writer.Bool(preset.legsUseSymmetry);
+
+		auto writeCompactBoneModifier = [](const auto& modifier) {
+			rapidjson::StringBuffer buf;
+			rapidjson::Writer<rapidjson::StringBuffer> compactWriter(buf); // one-line writer
+
+			compactWriter.StartObject();
+			compactWriter.Key(PRESET_BONE_MODIFIERS_SCALE_ID);
+			compactWriter.StartArray();
+			compactWriter.Double(modifier.scale.x);
+			compactWriter.Double(modifier.scale.y);
+			compactWriter.Double(modifier.scale.z);
+			compactWriter.EndArray();
+
+			compactWriter.Key(PRESET_BONE_MODIFIERS_POSITION_ID);
+			compactWriter.StartArray();
+			compactWriter.Double(modifier.position.x);
+			compactWriter.Double(modifier.position.y);
+			compactWriter.Double(modifier.position.z);
+			compactWriter.EndArray();
+
+			compactWriter.Key(PRESET_BONE_MODIFIERS_ROTATION_ID);
+			compactWriter.StartArray();
+			compactWriter.Double(modifier.rotation.x);
+			compactWriter.Double(modifier.rotation.y);
+			compactWriter.Double(modifier.rotation.z);
+			compactWriter.EndArray();
+
+			compactWriter.EndObject();
+
+			return buf;
+			};
+
+		// Body Bone Modifiers (compact)
+		writer.Key(PRESET_BONE_MODIFIERS_BODY_ID);
+		writer.StartObject();
+		for (const auto& [boneName, modifier] : preset.bodyBoneModifiers) {
+			writer.Key(boneName.c_str());
+
+			rapidjson::StringBuffer compactBuf = writeCompactBoneModifier(modifier);
+			writer.RawValue(compactBuf.GetString(), compactBuf.GetSize(), rapidjson::kObjectType);
+		}
 		writer.EndObject();
+
+		// Legs Bone Modifiers (compact)
+		writer.Key(PRESET_BONE_MODIFIERS_LEGS_ID);
+		writer.StartObject();
+		for (const auto& [boneName, modifier] : preset.legsBoneModifiers) {
+			writer.Key(boneName.c_str());
+
+			rapidjson::StringBuffer compactBuf = writeCompactBoneModifier(modifier);
+			writer.RawValue(compactBuf.GetString(), compactBuf.GetSize(), rapidjson::kObjectType);
+		}
+		writer.EndObject();
+		writer.EndObject();
+
+		// Post process to align modifier bodies
 
 		bool success = writeJsonFile(path.string(), s.GetString());
 

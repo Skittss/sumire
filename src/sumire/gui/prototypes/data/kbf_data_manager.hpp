@@ -123,6 +123,7 @@ namespace kbf {
 		// .... Too bad!
 		std::unordered_map<std::string, Preset> presets; // index by uuid
 		bool loadPreset(const std::filesystem::path& path, Preset* out);
+		bool loadBoneModifiers(const rapidjson::Value& object, std::map<std::string, BoneModifier>* out);
 		bool writePreset(const std::filesystem::path& path, const Preset& preset) const;
 		bool loadPresets();
 

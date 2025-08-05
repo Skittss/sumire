@@ -14,18 +14,11 @@ namespace kbf {
 		glm::vec3 position;
 		glm::vec3 rotation;
 
-		bool scaleLinked    = false;
-		bool positionLinked = false;
-		bool rotationLinked = false;
-
 		bool operator==(const BoneModifier& other) const {
 			return (
 				scale == other.scale &&
 				position == other.position &&
-				rotation == other.rotation &&
-				scaleLinked == other.scaleLinked &&
-				positionLinked == other.positionLinked &&
-				rotationLinked == other.rotationLinked
+				rotation == other.rotation
 			);
 		}
 	};

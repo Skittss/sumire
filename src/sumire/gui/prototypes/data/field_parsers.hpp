@@ -135,4 +135,44 @@ namespace kbf {
             return false;
         }
     }
+
+    inline bool parseFloat(
+        const rapidjson::Value& config,
+        const std::string& memberName,
+        const std::string& errorName,
+        float* out
+    ) {
+		assert(out != nullptr);
+        const char* cstrName = memberName.c_str();
+        if (config.HasMember(cstrName) && config[cstrName].IsFloat()) {
+            *out = config[cstrName].GetFloat();
+            return true;
+        }
+        else {
+            DEBUG_STACK.push(KBF_FIELD_PARSE_WARNING_STR(errorName), DebugStack::Color::WARNING);
+            return false;
+        }
+    }
+
+    inline bool parseVec3(
+        const rapidjson::Value& config,
+        const std::string& memberName,
+        const std::string& errorName,
+        glm::vec3* out
+    ) {
+        assert(out != nullptr);
+        const char* cstrName = memberName.c_str();
+        if (config.HasMember(cstrName) && config[cstrName].IsArray() && config[cstrName].Size() == 3) {
+            const rapidjson::Value& arr = config[cstrName];
+            out->x = arr[0].GetFloat();
+            out->y = arr[1].GetFloat();
+            out->z = arr[2].GetFloat();
+            return true;
+        }
+        else {
+            DEBUG_STACK.push(KBF_FIELD_PARSE_WARNING_STR(errorName), DebugStack::Color::WARNING);
+            return false;
+        }
+    }
+
 }
