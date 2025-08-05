@@ -50,7 +50,8 @@ namespace kbf {
             constexpr const char* modLimitLabel = " Mod Limit ";
             float reservedWidth = ImGui::CalcTextSize(modLimitLabel).x;
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - reservedWidth);
-            ImGui::DragFloat(modLimitLabel, &m_modLimit, 0.01f, 0.0f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat(modLimitLabel, &m_modLimit, 0.01f, 0.01f, 5.0f, "%.2f");
+            if (m_modLimit < 0.0f) m_modLimit = 0;
             ImGui::SetItemTooltip("The maximum value of any bone modifier for this preset.\nSet this to your expected max modifier to see differences more clearly.");
             if (modLimit) *modLimit = m_modLimit;
             
