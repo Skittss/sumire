@@ -54,7 +54,7 @@ namespace kbf {
 
         ImGui::Indent();
         WRAP_BULLET("1.", "As a successor to my mod Female Body Sliders For Everyone (FBS4all).");
-        WRAP_BULLET("2.", "As a more efficient & flexible alternative to Ridog8's Female Body Sliders (FBS).");
+        WRAP_BULLET("2.", "As a more efficient & flexible alternative to Female Body Sliders (FBS).");
         ImGui::Unindent();
 
         ImGui::TextWrapped(
