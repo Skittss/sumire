@@ -11,10 +11,12 @@
 #include <sumire/gui/prototypes/gui/tabs/shared/bone_slider.hpp>
 #include <sumire/gui/prototypes/data/bones/default_bones.hpp>
 #include <sumire/gui/prototypes/data/bones/common_bones.hpp>
+#include <sumire/gui/prototypes/data/bones/bone_symmetry_utils.hpp>
 
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 
 #include <format>
+#include <unordered_set>
 
 namespace kbf {
 
@@ -212,13 +214,11 @@ namespace kbf {
             if (ImGui::BeginTabItem("Properties")) {
                 ImGui::Spacing();
                 drawPresetGroupEditor_Properties(&openObject.ptrAfter.presetGroup);
-                ImGui::EndChild();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Assigned Presets")) {
                 ImGui::Spacing();
                 drawPresetGroupEditor_AssignedPresets(&openObject.ptrAfter.presetGroup);
-                ImGui::EndChild();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
@@ -372,7 +372,7 @@ namespace kbf {
         bodyBoneInfoWidget.draw(&compactMode, &categorizeBones, &(**preset).bodyUseSymmetry, &(**preset).bodyModLimit);
         ImGui::EndChild();
 
-        ImGui::BeginChild("BoneModifiersListBody", ImVec2(0, 0), 0, ImGuiWindowFlags_NoScrollbar);
+        ImGui::BeginChild("BoneModifiersListBody");
 
         if ((**preset).bodyBoneModifiers.size() == 0) {
             ImGui::Spacing();
@@ -383,16 +383,7 @@ namespace kbf {
             ImGui::PopStyleColor();
         }
         else {
-            std::unordered_map<std::string, std::vector<SortableBoneModifier>> categorizedModifiers;
-            if (categorizeBones) {
-                for (auto& [boneName, modifier] : (**preset).bodyBoneModifiers)
-					// Sort into category vectors
-					categorizedModifiers[getCommonBoneCategory(boneName)].emplace_back(SortableBoneModifier{ boneName, &modifier });
-            }
-            else {
-                for (auto& [boneName, modifier] : (**preset).bodyBoneModifiers)
-                    categorizedModifiers[getCommonBoneCategory("Bones")].emplace_back(SortableBoneModifier{ boneName, &modifier });
-            }
+            auto categorizedModifiers = getProcessedModifiers((**preset).bodyBoneModifiers, categorizeBones, (**preset).bodyUseSymmetry);
 
             for (auto& [categoryName, sortableModifiers] : categorizedModifiers) {
                 bool display = true;
@@ -413,6 +404,52 @@ namespace kbf {
 
     void EditorTab::drawPresetEditor_BoneModifiersLegs(Preset** preset) {
 
+    }
+
+    std::unordered_map<std::string, std::vector<SortableBoneModifier>> EditorTab::getProcessedModifiers(
+        std::map<std::string, BoneModifier>& modifiers,
+        bool categorizeBones,
+        bool useSymmetry
+    ) {
+        // Categorize bones & Get symmetry Proxies
+        std::unordered_set<std::string> processedBones;
+        std::unordered_map<std::string, std::vector<SortableBoneModifier>> categorizedModifiers;
+        if (categorizeBones) {
+            for (auto& [boneName, modifier] : modifiers) {
+                SortableBoneModifier sortableModifier{ boneName, false, &modifier, nullptr, boneName, "" };
+
+                bool alreadyProcessed = processedBones.find(boneName) != processedBones.end();
+                if (alreadyProcessed) continue;
+
+                if (useSymmetry) {
+                    std::string complement;
+                    sortableModifier = getSymmetryProxyModifier(boneName, modifiers, &complement);
+                    processedBones.insert(complement);
+                }
+
+                processedBones.insert(boneName);
+                categorizedModifiers[getCommonBoneCategory(boneName)].emplace_back(sortableModifier);
+            }
+        }
+        else {
+            for (auto& [boneName, modifier] : modifiers) {
+                SortableBoneModifier sortableModifier{ boneName, false, &modifier, nullptr, boneName, "" };
+
+                bool alreadyProcessed = processedBones.find(boneName) != processedBones.end();
+                if (alreadyProcessed) continue;
+
+                if (useSymmetry) {
+                    std::string complement;
+                    sortableModifier = getSymmetryProxyModifier(boneName, modifiers, &complement);
+                    processedBones.insert(complement);
+                }
+
+                processedBones.insert(boneName);
+                categorizedModifiers[getCommonBoneCategory("Bones")].emplace_back(sortableModifier);
+            }
+        }
+
+        return categorizedModifiers;
     }
 
     void EditorTab::drawCompactBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers) {
@@ -470,7 +507,7 @@ namespace kbf {
             }
         }
 
-        std::vector<std::string> bonesToDelete{};
+        std::vector<const SortableBoneModifier*> bonesToDelete{};
         for (const SortableBoneModifier& bone : modifiers) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -479,7 +516,7 @@ namespace kbf {
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (sliderHeight + tableVpad - ImGui::GetFontSize() * deleteButtonScale) * 0.5f);
             if (ImDeleteButton(("##del_" + bone.name).c_str(), deleteButtonScale)) {
-                bonesToDelete.push_back(bone.name);
+                bonesToDelete.push_back(&bone);
             }
             ImGui::PopStyleColor(2);
 
@@ -497,11 +534,19 @@ namespace kbf {
             ImGui::TableNextColumn();
             drawCompactBoneModifierGroup(bone.name + "_rotation_", bone.modifier->rotation, (**preset).bodyModLimit, size, "Rot ");
 
+            if (bone.isSymmetryProxy) *bone.reflectedModifier = bone.modifier->reflect();
+
             ImGui::PopStyleVar();
         }
 
-        for (const std::string& bone : bonesToDelete) {
-            (**preset).bodyBoneModifiers.erase(bone);
+        for (const SortableBoneModifier* bone : bonesToDelete) {
+            if (bone->isSymmetryProxy) {
+                (**preset).bodyBoneModifiers.erase(bone->boneName);
+                (**preset).bodyBoneModifiers.erase(bone->reflectedBoneName);
+            }
+            else {
+                (**preset).bodyBoneModifiers.erase(bone->boneName);
+            }
         }
 
         ImGui::PopStyleVar();

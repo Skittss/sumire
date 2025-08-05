@@ -66,11 +66,17 @@ namespace kbf {
 		void drawPresetEditor_Properties(Preset** preset);
 		void drawPresetEditor_BoneModifiersBody(Preset** preset);
 		void drawPresetEditor_BoneModifiersLegs(Preset** preset);
+		static std::unordered_map<std::string, std::vector<SortableBoneModifier>> getProcessedModifiers(
+			std::map<std::string, BoneModifier>& modifiers, 
+			bool categorizeBones, 
+			bool useSymmetry);
+
 		void drawCompactBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers);
 		void drawBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers);
 		void drawCompactBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, ImVec2 size, std::string fmtPrefix = "");
 		void drawBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, float width, float speed);
 		bool canSavePreset(std::string& errMsg) const;
+
 		void drawArmourList(Preset& preset, const std::string& filter);
 		void drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter);
 		BoneModifierInfoWidget bodyBoneInfoWidget{};

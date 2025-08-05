@@ -43,7 +43,7 @@ namespace kbf {
 
             ImGui::SameLine();
             ImGui::Checkbox(" L/R Symmetry ", &m_symmetry);
-            ImGui::SetItemTooltip("When enabled, bones with left (L) & right (R) pairs will be combined into one set of sliders.\n Any modifiers applied to the set will be reflected on the opposite bones.");
+            ImGui::SetItemTooltip("When enabled, bones with left (L_) & right (R_) pairs will be combined into one set of sliders.\n Any modifiers applied to the set will be reflected on the opposite bones.");
             if (symmetry) *symmetry = m_symmetry;
             
             ImGui::SameLine();
