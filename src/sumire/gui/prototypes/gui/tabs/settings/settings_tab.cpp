@@ -10,5 +10,6 @@ namespace kbf {
 	}
 
 	void SettingsTab::drawPopouts() {};
+	void SettingsTab::closePopouts() {};
 
 }

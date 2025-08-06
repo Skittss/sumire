@@ -20,6 +20,7 @@ namespace kbf {
 
 		void draw() override;
 		void drawPopouts() override;
+		void closePopouts() override;
 
 		void onOpenPresetGroupInEditor(std::function<void(std::string)> callback) { openPresetGroupInEditorCb = callback; }
 

@@ -34,6 +34,12 @@ namespace kbf {
         editPlayerOverridePanel.draw();
     }
 
+    void PlayerTab::closePopouts() {
+        editDefaultPanel.close();
+        addPlayerOverridePanel.close();
+        editPlayerOverridePanel.close();
+	}
+
     void PlayerTab::drawDefaults() {
         constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_PadOuterX;
 
@@ -162,17 +168,19 @@ namespace kbf {
                 // Sex Mark
                 bool female = false;
                 float presetGroupSexMarkSpacing = ImGui::GetStyle().ItemSpacing.x;
+                float presetGroupSexMarkSpacingBefore = 0.0f;
                 float endPos = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
                 if (activeGroup) {
                     bool female = activeGroup->female;
-                    presetGroupSexMarkSpacing = 30.0f;
+                    presetGroupSexMarkSpacing = 15.0f;
+                    presetGroupSexMarkSpacingBefore = 10.0f;
 
                     std::string presetGroupSexMarkSymbol = female ? WS_FONT_FEMALE : WS_FONT_MALE;
                     ImVec4 presetGroupSexMarkerCol = female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
 
                     ImVec2 presetGroupSexMarkerSize = ImGui::CalcTextSize(presetGroupSexMarkSymbol.c_str());
                     ImVec2 presetGroupSexMarkerPos;
-                    presetGroupSexMarkerPos.x = endPos - presetGroupSexMarkerSize.x - ImGui::GetStyle().ItemSpacing.x;
+                    presetGroupSexMarkerPos.x = endPos - presetGroupSexMarkSpacingBefore - ImGui::GetStyle().ItemSpacing.x;
                     presetGroupSexMarkerPos.y = pos.y + (selectableHeight - presetGroupSexMarkerSize.y) * 0.5f;
 
                     ImGui::PushFont(wsSymbolFont);
@@ -184,7 +192,7 @@ namespace kbf {
                 std::string presetGroupName = override->presetGroup.empty() || activeGroup == nullptr ? "Default" : activeGroup->name;
                 ImVec2 currentGroupStrSize = ImGui::CalcTextSize(presetGroupName.c_str());
                 ImVec2 currentGroupStrPos;
-                currentGroupStrPos.x = endPos - (currentGroupStrSize.x + presetGroupSexMarkSpacing);
+                currentGroupStrPos.x = endPos - (currentGroupStrSize.x + presetGroupSexMarkSpacing + presetGroupSexMarkSpacingBefore);
                 currentGroupStrPos.y = pos.y + (selectableHeight - currentGroupStrSize.y) * 0.5f;
 
                 ImVec4 presetGroupCol = activeGroup == nullptr ? ImVec4(0.365f, 0.678f, 0.886f, 0.8f) : ImVec4(1.0f, 1.0f, 1.0f, 0.5f);

@@ -30,6 +30,7 @@ namespace kbf {
 
 		void draw() override;
 		void drawPopouts() override;
+		void closePopouts() override;
 
 		void editNone() { openObject.setNone(); }
 		void editPresetGroup(PresetGroup* preset);

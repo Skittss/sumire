@@ -32,7 +32,8 @@ namespace kbf {
         }
 	}
 
-	void DebugTab::drawPopouts() {};
+    void DebugTab::drawPopouts() {};
+    void DebugTab::closePopouts() {};
 
     void DebugTab::drawDebugTab() {
         constexpr float padding = 5.0f;

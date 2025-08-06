@@ -26,6 +26,7 @@ namespace kbf {
 	}
 
     void AboutTab::drawPopouts() {}
+    void AboutTab::closePopouts() {}
 
     void AboutTab::drawInfoTab() {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 15));

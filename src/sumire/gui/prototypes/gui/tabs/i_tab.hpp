@@ -8,6 +8,7 @@ namespace kbf {
 	public:
 		virtual void draw() = 0;
 		virtual void drawPopouts() = 0;
+		virtual void closePopouts() = 0;
 	};
 
 

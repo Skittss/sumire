@@ -24,6 +24,7 @@ namespace kbf {
 
 		void draw() override;
 		void drawPopouts() override;
+		void closePopouts() override;
 
 		void onOpenPresetInEditor(std::function<void(std::string)> callback) { openPresetInEditorCb = callback; }
 

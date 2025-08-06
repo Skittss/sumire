@@ -34,6 +34,11 @@ namespace kbf {
         editPresetGroupPanel.draw();
     };
 
+    void PresetGroupsTab::closePopouts() {
+        createPresetGroupPanel.close();
+        editPresetGroupPanel.close();
+	}
+
     void PresetGroupsTab::drawPresetGroupList() {
         static bool sortDirAscending;
         static enum class SortCol {
@@ -134,7 +139,7 @@ namespace kbf {
                 ImGui::GetWindowDrawList()->AddText(groupNamePos, ImGui::GetColorU32(ImGuiCol_Text), group->name.c_str());
 
                 // Similarly for preset count
-                const size_t nPresets = group->presets.size();
+                const size_t nPresets = group->size();
                 std::string rightText = std::to_string(nPresets);
                 if (nPresets == 0) rightText = "Empty";
                 else if (nPresets == 1) rightText += " Preset";

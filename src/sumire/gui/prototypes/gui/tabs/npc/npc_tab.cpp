@@ -103,6 +103,11 @@ namespace kbf {
         editDefaultPanel.draw();
     };
 
+    void NpcTab::closePopouts() {
+        editPanel.close();
+        editDefaultPanel.close();
+    }
+
     void NpcTab::openEditDefaultPanel(const std::function<void(std::string)>& onSelect) {
         editPanel.close(); // Close the other panel if its open
         editDefaultPanel.openNew("Select Default Preset Group", "EditDefaultPanel_NpcTab", dataManager, wsSymbolFont);

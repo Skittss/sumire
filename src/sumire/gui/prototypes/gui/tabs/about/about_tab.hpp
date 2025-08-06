@@ -14,6 +14,7 @@ namespace kbf {
 
 		void draw() override;
 		void drawPopouts() override;
+		void closePopouts() override;
 
 	private:
 		void drawInfoTab();

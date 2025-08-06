@@ -47,6 +47,12 @@ namespace kbf {
         infoPopupPanel.draw();
     };
 
+    void PresetsTab::closePopouts() {
+        editPresetPanel.close();
+        createPresetPanel.close();
+        infoPopupPanel.close();
+	}
+
     void PresetsTab::drawBundleTab() {
         if (bundleViewed.empty()) {
             drawBundleList();
