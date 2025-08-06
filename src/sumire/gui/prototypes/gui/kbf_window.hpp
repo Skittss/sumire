@@ -42,6 +42,8 @@ namespace kbf {
 		void drawTab();
 		void drawPopouts();
 
+		void cleanupTab(KBFTab tab);
+
 		KBFDataManager& dataManager;
 
 		PlayerTab       playerTab{ dataManager };
@@ -52,9 +54,6 @@ namespace kbf {
 		SettingsTab     settingsTab;
 		DebugTab        debugTab;
 		AboutTab        aboutTab;
-
-		void addPlayerOverride(PlayerData playerData);
-		void removePlayerOverride(PlayerData playerData);
 
 		KBFTab tab = KBFTab::Players;
 

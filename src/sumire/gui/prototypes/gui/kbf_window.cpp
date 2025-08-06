@@ -95,7 +95,10 @@ namespace kbf {
     }
 
     void KBFWindow::drawKbfMenuItem(const std::string& label, const KBFTab tabId) {
-        if (ImGui::MenuItem(label.c_str(), nullptr, tab == tabId)) { tab = tabId; }
+        if (ImGui::MenuItem(label.c_str(), nullptr, tab == tabId)) { 
+			cleanupTab(tab); // Cleanup previous tab's popouts
+            tab = tabId; 
+        }
     }
 
     void KBFWindow::drawMenuBar() {
@@ -152,12 +155,33 @@ namespace kbf {
         aboutTab.drawPopouts();
     }
 
-    void KBFWindow::addPlayerOverride(PlayerData playerData) {
-        // TODO: Handle via main program.
-	}
-
-    void KBFWindow::removePlayerOverride(PlayerData playerData) {
-
+    void KBFWindow::cleanupTab(KBFTab tab) {
+        switch (tab) {
+        case KBFTab::Players:
+            playerTab.closePopouts();
+            break;
+        case KBFTab::NPCs:
+            npcTab.closePopouts();
+            break;
+        case KBFTab::PresetGroups:
+            presetGroupsTab.closePopouts();
+            break;
+        case KBFTab::Presets:
+            presetsTab.closePopouts();
+            break;
+        case KBFTab::Editor:
+            editorTab.closePopouts();
+            break;
+        case KBFTab::Settings:
+            settingsTab.closePopouts();
+            break;
+        case KBFTab::Debug:
+            debugTab.closePopouts();
+            break;
+        case KBFTab::About:
+            aboutTab.closePopouts();
+            break;
+		}
     }
 
 }
