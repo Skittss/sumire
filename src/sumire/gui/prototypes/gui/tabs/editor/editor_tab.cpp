@@ -5,6 +5,7 @@
 #include <sumire/gui/prototypes/data/ids/special_armour_ids.hpp>
 #include <sumire/gui/prototypes/data/armour/armour_list.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/styling_consts.hpp>
+#include <sumire/gui/prototypes/gui/tabs/shared/sex_marker.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/delete_button.hpp>
@@ -37,6 +38,13 @@ namespace kbf {
         presetGroupPanel.draw();
         selectBonePanel.draw();
         navWarnUnsavedPanel.draw();
+    }
+
+    void EditorTab::closePopouts() {
+        presetPanel.close();
+        presetGroupPanel.close();
+        selectBonePanel.close();
+        navWarnUnsavedPanel.close();
     }
 
     void EditorTab::editPresetGroup(PresetGroup* presetGroup) { 
@@ -246,6 +254,91 @@ namespace kbf {
     }
 
     void EditorTab::drawPresetGroupEditor_AssignedPresets(PresetGroup** presetGroup) {
+        static char filterBuffer[128] = "";
+        std::string filterStr{ filterBuffer };
+
+        ImGui::PushItemWidth(-1);
+        ImGui::InputTextWithHint("##ArmourSearch", "Armour Name...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PopItemWidth();
+        ImGui::Spacing();
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+		const std::vector<ArmourSet> armourSets = ArmourList::getFilteredSets(filterStr);
+        if (armourSets.size() == 0) {
+            constexpr char const* noArmourStr = "Armour Set Search Found Zero Results.";
+            preAlignCellContentHorizontal(noArmourStr);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+            ImGui::Text(noArmourStr);
+            ImGui::PopStyleColor();
+        }
+        else {
+            constexpr ImGuiTableFlags assignedPresetGridFlags =
+                ImGuiTableFlags_RowBg
+                | ImGuiTableFlags_PadOuterX
+                | ImGuiTableFlags_Sortable
+                | ImGuiTableFlags_ScrollY;
+
+            constexpr ImGuiTableColumnFlags stretchNoSortFlags =
+                ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthStretch;
+            constexpr ImGuiTableColumnFlags fixedNoSortFlags =
+                ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed;
+
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, LIST_PADDING);
+
+            ImGui::BeginTable("##AssignedPresetGridTable", 4, assignedPresetGridFlags);
+
+            ImGui::TableSetupColumn("",       fixedNoSortFlags, 0.0f);
+            ImGui::TableSetupColumn("Armour", fixedNoSortFlags, 0.0f);
+            ImGui::TableSetupColumn("Body",   stretchNoSortFlags, 0.0f);
+            ImGui::TableSetupColumn("Legs",   stretchNoSortFlags, 0.0f);
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableHeadersRow();
+
+            ImGui::PopStyleVar();
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, 0.0f));
+
+            constexpr float rowHeight = 40.0f;
+
+            for (const ArmourSet& armour : armourSets) {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+				ImVec2 cursorPos = ImGui::GetCursorPos();
+				constexpr ImVec2 sexMarkerOffset = ImVec2(5.0f, 12.5f);
+				ImGui::SetCursorPos(ImVec2(cursorPos.x + sexMarkerOffset.x, cursorPos.y + sexMarkerOffset.y));
+                drawSexMarker(wsSymbolFont, !armour.female, false, true);
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::PushFont(wsArmourFont);
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (rowHeight - ImGui::GetTextLineHeight()) * 0.5f);
+                ImGui::Text(armour.name.c_str());
+                ImGui::PopFont();
+
+                std::string bodyHint = "";
+                std::string legsHint = "";
+                if ((**presetGroup).armourHasBodyPresetUUID(armour)) {
+                    const Preset* preset = dataManager.getPresetByUUID((**presetGroup).bodyPresets.at(armour));
+                    if (preset) {
+                        bodyHint = preset->armour.name;
+                    }
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                ImGui::Selectable(bodyHint.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0.0f, rowHeight));
+
+                ImGui::TableSetColumnIndex(3);
+                ImGui::Selectable(bodyHint.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0.0f, rowHeight));
+
+
+            }
+
+            ImGui::EndTable();
+
+            ImGui::PopStyleVar();
+        }
 
     }
 
