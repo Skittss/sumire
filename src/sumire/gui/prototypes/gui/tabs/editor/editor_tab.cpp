@@ -21,23 +21,24 @@
 
 namespace kbf {
 
-	void EditorTab::draw() {
-		if (openObject.notSet()) {
-			drawNoEditor();
-		}
-		else if (openObject.type == EditableObject::ObjectType::PRESET) {
-			drawPresetEditor();
-		}
-		else if (openObject.type == EditableObject::ObjectType::PRESET_GROUP) {
-			drawPresetGroupEditor();
-		}
-	}
+    void EditorTab::draw() {
+        if (openObject.notSet()) {
+            drawNoEditor();
+        }
+        else if (openObject.type == EditableObject::ObjectType::PRESET) {
+            drawPresetEditor();
+        }
+        else if (openObject.type == EditableObject::ObjectType::PRESET_GROUP) {
+            drawPresetGroupEditor();
+        }
+    }
 
-	void EditorTab::drawPopouts() {
+    void EditorTab::drawPopouts() {
         presetPanel.draw();
         presetGroupPanel.draw();
         selectBonePanel.draw();
         navWarnUnsavedPanel.draw();
+        assignPresetPanel.draw();
     }
 
     void EditorTab::closePopouts() {
@@ -45,12 +46,15 @@ namespace kbf {
         presetGroupPanel.close();
         selectBonePanel.close();
         navWarnUnsavedPanel.close();
+        assignPresetPanel.close();
     }
 
     void EditorTab::editPresetGroup(PresetGroup* presetGroup) { 
         openObject.setPresetGroup(presetGroup);
         presetPanel.close();
         presetGroupPanel.close();
+        selectBonePanel.close();
+        assignPresetPanel.close();
         initializePresetGroupBuffers(presetGroup);
     }
 
@@ -60,6 +64,8 @@ namespace kbf {
         legsBoneInfoWidget.onAddBoneModifier([&]() { openSelectBonePanel(false); });
         presetPanel.close();
         presetGroupPanel.close();
+        selectBonePanel.close();
+        assignPresetPanel.close();
         initializePresetBuffers(preset);
     }
 
@@ -72,7 +78,7 @@ namespace kbf {
         strcpy(presetBundleBuffer, preset->bundle.c_str());
     }
 
-	void EditorTab::drawNoEditor() {
+    void EditorTab::drawNoEditor() {
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, LIST_PADDING);
 
         const ImVec2 buttonSize = ImVec2(ImGui::GetContentRegionAvail().x, 0.0f);
@@ -85,15 +91,15 @@ namespace kbf {
         }
         ImGui::Spacing();
 
-		ImGui::Spacing();
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-		constexpr char const* noPresetStr = "You can also click on entries in the Preset / Preset Group tabs to edit them here.";
-		preAlignCellContentHorizontal(noPresetStr);
-		ImGui::Text(noPresetStr);
-		ImGui::PopStyleColor();
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+        constexpr char const* noPresetStr = "You can also click on entries in the Preset / Preset Group tabs to edit them here.";
+        preAlignCellContentHorizontal(noPresetStr);
+        ImGui::Text(noPresetStr);
+        ImGui::PopStyleColor();
 
         ImGui::PopStyleVar();
-	}
+    }
 
     void EditorTab::openSelectPresetPanel() {
         presetPanel.openNew("Select Preset", "EditPanel_NpcTab", dataManager, wsSymbolFont, wsArmourFont, false);
@@ -194,6 +200,26 @@ namespace kbf {
         });
     }
 
+    void EditorTab::openAssignPresetPanel(ArmourSet armourSet, bool body) {
+        presetPanel.openNew(std::format("Assign Preset - {} ({})", armourSet.name, armourSet.female ? "F" : "M"), "AssignPresetPanel", dataManager, wsSymbolFont, wsArmourFont, true);
+        presetPanel.get()->focus();
+
+        presetPanel.get()->onSelectPreset([&, armourSet, body](std::string uuid) {
+            const Preset* presetToAssign = uuid.empty() ? nullptr : dataManager.getPresetByUUID(uuid);
+
+            if (body) {
+                if (presetToAssign) openObject.ptrAfter.presetGroup->bodyPresets[armourSet] = uuid;
+                else                openObject.ptrAfter.presetGroup->bodyPresets.erase(armourSet);
+            }
+            else {
+                if (presetToAssign) openObject.ptrAfter.presetGroup->legsPresets[armourSet] = uuid;
+                else                openObject.ptrAfter.presetGroup->legsPresets.erase(armourSet);
+            }
+
+            presetPanel.close();
+        });
+    }
+
     void EditorTab::drawPresetGroupEditor() {
         assert(openObject.type == EditableObject::ObjectType::PRESET_GROUP && openObject.ptrAfter.presetGroup != nullptr);
         const PresetGroup& presetGroupBefore = *openObject.ptrBefore.presetGroup;
@@ -262,11 +288,24 @@ namespace kbf {
         ImGui::PopItemWidth();
         ImGui::Spacing();
 
+        std::string hintTextBegin = std::format("This preset group is marked as {} - using ", (**presetGroup).female ? "Female" : "Male");
+        std::string hintTextEnd   = " presets is recommended.";
+        const float hintWidth = ImGui::CalcTextSize(hintTextBegin.c_str()).x + ImGui::CalcTextSize(hintTextEnd.c_str()).x + ImGui::GetFontSize();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (ImGui::GetContentRegionAvail().x - hintWidth) * 0.5f);
+        ImGui::Text(hintTextBegin.c_str());
+        ImGui::SameLine();
+        drawSexMarker(wsSymbolFont, !(**presetGroup).female, false, false);
+        ImGui::SameLine();
+		ImGui::Text(hintTextEnd.c_str());
+        ImGui::PopStyleColor();
+
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
+        ImGui::Spacing();
 
-		const std::vector<ArmourSet> armourSets = ArmourList::getFilteredSets(filterStr);
+        const std::vector<ArmourSet> armourSets = ArmourList::getFilteredSets(filterStr);
         if (armourSets.size() == 0) {
             constexpr char const* noArmourStr = "Armour Set Search Found Zero Results.";
             preAlignCellContentHorizontal(noArmourStr);
@@ -276,7 +315,7 @@ namespace kbf {
         }
         else {
             constexpr ImGuiTableFlags assignedPresetGridFlags =
-                ImGuiTableFlags_RowBg
+                ImGuiTableFlags_BordersInnerH
                 | ImGuiTableFlags_PadOuterX
                 | ImGuiTableFlags_Sortable
                 | ImGuiTableFlags_ScrollY;
@@ -305,34 +344,90 @@ namespace kbf {
             for (const ArmourSet& armour : armourSets) {
                 ImGui::TableNextRow();
 
-                ImGui::TableSetColumnIndex(0);
-				ImVec2 cursorPos = ImGui::GetCursorPos();
-				constexpr ImVec2 sexMarkerOffset = ImVec2(5.0f, 12.5f);
-				ImGui::SetCursorPos(ImVec2(cursorPos.x + sexMarkerOffset.x, cursorPos.y + sexMarkerOffset.y));
-                drawSexMarker(wsSymbolFont, !armour.female, false, true);
+                if (armour.name != ANY_ARMOUR_ID) {
+                    // Sex Marker
+                    ImGui::TableSetColumnIndex(0);
+                    ImVec2 cursorPos = ImGui::GetCursorPos();
+                    constexpr ImVec2 sexMarkerOffset = ImVec2(5.0f, 12.5f);
+                    ImGui::SetCursorPos(ImVec2(cursorPos.x + sexMarkerOffset.x, cursorPos.y + sexMarkerOffset.y));
+                    drawSexMarker(wsSymbolFont, !armour.female, false, true);
+                }
 
+                // Armour Name
                 ImGui::TableSetColumnIndex(1);
                 ImGui::PushFont(wsArmourFont);
                 ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (rowHeight - ImGui::GetTextLineHeight()) * 0.5f);
-                ImGui::Text(armour.name.c_str());
+
+                std::string displayName = armour.name == ANY_ARMOUR_ID ? "Default" : armour.name;
+                if (armour.name == ANY_ARMOUR_ID) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.365f, 0.678f, 0.886f, 0.8f));
+                ImGui::Text(displayName.c_str());
+				if (armour.name == ANY_ARMOUR_ID) ImGui::PopStyleColor();
                 ImGui::PopFont();
 
-                std::string bodyHint = "";
-                std::string legsHint = "";
-                if ((**presetGroup).armourHasBodyPresetUUID(armour)) {
-                    const Preset* preset = dataManager.getPresetByUUID((**presetGroup).bodyPresets.at(armour));
-                    if (preset) {
-                        bodyHint = preset->armour.name;
-                    }
+                Preset* bodyPreset = nullptr;
+                if ((**presetGroup).armourHasBodyPresetUUID(armour)) 
+                    bodyPreset = dataManager.getPresetByUUID((**presetGroup).bodyPresets.at(armour));
+
+                Preset* legsPreset = nullptr;
+                if ((**presetGroup).armourHasLegsPresetUUID(armour))
+                    legsPreset = dataManager.getPresetByUUID((**presetGroup).legsPresets.at(armour));
+
+				constexpr ImVec4 hasPresetColor{ 0.3f, 0.6f, 0.3f, 0.35f };
+
+                // Body Preset Name
+                constexpr float armourSexMarkerVerticalAlignOffset = 5.0f;
+                constexpr float armourSexMarkerOffsetBefore = 5.0f;
+                constexpr float armourSexMarkerOffset = 17.5f;
+                ImGui::TableSetColumnIndex(2);
+                if (bodyPreset) {
+                    std::string bodyArmourSexMarkSymbol = bodyPreset->female ? WS_FONT_FEMALE : WS_FONT_MALE;
+                    ImVec4 bodyArmourSexMarkerCol = bodyPreset->female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+                    ImVec2 bodyArmourSexMarkerSize = ImGui::CalcTextSize(bodyArmourSexMarkSymbol.c_str());
+                    ImVec2 bodyArmourSexMarkerPos;
+                    bodyArmourSexMarkerPos.x = ImGui::GetCursorScreenPos().x + armourSexMarkerOffsetBefore;
+                    bodyArmourSexMarkerPos.y = ImGui::GetCursorScreenPos().y + (rowHeight - bodyArmourSexMarkerSize.y) * 0.5f;
+                    ImGui::PushFont(wsSymbolFont);
+                    ImGui::GetWindowDrawList()->AddText(bodyArmourSexMarkerPos, ImGui::GetColorU32(bodyArmourSexMarkerCol), bodyArmourSexMarkSymbol.c_str());
+                    ImGui::PopFont();
+
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(hasPresetColor), 2);
+                    ImVec2 bodyTextPos;
+                    bodyTextPos.x = bodyArmourSexMarkerPos.x + armourSexMarkerOffset;
+                    bodyTextPos.y = ImGui::GetCursorScreenPos().y + (rowHeight - ImGui::GetTextLineHeight()) * 0.5f;
+                    ImGui::GetWindowDrawList()->AddText(bodyTextPos, ImGui::GetColorU32(ImGuiCol_Text), bodyPreset->name.c_str());
                 }
 
-                ImGui::TableSetColumnIndex(2);
-                ImGui::Selectable(bodyHint.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0.0f, rowHeight));
+                std::string bodySelectableId = std::format("##{}_{}_Body", armour.name, armour.female);
+                if (ImGui::Selectable(bodySelectableId.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0.0f, rowHeight))) {
+                    openAssignPresetPanel(armour, true);
+                }
 
+                // Legs Preset Name
                 ImGui::TableSetColumnIndex(3);
-                ImGui::Selectable(bodyHint.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0.0f, rowHeight));
+                if (legsPreset) {
+                    std::string legsArmourSexMarkSymbol = legsPreset->female ? WS_FONT_FEMALE : WS_FONT_MALE;
+                    ImVec4 legsArmourSexMarkerCol = legsPreset->female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
 
+                    ImVec2 legsArmourSexMarkerSize = ImGui::CalcTextSize(legsArmourSexMarkSymbol.c_str());
+                    ImVec2 legsArmourSexMarkerPos;
+                    legsArmourSexMarkerPos.x = ImGui::GetCursorScreenPos().x + armourSexMarkerOffsetBefore;
+                    legsArmourSexMarkerPos.y = ImGui::GetCursorScreenPos().y + (rowHeight - legsArmourSexMarkerSize.y) * 0.5f;
+                    ImGui::PushFont(wsSymbolFont);
+                    ImGui::GetWindowDrawList()->AddText(legsArmourSexMarkerPos, ImGui::GetColorU32(legsArmourSexMarkerCol), legsArmourSexMarkSymbol.c_str());
+                    ImGui::PopFont();
 
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(hasPresetColor), 3);
+                    ImVec2 legsTextPos;
+                    legsTextPos.x = legsArmourSexMarkerPos.x + armourSexMarkerOffset;
+                    legsTextPos.y = ImGui::GetCursorScreenPos().y + (rowHeight - ImGui::GetTextLineHeight()) * 0.5f;
+                    ImGui::GetWindowDrawList()->AddText(legsTextPos, ImGui::GetColorU32(ImGuiCol_Text), legsPreset->name.c_str());
+                }
+
+                std::string legsSelectableId = std::format("##{}_{}_Legs", armour.name, armour.female);
+                if (ImGui::Selectable(legsSelectableId.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0.0f, rowHeight))) {
+                    openAssignPresetPanel(armour, false);
+                }
             }
 
             ImGui::EndTable();
@@ -359,7 +454,7 @@ namespace kbf {
         return true;
     }
 
-	void EditorTab::drawPresetEditor() {
+    void EditorTab::drawPresetEditor() {
         assert(openObject.type == EditableObject::ObjectType::PRESET && openObject.ptrAfter.preset != nullptr);
         const Preset& presetBefore = *openObject.ptrBefore.preset;
 
@@ -404,7 +499,7 @@ namespace kbf {
             if (ImGui::IsItemClicked()) selectBonePanel.close();
             ImGui::EndTabBar();
         }
-	}
+    }
 
     void EditorTab::drawPresetEditor_Properties(Preset** preset) {
         ImGui::BeginChild("PresetProperties");
@@ -480,7 +575,7 @@ namespace kbf {
 
             for (auto& [categoryName, sortableModifiers] : categorizedModifiers) {
                 bool display = true;
-				if (categorizeBones) display = ImGui::CollapsingHeader(categoryName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
+                if (categorizeBones) display = ImGui::CollapsingHeader(categoryName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
                 if (display) {
                     if (compactMode) {
                         drawCompactBoneModifierTable(categoryName, sortableModifiers, (**preset).bodyBoneModifiers, (**preset).bodyModLimit);
@@ -1003,6 +1098,6 @@ namespace kbf {
         ImGui::EndChild();
 
         return true;
-	}
+    }
 
 }

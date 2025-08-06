@@ -48,10 +48,11 @@ namespace kbf {
 		void openCopyPresetPanel();
 		void openCopyPresetGroupPanel();
 		void openSelectBonePanel(bool body);
+		void openAssignPresetPanel(ArmourSet armourSet, bool body);
 		UniquePanel<PresetPanel>      presetPanel;
 		UniquePanel<PresetGroupPanel> presetGroupPanel;
 		UniquePanel<BonePanel>        selectBonePanel;
-		//UniquePanel<InfoPopupPanel>   generateCachePanel;
+		UniquePanel<PresetPanel>      assignPresetPanel;
 
 		// Preset Group Editor
 		void drawPresetGroupEditor();
