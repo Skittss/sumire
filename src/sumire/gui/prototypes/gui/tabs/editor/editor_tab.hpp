@@ -71,8 +71,16 @@ namespace kbf {
 			bool categorizeBones, 
 			bool useSymmetry);
 
-		void drawCompactBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers);
-		void drawBoneModifierTable_Body(Preset** preset, std::string tableName, std::vector<SortableBoneModifier>& modifiers);
+		void drawCompactBoneModifierTable(
+			std::string tableName, 
+			std::vector<SortableBoneModifier>& sortableModifiers,
+			std::map<std::string, BoneModifier>& modifiers,
+			float modLimit);
+		void drawBoneModifierTable(
+			std::string tableName, 
+			std::vector<SortableBoneModifier>& sortableModifiers,
+			std::map<std::string, BoneModifier>& modifiers,
+			float modLimit);
 		void drawCompactBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, ImVec2 size, std::string fmtPrefix = "");
 		void drawBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, float width, float speed);
 		bool canSavePreset(std::string& errMsg) const;
