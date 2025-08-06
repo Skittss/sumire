@@ -9,14 +9,15 @@ namespace kbf {
 		const std::string& strID,
 		const std::string& message,
 		const std::string& okLabel,
-		const std::string& cancelLabel
-	) : iPanel(label, strID), message{ message }, okLabel{ okLabel }, cancelLabel{ cancelLabel} {}
+		const std::string& cancelLabel,
+		const bool allowClose
+	) : iPanel(label, strID), message{ message }, okLabel{ okLabel }, cancelLabel{ cancelLabel}, allowClose{ allowClose } {}
 
 	bool InfoPopupPanel::draw() {
 		bool open = true;
 		processFocus();
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
-		ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::Begin(nameWithID.c_str(), allowClose ? &open : nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
 
 		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + wrapWidth);
 		ImGui::TextWrapped("%s", message.c_str());

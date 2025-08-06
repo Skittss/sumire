@@ -15,7 +15,8 @@ namespace kbf {
 			const std::string& strID, 
 			const std::string& message,
 			const std::string& okLabel = "OK",
-			const std::string& cancelLabel = "");
+			const std::string& cancelLabel = "",
+			const bool allowClose = true);
 
 		bool draw() override;
 		void onOk(std::function<void()> callback) { okCallback = callback; }
@@ -26,6 +27,7 @@ namespace kbf {
 		std::string message;
 		std::string okLabel;
 		std::string cancelLabel;
+		const bool allowClose;
 
 		std::function<void()> okCallback;
 		std::function<void()> cancelCallback;
