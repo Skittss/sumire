@@ -11,14 +11,28 @@ namespace kbf {
 		std::string uuid;
 		std::string name;
 		bool female;
-		std::unordered_map<std::string, Preset> presets;
+		std::unordered_map<ArmourSet, std::string> bodyPresets;
+		std::unordered_map<ArmourSet, std::string> legsPresets;
 
 		bool operator==(const PresetGroup& other) const {
 			return (
 				uuid == other.uuid &&
 				name == other.name &&
 				female == other.female &&
-				presets == other.presets);
+				bodyPresets == other.bodyPresets &&
+				legsPresets == other.legsPresets);
+		}
+
+		bool armourHasBodyPresetUUID(const ArmourSet& armour) const {
+			return bodyPresets.find(armour) != bodyPresets.end();
+		}
+
+		bool armourHasLegsPresetUUID(const ArmourSet& armour) const {
+			return legsPresets.find(armour) != legsPresets.end();
+		}
+
+		size_t size() const {
+			return bodyPresets.size() + legsPresets.size();
 		}
 	};
 

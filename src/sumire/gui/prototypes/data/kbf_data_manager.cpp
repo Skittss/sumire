@@ -1095,9 +1095,10 @@ namespace kbf {
 			size_t defaultCount = 0;
 			size_t invalidCount = 1;
 
-			for (auto& [armourSet, preset] : presetGroup.presets) {
-				bool isDefault = preset.uuid.empty();
-				bool isInvalid = getPresetByUUID(preset.uuid) == nullptr;
+			// Body
+			for (auto& [armourSet, presetUUID] : presetGroup.bodyPresets) {
+				bool isDefault = presetUUID.empty();
+				bool isInvalid = getPresetByUUID(presetUUID) == nullptr;
 
 				if (isDefault || isInvalid) {
 					if (!newPresetGroup) {
@@ -1105,9 +1106,27 @@ namespace kbf {
 					}
 
 					// remove the entry
-					newPresetGroup->presets.erase(armourSet);
+					newPresetGroup->bodyPresets.erase(armourSet);
 
 					if      (isDefault) defaultCount++;
+					else if (isInvalid) invalidCount++;
+				}
+			}
+
+			// Legs
+			for (auto& [armourSet, presetUUID] : presetGroup.legsPresets) {
+				bool isDefault = presetUUID.empty();
+				bool isInvalid = getPresetByUUID(presetUUID) == nullptr;
+
+				if (isDefault || isInvalid) {
+					if (!newPresetGroup) {
+						newPresetGroup = new PresetGroup{ presetGroup };
+					}
+
+					// remove the entry
+					newPresetGroup->legsPresets.erase(armourSet);
+
+					if (isDefault) defaultCount++;
 					else if (isInvalid) invalidCount++;
 				}
 			}

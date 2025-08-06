@@ -100,9 +100,9 @@ namespace kbf {
             ImGui::GetWindowDrawList()->AddText(presetGroupNamePos, ImGui::GetColorU32(ImGuiCol_Text), group->name.c_str());
 
             std::string presetCountStr;
-            if (group->presets.size() == 0) presetCountStr = "Empty";
-            else if (group->presets.size() == 1) presetCountStr = "1 Preset";
-            else presetCountStr = std::to_string(group->presets.size()) + " Presets";
+            if (group->size() == 0) presetCountStr = "Empty";
+            else if (group->size() == 1) presetCountStr = "1 Preset";
+            else presetCountStr = std::to_string(group->size()) + " Presets";
 
             ImVec2 rightTextSize = ImGui::CalcTextSize(presetCountStr.c_str());
             float hunterIdCursorPosX = ImGui::GetCursorScreenPos().x + contentRegionWidth - rightTextSize.x - ImGui::GetStyle().ItemSpacing.x;
