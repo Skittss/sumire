@@ -8,6 +8,7 @@
 #include <sumire/gui/prototypes/data/formats/preset_defaults.hpp>
 
 #include <rapidjson/document.h>
+#include <imgui.h>
 
 #include <string>
 #include <filesystem>
@@ -62,6 +63,8 @@ namespace kbf {
 		const PlayerOverride* getPlayerOverride(const PlayerData& player) const { return const_cast<KBFDataManager*>(this)->getPlayerOverride(player); }
 
 		std::vector<const Preset*> getPresets(const std::string& filter = "", bool sort = false) const;
+		std::vector<std::pair<std::string, size_t>> getPresetBundles(const std::string& filter = "", bool sort = false) const;
+		std::vector<std::string> getPresetsInBundle(const std::string& bundleName) const;
 		std::vector<const PresetGroup*> getPresetGroups(const std::string& filter = "", bool sort = false) const;
 		std::vector<const PlayerOverride*> getPlayerOverrides(const std::string& filter = "", bool sort = false) const;
 
@@ -76,6 +79,9 @@ namespace kbf {
 		void updatePreset(const std::string& uuid, Preset newPreset);
 		void updatePresetGroup(const std::string& uuid, PresetGroup newPresetGroup);
 		void updatePlayerOverride(const PlayerData& player, PlayerOverride newOverride);
+
+		void setRegularFontOverride(ImFont* font) { regularFontOverride = font; }
+		ImFont* getRegularFontOverride() const { return regularFontOverride; }
 
 		// const Config& config() { return m_config; }
 
@@ -129,6 +135,7 @@ namespace kbf {
 
 		std::unordered_map<std::string, PresetGroup> presetGroups;
 		bool loadPresetGroup(const std::filesystem::path& path, PresetGroup* out);
+		bool loadAssignedPresets(const rapidjson::Value& object, std::unordered_map<ArmourSet, std::string>* out);
 		bool writePresetGroup(const std::filesystem::path& path, const PresetGroup& presetGroup) const;
 		bool loadPresetGroups();
 
@@ -149,6 +156,8 @@ namespace kbf {
 		bool validatePresetExists(std::string& uuid) const;
 
 		BoneCacheManager boneCacheManager;
+
+		ImFont* regularFontOverride = nullptr;
 	};
 
 }

@@ -16,6 +16,7 @@
 #include <fstream>
 #include <format>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace kbf {
 	void KBFDataManager::loadData() {
@@ -30,6 +31,9 @@ namespace kbf {
 		loadPresets();
 		loadPresetGroups();
 		loadPlayerOverrides();
+
+		validateObjectsUsingPresets();
+		validateObjectsUsingPresetGroups();
 	}
 
 	bool KBFDataManager::presetExists(const std::string& name) const {
@@ -96,6 +100,45 @@ namespace kbf {
 		}
 
 		return filteredPresets;
+	}
+
+	std::vector<std::pair<std::string, size_t>> KBFDataManager::getPresetBundles(const std::string& filter, bool sort) const {
+		std::unordered_map<std::string, size_t> presetBundles;
+		std::string filterLower = toLower(filter);
+
+		for (const auto& [uuid, preset] : presets) {
+			if (!preset.bundle.empty()) {
+				std::string bundleNameLower = toLower(preset.bundle);
+				if (filterLower.empty() || bundleNameLower.find(filterLower) != std::string::npos) {
+					auto it = presetBundles.find(preset.bundle);
+					if (it != presetBundles.end()) {
+						it->second++;
+					} else {
+						presetBundles.emplace(preset.bundle, 1);
+					}
+				}
+			}
+		}
+
+		std::vector<std::pair<std::string, size_t>> sortedPresetBundles(presetBundles.begin(), presetBundles.end());
+		if (sort) {
+			std::sort(sortedPresetBundles.begin(), sortedPresetBundles.end(),
+				[](const std::pair<std::string, size_t>& a, const std::pair<std::string, size_t>& b) {
+					return a.first < b.first;
+				});
+		}
+
+		return sortedPresetBundles;
+	}
+
+	std::vector<std::string> KBFDataManager::getPresetsInBundle(const std::string& bundleName) const {
+		std::vector<std::string> presetsInBundle;
+		for (const auto& [uuid, preset] : presets) {
+			if (preset.bundle == bundleName) {
+				presetsInBundle.push_back(preset.uuid);
+			}
+		}
+		return presetsInBundle;
 	}
 
 	std::vector<const PresetGroup*> KBFDataManager::getPresetGroups(const std::string& filter, bool sort) const {
@@ -694,82 +737,6 @@ namespace kbf {
 	}
 
 	bool KBFDataManager::writePreset(const std::filesystem::path& path, const Preset& preset) const {
-		//rapidjson::StringBuffer s;
-		//rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
-
-		//writer.StartObject();
-		//writer.Key(PRESET_UUID_ID);
-		//writer.String(preset.uuid.c_str());
-		//writer.Key(PRESET_BUNDLE_ID);
-		//writer.String(preset.bundle.c_str());
-		//writer.Key(PRESET_ARMOUR_NAME_ID);
-		//writer.String(preset.armour.name.c_str());
-		//writer.Key(PRESET_ARMOUR_FEMALE_ID);
-		//writer.Bool(preset.armour.female);
-		//writer.Key(PRESET_FEMALE_ID);
-		//writer.Bool(preset.female);
-		//writer.Key(PRESET_BODY_MOD_LIMIT_ID);
-		//writer.Double(preset.bodyModLimit);
-		//writer.Key(PRESET_LEGS_MOD_LIMIT_ID);
-		//writer.Double(preset.legsModLimit);
-		//writer.Key(PRESET_BODY_USE_SYMMETRY_ID);
-		//writer.Bool(preset.bodyUseSymmetry);
-		//writer.Key(PRESET_LEGS_USE_SYMMETRY_ID);
-		//writer.Bool(preset.legsUseSymmetry);
-		//writer.Key(PRESET_BONE_MODIFIERS_BODY_ID);
-		//writer.StartObject();
-		//for (const auto& [boneName, modifier] : preset.bodyBoneModifiers) {
-		//	writer.Key(boneName.c_str());
-		//	writer.StartObject();
-		//	writer.Key(PRESET_BONE_MODIFIERS_SCALE_ID);
-		//	writer.StartArray();
-		//	writer.Double(modifier.scale.x);
-		//	writer.Double(modifier.scale.y);
-		//	writer.Double(modifier.scale.z);
-		//	writer.EndArray();
-		//	writer.Key(PRESET_BONE_MODIFIERS_POSITION_ID);
-		//	writer.StartArray();
-		//	writer.Double(modifier.position.x);
-		//	writer.Double(modifier.position.y);
-		//	writer.Double(modifier.position.z);
-		//	writer.EndArray();
-		//	writer.Key(PRESET_BONE_MODIFIERS_ROTATION_ID);
-		//	writer.StartArray();
-		//	writer.Double(modifier.rotation.x);
-		//	writer.Double(modifier.rotation.y);
-		//	writer.Double(modifier.rotation.z);
-		//	writer.EndArray();
-		//	writer.EndObject();
-		//}
-		//writer.EndObject();
-		//writer.Key(PRESET_BONE_MODIFIERS_LEGS_ID);
-		//writer.StartObject();
-		//for (const auto& [boneName, modifier] : preset.legsBoneModifiers) {
-		//	writer.Key(boneName.c_str());
-		//	writer.StartObject();
-		//	writer.Key(PRESET_BONE_MODIFIERS_SCALE_ID);
-		//	writer.StartArray();
-		//	writer.Double(modifier.scale.x);
-		//	writer.Double(modifier.scale.y);
-		//	writer.Double(modifier.scale.z);
-		//	writer.EndArray();
-		//	writer.Key(PRESET_BONE_MODIFIERS_POSITION_ID);
-		//	writer.StartArray();
-		//	writer.Double(modifier.position.x);
-		//	writer.Double(modifier.position.y);
-		//	writer.Double(modifier.position.z);
-		//	writer.EndArray();
-		//	writer.Key(PRESET_BONE_MODIFIERS_ROTATION_ID);
-		//	writer.StartArray();
-		//	writer.Double(modifier.rotation.x);
-		//	writer.Double(modifier.rotation.y);
-		//	writer.Double(modifier.rotation.z);
-		//	writer.EndArray();
-		//	writer.EndObject();
-		//}
-		//writer.EndObject();
-		//writer.EndObject();
-
 		rapidjson::StringBuffer s;
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
@@ -847,8 +814,6 @@ namespace kbf {
 		writer.EndObject();
 		writer.EndObject();
 
-		// Post process to align modifier bodies
-
 		bool success = writeJsonFile(path.string(), s.GetString());
 
 		if (!success) {
@@ -892,8 +857,45 @@ namespace kbf {
 		parsed &= parseString(presetGroupDoc, PRESET_GROUP_UUID_ID, PRESET_GROUP_UUID_ID, &out->uuid);
 		parsed &= parseBool(presetGroupDoc, PRESET_GROUP_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->female);
 
+		parsed &= parseObject(presetGroupDoc, PRESET_GROUP_BODY_PRESETS_ID, PRESET_GROUP_BODY_PRESETS_ID);
+		if (parsed) {
+			const rapidjson::Value& assignedPresets = presetGroupDoc[PRESET_GROUP_BODY_PRESETS_ID];
+			parsed &= loadAssignedPresets(assignedPresets, &out->bodyPresets);
+		}
+
+		// Legs bone Bone modifiers
+		parsed &= parseObject(presetGroupDoc, PRESET_GROUP_LEGS_PRESETS_ID, PRESET_GROUP_LEGS_PRESETS_ID);
+		if (parsed) {
+			const rapidjson::Value& assignedPresets = presetGroupDoc[PRESET_GROUP_LEGS_PRESETS_ID];
+			parsed &= loadAssignedPresets(assignedPresets, &out->legsPresets);
+		}
+
 		if (!parsed) {
 			DEBUG_STACK.push(std::format("Failed to parse preset group {}. One or more required values were missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
+		}
+
+		return parsed;
+	}
+
+	bool KBFDataManager::loadAssignedPresets(const rapidjson::Value& object, std::unordered_map<ArmourSet, std::string>* out) {
+		assert(out != nullptr);
+
+		bool parsed = true;
+
+		for (const auto& assignedPreset : object.GetObject()) {
+			if (assignedPreset.value.IsObject()) {
+				ArmourSet armourSet{};
+				std::string presetUUID;
+
+				parsed &= parseString(assignedPreset.value, PRESET_GROUP_PRESETS_ARMOUR_NAME_ID, PRESET_GROUP_PRESETS_ARMOUR_NAME_ID, &armourSet.name);
+				parsed &= parseBool(assignedPreset.value, PRESET_GROUP_PRESETS_FEMALE_ID, PRESET_GROUP_PRESETS_FEMALE_ID, &armourSet.female);
+				parsed &= parseString(assignedPreset.value, PRESET_GROUP_PRESETS_UUID_ID, PRESET_GROUP_PRESETS_UUID_ID, &presetUUID);
+
+				out->emplace(armourSet, presetUUID);
+			}
+			else {
+				DEBUG_STACK.push("Failed to parse assigned preset. Expected an object, but got a different type.", DebugStack::Color::ERROR);
+			}
 		}
 
 		return parsed;
@@ -908,12 +910,54 @@ namespace kbf {
 		writer.String(presetGroup.uuid.c_str());
 		writer.Key(PRESET_GROUP_FEMALE_ID);
 		writer.Bool(presetGroup.female);
+
+		auto writeCompactAssignedPreset = [](const ArmourSet& armourSet, std::string presetUUID) {
+			rapidjson::StringBuffer buf;
+			rapidjson::Writer<rapidjson::StringBuffer> compactWriter(buf); // one-line writer
+
+			compactWriter.StartObject();
+			compactWriter.Key(PRESET_GROUP_PRESETS_ARMOUR_NAME_ID);
+			compactWriter.String(armourSet.name.c_str());
+			compactWriter.Key(PRESET_GROUP_PRESETS_FEMALE_ID);
+			compactWriter.Bool(armourSet.female);
+			compactWriter.Key(PRESET_GROUP_PRESETS_UUID_ID);
+			compactWriter.String(presetUUID.c_str());
+			compactWriter.EndObject();
+
+			return buf;
+		};
+
+		// Body Presets (compact)
+		writer.Key(PRESET_GROUP_BODY_PRESETS_ID);
+		writer.StartObject();
+		size_t i = 0;
+		for (const auto& [armourSet, presetUUID] : presetGroup.bodyPresets) {
+			writer.Key(std::to_string(i).c_str());
+
+			rapidjson::StringBuffer compactBuf = writeCompactAssignedPreset(armourSet, presetUUID);
+			writer.RawValue(compactBuf.GetString(), compactBuf.GetSize(), rapidjson::kObjectType);
+			i++;
+		}
+		writer.EndObject();
+
+		// Legs Presets (compact)
+		writer.Key(PRESET_GROUP_LEGS_PRESETS_ID);
+		writer.StartObject();
+		i = 0;
+		for (const auto& [armourSet, presetUUID] : presetGroup.legsPresets) {
+			writer.Key(std::to_string(i).c_str());
+
+			rapidjson::StringBuffer compactBuf = writeCompactAssignedPreset(armourSet, presetUUID);
+			writer.RawValue(compactBuf.GetString(), compactBuf.GetSize(), rapidjson::kObjectType);
+			i++;
+		}
+		writer.EndObject();
 		writer.EndObject();
 
 		bool success = writeJsonFile(path.string(), s.GetString());
 
 		if (!success) {
-			DEBUG_STACK.push(std::format("Failed to write preset group {} ({}) to {}", presetGroup.name, presetGroup.uuid, path.string()), DebugStack::Color::ERROR);
+			DEBUG_STACK.push(std::format("Failed to write preset {} ({}) to {}", presetGroup.name, presetGroup.uuid, path.string()), DebugStack::Color::ERROR);
 		}
 
 		return success;
@@ -1017,18 +1061,27 @@ namespace kbf {
 
 	void KBFDataManager::validatePlayerOverrides() {
 		DEBUG_STACK.push("Validating Player Overrides...", DebugStack::Color::DEBUG);
+
+		std::vector<PlayerData> overridesToUpdate{};
+
 		for (auto& [player, playerOverride] : playerOverrides) {
 			if (!playerOverride.presetGroup.empty() && getPresetGroupByUUID(playerOverride.presetGroup) == nullptr) {
-				DEBUG_STACK.push(std::format("Player override for {} has an invalid preset group ({}) - it may have been deleted. Reverting to default...",
-					player.string(),
-					playerOverride.presetGroup
-				), DebugStack::Color::WARNING);
-
-				PlayerOverride newPlayerOverride = playerOverride;
-				newPlayerOverride.presetGroup = "";
-
-				updatePlayerOverride(player, newPlayerOverride);
+				overridesToUpdate.push_back(player);
 			}
+		}
+
+		for (PlayerData& player : overridesToUpdate) {
+			PlayerOverride& playerOverride = playerOverrides.at(player);
+
+			DEBUG_STACK.push(std::format("Player override for {} has an invalid preset group ({}) - it may have been deleted. Reverting to default...",
+				player.string(),
+				playerOverride.presetGroup
+			), DebugStack::Color::WARNING);
+
+			PlayerOverride newPlayerOverride = playerOverride;
+			newPlayerOverride.presetGroup = "";
+
+			updatePlayerOverride(player, newPlayerOverride);
 		}
 	}
 
