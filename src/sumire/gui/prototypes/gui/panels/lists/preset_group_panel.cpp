@@ -1,4 +1,4 @@
-#include <sumire/gui/prototypes/gui/panels/preset_group_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/preset_group_panel.hpp>
 
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>

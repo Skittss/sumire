@@ -1,4 +1,4 @@
-#include <sumire/gui/prototypes/gui/panels/player_list_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/player_list_panel.hpp>
 
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>

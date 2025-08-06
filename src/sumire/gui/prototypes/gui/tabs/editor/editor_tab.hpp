@@ -6,10 +6,10 @@
 #include <sumire/gui/prototypes/data/kbf_data_manager.hpp>
 
 #include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/preset_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/preset_group_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/info_popup_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/bone_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/preset_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/preset_group_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/bone_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/info/info_popup_panel.hpp>
 #include <sumire/gui/prototypes/data/bones/sortable_bone_modifier.hpp>
 
 #include <imgui.h>

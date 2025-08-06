@@ -4,7 +4,7 @@
 #include <sumire/gui/prototypes/data/formats/preset.hpp>
 #include <sumire/gui/prototypes/data/kbf_data_manager.hpp>
 #include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/preset_group_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/preset_group_panel.hpp>
 
 #include <imgui.h>
 

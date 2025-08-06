@@ -1,7 +1,8 @@
-#include <sumire/gui/prototypes/gui/panels/edit_preset_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/presets/create_preset_panel.hpp>
 
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/data/ids/special_armour_ids.hpp>
+#include <sumire/gui/prototypes/data/ids/preset_ids.hpp>
 #include <sumire/gui/prototypes/data/armour/armour_list.hpp>
 #include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
@@ -11,32 +12,29 @@
 
 namespace kbf {
 
-    EditPresetPanel::EditPresetPanel(
-        const std::string& presetUUID,
+    CreatePresetPanel::CreatePresetPanel(
         const std::string& name,
         const std::string& strID,
         const KBFDataManager& dataManager,
         ImFont* wsSymbolFont,
         ImFont* wsArmourFont
-    ) : iPanel(name, strID),
-        presetUUID{ presetUUID },
-        dataManager{ dataManager },
-        wsSymbolFont{ wsSymbolFont },
-        wsArmourFont{ wsArmourFont } 
-    {
-        const Preset* presetPtr = dataManager.getPresetByUUID(presetUUID);
-        presetBefore = *presetPtr;
-        preset       = *presetPtr;
+    ) : iPanel(name, strID), dataManager{ dataManager }, wsSymbolFont{ wsSymbolFont }, wsArmourFont{ wsArmourFont } {
+        preset        = Preset{};
+        preset.name   = "New Preset";
+        preset.uuid   = uuid::v4::UUID::New().String();
+        preset.bundle = PRESET_DEFAULT_BUNDLE;
+        preset.female = true;
+        preset.armour = ArmourSet{ ANY_ARMOUR_ID, false };
 
         initializeBuffers();
     }
 
-    void EditPresetPanel::initializeBuffers() {
+    void CreatePresetPanel::initializeBuffers() {
         std::strcpy(presetNameBuffer, preset.name.c_str());
         std::strcpy(presetBundleBuffer, preset.bundle.c_str());
     }
 
-    bool EditPresetPanel::draw() {
+    bool CreatePresetPanel::draw() {
         bool open = true;
         processFocus();
 
@@ -55,7 +53,7 @@ namespace kbf {
 
         ImGui::InputText(" Name ", presetNameBuffer, IM_ARRAYSIZE(presetNameBuffer));
         preset.name = std::string{ presetNameBuffer };
-
+        
         ImGui::Spacing();
         ImGui::InputText(" Bundle ", presetBundleBuffer, IM_ARRAYSIZE(presetBundleBuffer));
         preset.bundle = std::string{ presetBundleBuffer };
@@ -102,31 +100,18 @@ namespace kbf {
 
         ImGui::Spacing();
         ImGui::Spacing();
-        static constexpr const char* kDeleteLabel = "Delete";
-        static constexpr const char* kCancelLabel = "Cancel";
-        static constexpr const char* kEditorLabel = "Open In Editor";
-        static constexpr const char* kUpdateLabel = "Update";
 
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f)); // Muted red
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-        if (ImGui::Button(kDeleteLabel)) {
-            INVOKE_REQUIRED_CALLBACK(deleteCallback, presetUUID);
-        }
-        ImGui::PopStyleColor(3);
+        static constexpr const char* kCancelLabel = "Cancel";
+        static constexpr const char* kCreateLabel = "Create";
+
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float buttonWidth1 = ImGui::CalcTextSize(kCancelLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+        float buttonWidth2 = ImGui::CalcTextSize(kCreateLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+        float totalWidth = buttonWidth1 + buttonWidth2 + spacing;
 
         float availableWidth = ImGui::GetContentRegionAvail().x;
-        float spacing = ImGui::GetStyle().ItemSpacing.x;
-        float cancelButtonWidth = ImGui::CalcTextSize(kCancelLabel).x + ImGui::GetStyle().FramePadding.x * 2;
-        float editorButtonWidth = ImGui::CalcTextSize(kEditorLabel).x + ImGui::GetStyle().FramePadding.x * 2;
-        float updateButtonWidth = ImGui::CalcTextSize(kUpdateLabel).x + ImGui::GetStyle().FramePadding.x * 2;
-        float totalWidth = updateButtonWidth + editorButtonWidth + cancelButtonWidth + spacing;
+        ImGui::SetCursorPosX(availableWidth - totalWidth + 8.0f); // Align to the right
 
-        // Cancel Button
-        ImGui::SameLine();
-
-        float cancelButtonPos = availableWidth - totalWidth;
-        ImGui::SetCursorPosX(cancelButtonPos);
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.20f, 0.20f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.10f, 0.10f, 0.10f, 1.0f));
@@ -136,27 +121,18 @@ namespace kbf {
         }
 
         ImGui::PopStyleColor(3);
-
-        // Editor Button
+        
         ImGui::SameLine();
 
-        if (ImGui::Button(kEditorLabel)) {
-            INVOKE_REQUIRED_CALLBACK(openEditorCallback, presetUUID);
-        }
-        ImGui::SetItemTooltip("Edit all values, e.g. bone modifiers");
-
-        // Update Button
-        ImGui::SameLine();
-
-        const bool nameEmpty = preset.name.empty();
+		const bool nameEmpty = preset.name.empty();
         const bool bundleEmpty = preset.bundle.empty();
-        const bool alreadyExists = preset.name != presetBefore.name && dataManager.presetExists(preset.name);
-        const bool disableUpdateButton = nameEmpty || bundleEmpty || alreadyExists;
-        if (disableUpdateButton) ImGui::BeginDisabled();
-        if (ImGui::Button(kUpdateLabel)) {
-            INVOKE_REQUIRED_CALLBACK(updateCallback, presetUUID, preset);
+        const bool alreadyExists = dataManager.presetExists(preset.name);
+		const bool disableCreateButton = nameEmpty || bundleEmpty || alreadyExists;
+        if (disableCreateButton) ImGui::BeginDisabled();
+        if (ImGui::Button(kCreateLabel)) {
+            INVOKE_REQUIRED_CALLBACK(createCallback, preset);
         }
-        if (disableUpdateButton) ImGui::EndDisabled();
+        if (disableCreateButton) ImGui::EndDisabled();
         if (nameEmpty) ImGui::SetItemTooltip("Please provide a preset name");
         if (bundleEmpty) ImGui::SetItemTooltip("Please provide a bundle name");
         else if (alreadyExists) ImGui::SetItemTooltip("Preset name already taken");
@@ -167,7 +143,7 @@ namespace kbf {
         return open;
     }
 
-    void EditPresetPanel::drawArmourList(const std::string& filter) {
+    void CreatePresetPanel::drawArmourList(const std::string& filter) {
         std::vector<ArmourSet> armours = ArmourList::getFilteredSets(filter);
 
         // Fixed-height, scrollable region
@@ -204,9 +180,9 @@ namespace kbf {
         ImGui::PopStyleColor();
     }
 
-    void EditPresetPanel::drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter) {
+    void CreatePresetPanel::drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter) {
         // Sex Mark
-        std::string symbol = armourSet.female ? WS_FONT_FEMALE : WS_FONT_MALE;
+        std::string symbol  = armourSet.female ? WS_FONT_FEMALE : WS_FONT_MALE;
         std::string tooltip = armourSet.female ? "Female" : "Male";
         ImVec4 colour = armourSet.female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
 
@@ -230,9 +206,9 @@ namespace kbf {
         ImGui::PushFont(wsArmourFont);
         ImGui::GetWindowDrawList()->AddText(ImVec2(armourNameCursorPosX, armourNameCursorPosY), ImGui::GetColorU32(ImGuiCol_Text), armourSet.name.c_str());
         ImGui::PopFont();
-    }
+	}
 
-    void EditPresetPanel::openCopyPresetPanel() {
+    void CreatePresetPanel::openCopyPresetPanel() {
         copyPresetPanel.openNew("Copy Existing Preset", "CreatePresetPanel_CopyPanel", dataManager, wsSymbolFont, wsArmourFont, false);
         copyPresetPanel.get()->focus();
 
@@ -241,7 +217,7 @@ namespace kbf {
             if (copyPreset) {
                 std::string nameBefore = preset.name;
                 preset = *copyPreset;
-                preset.uuid = presetBefore.uuid; // Make sure UUID remains the same.
+                preset.uuid = uuid::v4::UUID::New().String(); // Make sure to change the UUID.
                 preset.name = nameBefore;
                 initializeBuffers();
             }
@@ -249,7 +225,7 @@ namespace kbf {
                 DEBUG_STACK.push(std::format("Could not find preset with UUID {} while trying to make a copy.", uuid), DebugStack::Color::ERROR);
             }
             copyPresetPanel.close();
-            });
+        });
     }
 
 }

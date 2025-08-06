@@ -1,4 +1,4 @@
-#include <sumire/gui/prototypes/gui/panels/edit_player_override_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/presets/edit_player_override_panel.hpp>
 
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>

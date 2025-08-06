@@ -4,9 +4,9 @@
 
 #include <sumire/gui/prototypes/data/formats/player_override.hpp>
 #include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/player_list_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/preset_group_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/edit_player_override_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/player_list_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/preset_group_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/presets/edit_player_override_panel.hpp>
 
 namespace kbf {
 

@@ -1,4 +1,4 @@
-#include <sumire/gui/prototypes/gui/panels/create_preset_group_from_bundle_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/presets/create_preset_group_from_bundle_panel.hpp>
 
 #include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>

@@ -1,4 +1,4 @@
-#include <sumire/gui/prototypes/gui/panels/edit_preset_group_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/presets/edit_preset_group_panel.hpp>
 
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/data/ids/special_armour_ids.hpp>

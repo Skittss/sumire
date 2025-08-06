@@ -1,4 +1,4 @@
-#include <sumire/gui/prototypes/gui/panels/info_popup_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/info/info_popup_panel.hpp>
 
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 

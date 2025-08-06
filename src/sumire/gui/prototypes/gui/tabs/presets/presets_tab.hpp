@@ -3,9 +3,9 @@
 #include <sumire/gui/prototypes/gui/tabs/i_tab.hpp>
 
 #include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/create_preset_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/edit_preset_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/info_popup_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/presets/create_preset_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/presets/edit_preset_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/info/info_popup_panel.hpp>
 
 #include <imgui.h>
 

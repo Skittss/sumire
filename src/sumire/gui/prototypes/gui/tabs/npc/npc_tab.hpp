@@ -3,8 +3,8 @@
 #include <sumire/gui/prototypes/gui/tabs/i_tab.hpp>
 
 #include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/preset_group_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/preset_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/preset_group_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/preset_panel.hpp>
 
 #include <imgui.h>
 
