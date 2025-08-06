@@ -29,7 +29,7 @@ namespace kbf {
             editorTab.editPresetGroup(dataManager.getPresetGroupByUUID(uuid)); 
             tab = KBFTab::Editor; });
 
-		DEBUG_STACK.push("Hello from Kana! Framework initialized.", DebugStack::Color::INFO);
+		DEBUG_STACK.push("Hello from Kana! ^o^ - Framework initialized.", DebugStack::Color::INFO);
     }
 
     void KBFWindow::initializeFonts() {
@@ -71,6 +71,8 @@ namespace kbf {
         editorTab.setArmourFont(wildsArmourFont);
         debugTab.setMonoFont(monoFont);
         aboutTab.setAsciiFont(monoFontTiny);
+
+        dataManager.setRegularFontOverride(mainFont);
     }
 
     void KBFWindow::draw() {
