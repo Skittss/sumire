@@ -1,6 +1,5 @@
 ﻿#include <sumire/gui/prototypes/data/armour/armour_list.hpp>
 
-#include <sumire/gui/prototypes/data/ids/special_armour_ids.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 
 #include <algorithm>
@@ -36,7 +35,7 @@ namespace kbf {
 
 	const std::map<ArmourSet, ArmourID> ArmourList::mapping = {
         // Name                          // Female?  // Body ID         // Legs ID
-        { { ANY_ARMOUR_ID                , false } , { ANY_ARMOUR_ID    ANY_ARMOUR_ID   } },
+        { ArmourList::DefaultArmourSet()           , { ANY_ARMOUR_ID  , ANY_ARMOUR_ID   } },
         { { "Innerwear 0"                , false } , { "ch03_002_0002", "ch03_002_0004" } },
         { { "Innerwear 0"                , true  } , { "ch03_002_0012", "ch03_002_0014" } },
         { { "Innerwear 1"                , false } , { "ch03_002_1002", "ch03_002_1004" } },
