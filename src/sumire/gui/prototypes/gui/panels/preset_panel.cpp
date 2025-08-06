@@ -29,6 +29,7 @@ namespace kbf {
         processFocus();
         ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
         ImGui::SetNextWindowSize(ImVec2(600, 0), ImGuiCond_Once);
+        ImGui::PushFont(wsArmourFont);
         ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse);
 
         float width = ImGui::GetWindowSize().x;
@@ -38,15 +39,18 @@ namespace kbf {
 
         drawPresetList(dataManager.getPresets(filterStr, true));
 
+        ImGui::PushFont(dataManager.getRegularFontOverride());
         ImGui::PushItemWidth(-1);
         ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
         ImGui::PopItemWidth();
+        ImGui::PopFont();
 
         float contentHeight = ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y;
         ImVec2 newSize = ImVec2(width, contentHeight);
         ImGui::SetWindowSize(newSize);
 
         ImGui::End();
+        ImGui::PopFont();
         ImGui::PopStyleVar();
 
         return open;
@@ -94,6 +98,8 @@ namespace kbf {
 
             ImGui::PopFont();
 
+            ImGui::PushFont(dataManager.getRegularFontOverride());
+
             // Group name... floating because imgui has no vertical alignment STILL :(
             constexpr float playerNameSpacingAfter = 5.0f;
             ImVec2 playerNameSize = ImGui::CalcTextSize(preset->name.c_str());
@@ -110,6 +116,8 @@ namespace kbf {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
             ImGui::GetWindowDrawList()->AddText(bundleStrPos, ImGui::GetColorU32(ImGuiCol_Text), bundleStr.c_str());
             ImGui::PopStyleColor();
+
+			ImGui::PopFont();
 
             // Legs Mark
             constexpr ImVec4 armourMissingCol{ 1.0f, 1.0f, 1.0f, 0.1f };
