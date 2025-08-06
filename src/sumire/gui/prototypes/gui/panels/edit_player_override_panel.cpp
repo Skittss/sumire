@@ -130,7 +130,7 @@ namespace kbf {
         const float selectableHeight = ImGui::GetTextLineHeight();
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.365f, 0.678f, 0.886f, 0.8f));
-        if (ImGui::Selectable("Default", false, 0, ImVec2(0.0f, selectableHeight))) {
+        if (ImGui::Selectable("Default", playerOverride.presetGroup.empty(), 0, ImVec2(0.0f, selectableHeight))) {
             playerOverride.presetGroup = "";
         }
         ImGui::PopStyleColor();
@@ -141,7 +141,7 @@ namespace kbf {
         {
             ImVec2 pos = ImGui::GetCursorScreenPos();
 
-            if (ImGui::Selectable(("##" + group->name).c_str(), false, 0, ImVec2(0.0f, selectableHeight))) {
+            if (ImGui::Selectable(("##" + group->name).c_str(), playerOverride.presetGroup == group->uuid, 0, ImVec2(0.0f, selectableHeight))) {
                 playerOverride.presetGroup = group->uuid;
             }
 
