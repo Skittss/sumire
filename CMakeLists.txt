@@ -137,6 +137,7 @@ SET(SUMIRE_SOURCES
     "${SUMIRE_SRC_DIR}/gui/prototypes/data/bones/bone_cache_manager.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/data/kbf_data_manager.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/bone_panel.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/create_preset_group_from_bundle_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/create_preset_group_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/create_preset_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/edit_player_override_panel.cpp "

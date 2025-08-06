@@ -20,8 +20,9 @@ namespace kbf {
         }
 
         if (ImGui::Button("Create From Preset Bundle", buttonSize)) {
-
+            openCreatePresetGroupFromBundlePanel();
         }
+        ImGui::SetItemTooltip("Automatically create a preset group using the assigned armour sets for presets within a specific bundle.");
         ImGui::Spacing();
 
         ImGui::BeginChild("PresetGroupListChild");
@@ -31,11 +32,13 @@ namespace kbf {
 
 	void PresetGroupsTab::drawPopouts() {
         createPresetGroupPanel.draw();
+		createPresetGroupFromBundlePanel.draw();
         editPresetGroupPanel.draw();
     };
 
     void PresetGroupsTab::closePopouts() {
         createPresetGroupPanel.close();
+		createPresetGroupFromBundlePanel.close();
         editPresetGroupPanel.close();
 	}
 
@@ -170,6 +173,20 @@ namespace kbf {
         createPresetGroupPanel.get()->onCreate([&](const PresetGroup& presetGroup) {
             dataManager.addPresetGroup(presetGroup);
             createPresetGroupPanel.close();
+        });
+    }
+
+    void PresetGroupsTab::openCreatePresetGroupFromBundlePanel() {
+        createPresetGroupFromBundlePanel.openNew("Create Preset Group From Bundle", "CreatePresetGroupFromBundlePanel", dataManager, wsSymbolFont);
+        createPresetGroupFromBundlePanel.get()->focus();
+
+        createPresetGroupFromBundlePanel.get()->onCancel([&]() {
+            createPresetGroupFromBundlePanel.close();
+        });
+
+        createPresetGroupFromBundlePanel.get()->onCreate([&](const PresetGroup& presetGroup) {
+            dataManager.addPresetGroup(presetGroup);
+            createPresetGroupFromBundlePanel.close();
         });
     }
 

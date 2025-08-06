@@ -3,6 +3,7 @@
 #include <sumire/gui/prototypes/gui/tabs/i_tab.hpp>
 #include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/create_preset_group_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/create_preset_group_from_bundle_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/edit_preset_group_panel.hpp>
 
 #include <imgui.h>
@@ -27,9 +28,11 @@ namespace kbf {
 	private:
 		void drawPresetGroupList();
 
-		UniquePanel<CreatePresetGroupPanel> createPresetGroupPanel;
-		UniquePanel<EditPresetGroupPanel> editPresetGroupPanel;
+		UniquePanel<CreatePresetGroupPanel>           createPresetGroupPanel;
+		UniquePanel<CreatePresetGroupFromBundlePanel> createPresetGroupFromBundlePanel;
+		UniquePanel<EditPresetGroupPanel>             editPresetGroupPanel;
 		void openCreatePresetGroupPanel();
+		void openCreatePresetGroupFromBundlePanel();
 		void openEditPresetGroupPanel(const std::string& presetUUID);
 
 		KBFDataManager& dataManager;
