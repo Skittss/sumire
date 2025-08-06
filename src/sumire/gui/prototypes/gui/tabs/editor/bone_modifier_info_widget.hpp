@@ -67,6 +67,8 @@ namespace kbf {
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
+
+            return true;
 		}
 
     private:
