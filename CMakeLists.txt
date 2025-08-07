@@ -2,10 +2,11 @@ cmake_minimum_required(VERSION 3.15.0)
 
 # ---- Project Meta ----------------------------------------------------------------------------------------------
 set(NAME sumire)
+set(VER 0.1.0)
 project(
     ${NAME} 
     LANGUAGES C CXX
-    VERSION 0.1.0
+    VERSION ${VER}
 )
 
 # ---- Sumire Directories ----------------------------------------------------------------------------------------
@@ -19,6 +20,7 @@ option(ENABLE_BUILD_ERRORS "Enable build warnings and errors." ON)
 
 add_compile_definitions(ASSETS_ROOT="/")
 add_compile_definitions(SUMI_NO_VALIDATION_LAYERS=1) # Turn off validation layers manually, if needed
+add_compile_definitions(SUMIRE_VERSION=\"${VER}\") 
 
 include(./.env.cmake OPTIONAL RESULT_VARIABLE LOCAL_ENV)
 message(STATUS "Using local .env.cmake at: ${LOCAL_ENV}")

@@ -2,6 +2,7 @@
 
 #include <sumire/gui/prototypes/gui/tabs/about/ascii_art_splash.hpp>
 #include <sumire/gui/prototypes/gui/tabs/shared/tab_bar_separator.hpp>
+#include <format>
 
 #define WRAP_BULLET(bullet, text) ImGui::TextWrapped(bullet); ImGui::SameLine(); ImGui::TextWrapped(text)
 
@@ -33,7 +34,7 @@ namespace kbf {
         ImGui::Spacing();
 
         drawTabBarSeparator("Version", "Version");
-        ImGui::Text("Kana's Body Framework vTODO"); // TODO: PASS THIS FROM COMPILER!!
+        ImGui::Text(std::format("Kana's Body Framework v{}", SUMIRE_VERSION).c_str());
         
         ImGui::Spacing();
 

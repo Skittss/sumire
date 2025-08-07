@@ -9,6 +9,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <format>
 
 #include <iostream>
 
@@ -137,7 +138,7 @@ namespace sumire {
         kbfInstance.draw();
         
         ImGui::Begin("Sumire Scene Viewer");
-        ImGui::Text("Sumire Build v0.0.1");
+        ImGui::Text(std::format("Sumire Build v{}", SUMIRE_VERSION).c_str());
 
         ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
 
