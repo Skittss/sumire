@@ -3,10 +3,13 @@
 #include <sumire/gui/prototypes/data/field_parsers.hpp>
 #include <sumire/gui/prototypes/data/ids/config_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/preset_ids.hpp>
+#include <sumire/gui/prototypes/data/fbs_compat/fbs_preset_ids.hpp>
+#include <sumire/gui/prototypes/data/fbs_compat/fbs_armour_set_compat.hpp>
 #include <sumire/gui/prototypes/data/ids/preset_group_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/player_override_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/format_ids.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
+#include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 
@@ -80,7 +83,7 @@ namespace kbf {
 		return nullptr;
 	}
 
-	std::vector<const Preset*> KBFDataManager::getPresets(const std::string& filter, bool sort) const {
+	std::vector<const Preset*> KBFDataManager::getPresets(const std::string& filter, bool filterBody, bool filterLegs, bool sort) const {
 		std::vector<const Preset*> filteredPresets;
 
 		std::string filterLower = toLower(filter);
@@ -89,6 +92,9 @@ namespace kbf {
 			std::string presetNameLower = toLower(preset.name);
 
 			if (filterLower.empty() || presetNameLower.find(filterLower) != std::string::npos) {
+				if (filterBody && !preset.hasBody()) continue;
+				if (filterLegs && !preset.hasLegs()) continue;
+
 				filteredPresets.push_back(&preset);
 			}
 		}
@@ -248,7 +254,7 @@ namespace kbf {
 		}
 	}
 
-	void KBFDataManager::deletePreset(const std::string& uuid) {
+	void KBFDataManager::deletePreset(const std::string& uuid, bool validate) {
 		if (presets.find(uuid) == presets.end()) {
 			DEBUG_STACK.push(std::format("Tried to delete preset with UUID {}, but no such preset exists. Skipping...", uuid), DebugStack::Color::WARNING);
 			return;
@@ -260,15 +266,28 @@ namespace kbf {
 		if (!std::filesystem::exists(currPresetPath)) {
 			DEBUG_STACK.push(std::format("Deleted preset {} ({}) locally, but no corresponding .json file exists.", presetName, uuid), DebugStack::Color::WARNING);
 			presets.erase(uuid);
-			validateObjectsUsingPresets();
+			if (validate) validateObjectsUsingPresets();
 			return;
 		}
 
 		if (deleteJsonFile(currPresetPath.string())) {
 			DEBUG_STACK.push(std::format("Deleted preset {} ({})", presetName, uuid), DebugStack::Color::SUCCESS);
 			presets.erase(uuid);
-			validateObjectsUsingPresets();
+			if (validate) validateObjectsUsingPresets();
 		}
+	}
+
+	void KBFDataManager::deletePresetBundle(const std::string& bundleName) {
+		std::vector<std::string> presetUUIDs = getPresetsInBundle(bundleName);
+		if (presetUUIDs.empty()) {
+			DEBUG_STACK.push(std::format("Tried to delete preset bundle {}, but no presets found in this bundle. Skipping...", bundleName), DebugStack::Color::WARNING);
+			return;
+		}
+		for (size_t i = 0; i < presetUUIDs.size(); i++) {
+			bool validate = (i == presetUUIDs.size() - 1); // Validate only on the last deletion.
+			deletePreset(presetUUIDs[i], validate);
+		}
+		DEBUG_STACK.push(std::format("Deleted preset bundle: {}", bundleName), DebugStack::Color::SUCCESS);
 	}
 
 	void KBFDataManager::deletePresetGroup(const std::string& uuid) {
@@ -374,6 +393,76 @@ namespace kbf {
 			// Have to update the entire entry here as data in the key is NOT constant
 			playerOverrides.erase(player);
 			playerOverrides.emplace(newOverride.player, newOverride);
+		}
+	}
+
+	bool KBFDataManager::getFBSpresets(std::vector<FBSPreset>* out, bool female, std::string bundle) const {
+		if (!out) return false;
+		if (!fbsDirectoryFound()) return false;
+
+		out->clear();
+
+		bool hasFailure = false;
+
+		// Load all body presets
+		std::filesystem::path bodyPath = this->fbsPath / "Body";
+		if (!std::filesystem::exists(bodyPath)) {
+			DEBUG_STACK.push(std::format("FBS Body presets directory does not exist at {}", bodyPath.string()), DebugStack::Color::ERROR);
+			return false;
+		}
+
+		for (const auto& entry : std::filesystem::directory_iterator(bodyPath)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".json") {
+				FBSPreset preset;
+				if (loadFBSPreset(entry.path(), true, female, bundle, &preset)) {
+					out->push_back(preset);
+				}
+				else {
+					hasFailure = true;
+				}
+			}
+		}
+
+		// Load all leg presets
+		std::filesystem::path legPath = this->fbsPath / "Leg";
+		if (!std::filesystem::exists(legPath)) {
+			DEBUG_STACK.push(std::format("FBS Leg presets directory does not exist at {}", legPath.string()), DebugStack::Color::ERROR);
+			return false;
+		}
+
+		for (const auto& entry : std::filesystem::directory_iterator(legPath)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".json") {
+				FBSPreset preset;
+				if (loadFBSPreset(entry.path(), false, female, bundle, &preset)) {
+					out->push_back(preset);
+				}
+				else {
+					hasFailure = true;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	void KBFDataManager::resolveNameConflicts(std::vector<Preset>& presets) const {
+		if (presets.empty()) return;
+
+		// Resolve name conflicts by appending a number to the name if it already exists
+		std::unordered_map<std::string, int> nameCount;
+		for (auto& preset : presets) {
+			std::string name = preset.name;
+
+			std::string newName = name;
+			size_t count = 1;
+			while (presetExists(newName) && count < 1000) {
+				// Try appending a number to the name until its unique
+				newName = std::format("{} ({})", name, count);
+				count++;
+			}
+
+			// Update the preset name
+			preset.name = newName;
 		}
 	}
 
@@ -869,6 +958,97 @@ namespace kbf {
 			}
 		}
 		return hasFailure;
+	}
+
+	bool KBFDataManager::loadFBSPreset(const std::filesystem::path& path, bool body, bool female, std::string bundle, FBSPreset* out) const {
+		assert(out != nullptr);
+
+		DEBUG_STACK.push(std::format("Loading FBS preset from {}", path.string()), DebugStack::Color::INFO);
+
+		rapidjson::Document presetDoc = loadConfigJson(path.string(), nullptr);
+		if (!presetDoc.IsObject() || presetDoc.HasParseError()) return false;
+
+		out->preset.name = path.stem().string();
+
+		bool parsed = true;
+
+		uint32_t fbsArmourID = 0;
+
+		std::string autoSwitchID = body ? FBS_AUTO_SWITCH_BODY_ID : FBS_AUTO_SWITCH_LEGS_ID;
+		std::string armourID     = body ? FBS_ARMOUR_ID_BODY_ID : FBS_ARMOUR_ID_LEGS_ID;
+		parsed &= parseBool(presetDoc, autoSwitchID, autoSwitchID, &out->autoswitchingEnabled);
+		parsed &= parseUint(presetDoc, armourID, armourID, &fbsArmourID);
+
+		// Deal with lua indexing at 1 (why lua... why...?)
+		if (fbsArmourID == 0) return false; // No armour at index 0
+		fbsArmourID--;
+
+		parsed &= fbsArmourExists(fbsArmourID, body);
+
+		if (!parsed) return false;
+
+		// Get all the modifiers (this is a horrible file read)
+		std::map<std::string, BoneModifier>& targetModifiers = body ? out->preset.bodyBoneModifiers : out->preset.legsBoneModifiers;
+		const auto addModifierIfNotExistsFn = [&targetModifiers](const std::string& boneName) {
+			if (targetModifiers.find(boneName) == targetModifiers.end()) targetModifiers.emplace(boneName, BoneModifier{});
+		};
+
+		for (const auto& key : presetDoc.GetObject()) {
+			std::string keyName = key.name.GetString();
+			std::string boneName;
+
+			// The key will be a modifier if it ends in "EulervecX/Y/Z", "PosvecX/Y/Z", or "ScalevecX/Y/Z" (There is a Eularvec but not used... what the fuck?)
+			bool isEulerX = keyName.ends_with("EulervecX");
+			bool isEulerY = keyName.ends_with("EulervecY");
+			bool isEulerZ = keyName.ends_with("EulervecZ");
+			bool isPosX   = keyName.ends_with("PosvecX");
+			bool isPosY   = keyName.ends_with("PosvecY");
+			bool isPosZ   = keyName.ends_with("PosvecZ");
+			bool isScaleX = keyName.ends_with("ScalevecX");
+			bool isScaleY = keyName.ends_with("ScalevecY");
+			bool isScaleZ = keyName.ends_with("ScalevecZ");
+
+			bool isModifier = isEulerX || isEulerY || isEulerZ || isPosX || isPosY || isPosZ || isScaleX || isScaleY || isScaleZ;
+			if (!isModifier) continue;
+
+			if      (isEulerX) boneName = keyName.substr(0, keyName.find_last_of("EulervecX"));
+			else if (isEulerY) boneName = keyName.substr(0, keyName.find_last_of("EulervecY"));
+			else if (isEulerZ) boneName = keyName.substr(0, keyName.find_last_of("EulervecZ"));
+			else if (isPosX)   boneName = keyName.substr(0, keyName.find_last_of("PosvecX"));
+			else if (isPosY)   boneName = keyName.substr(0, keyName.find_last_of("PosvecY"));
+			else if (isPosZ)   boneName = keyName.substr(0, keyName.find_last_of("PosvecZ"));
+			else if (isScaleX) boneName = keyName.substr(0, keyName.find_last_of("ScalevecX"));
+			else if (isScaleY) boneName = keyName.substr(0, keyName.find_last_of("ScalevecY"));
+			else if (isScaleZ) boneName = keyName.substr(0, keyName.find_last_of("ScalevecZ"));
+
+			float modValue = 0.0f;
+			parsed &= parseFloat(presetDoc, keyName.c_str(), keyName.c_str(), &modValue);
+
+			if      (isEulerX) { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].rotation.x = modValue; }
+			else if (isEulerY) { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].rotation.y = modValue; }
+			else if (isEulerZ) { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].rotation.z = modValue; }
+			else if (isPosX)   { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].position.x = modValue; }
+			else if (isPosY)   { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].position.y = modValue; }
+			else if (isPosZ)   { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].position.z = modValue; }
+			else if (isScaleX) { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].scale.x = modValue; }
+			else if (isScaleY) { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].scale.y = modValue; }
+			else if (isScaleZ) { addModifierIfNotExistsFn(boneName); targetModifiers[boneName].scale.z = modValue; }
+		}
+
+		if (parsed) {
+			// fill in kbf preset data
+			out->preset.uuid = uuid::v4::UUID::New().String();
+			out->preset.bundle = bundle;
+			out->preset.female = female;
+			out->preset.bodyModLimit = 2.50f;
+			out->preset.legsModLimit = 2.50f;
+			out->preset.bodyUseSymmetry = true; // TODO: This is *probably* safe, but need to check.
+			out->preset.legsUseSymmetry = true;
+			out->preset.armour = getArmourSetFromFBSidx(fbsArmourID, body);
+		}
+
+		return parsed;
+
 	}
 
 	bool KBFDataManager::loadPresetGroup(const std::filesystem::path& path, PresetGroup* out) {

@@ -149,6 +149,7 @@ SET(SUMIRE_SOURCES
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/presets/edit_player_override_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/presets/edit_preset_group_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/presets/edit_preset_panel.cpp "
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/presets/import_fbs_presets_panel.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/debug/debug_tab.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/editor/editor_tab.cpp "
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/tabs/npc/npc_tab.cpp "

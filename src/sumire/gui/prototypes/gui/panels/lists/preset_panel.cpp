@@ -37,7 +37,7 @@ namespace kbf {
         static char filterBuffer[128] = "";
         std::string filterStr{ filterBuffer };
 
-        drawPresetList(dataManager.getPresets(filterStr, true));
+        drawPresetList(dataManager.getPresets(filterStr, false, false, true));
 
         ImGui::PushFont(dataManager.getRegularFontOverride());
         ImGui::PushItemWidth(-1);

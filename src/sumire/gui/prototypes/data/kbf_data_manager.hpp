@@ -3,6 +3,7 @@
 #include <sumire/gui/prototypes/data/bones/bone_cache_manager.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_group.hpp>
 #include <sumire/gui/prototypes/data/formats/preset.hpp>
+#include <sumire/gui/prototypes/data/fbs_compat/fbs_preset.hpp>
 #include <sumire/gui/prototypes/data/formats/player_override.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_group_defaults.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_defaults.hpp>
@@ -17,7 +18,8 @@ namespace kbf {
 
 	class KBFDataManager {
 	public:
-		KBFDataManager(const std::string& path) : dataBasePath(path) {}
+		KBFDataManager(const std::string& path, const std::string& fbsPath) 
+			: dataBasePath{ path }, fbsPath{ fbsPath } {}
 
 		void loadData();
 
@@ -62,7 +64,7 @@ namespace kbf {
 		const PresetGroup* getPresetGroupByUUID(const std::string& uuid) const { return const_cast<KBFDataManager*>(this)->getPresetGroupByUUID(uuid); }
 		const PlayerOverride* getPlayerOverride(const PlayerData& player) const { return const_cast<KBFDataManager*>(this)->getPlayerOverride(player); }
 
-		std::vector<const Preset*> getPresets(const std::string& filter = "", bool sort = false) const;
+		std::vector<const Preset*> getPresets(const std::string& filter = "", bool filterBody = false, bool filterLegs = false, bool sort = false) const;
 		std::vector<std::pair<std::string, size_t>> getPresetBundles(const std::string& filter = "", bool sort = false) const;
 		std::vector<std::string> getPresetsInBundle(const std::string& bundleName) const;
 		std::vector<const PresetGroup*> getPresetGroups(const std::string& filter = "", bool sort = false) const;
@@ -72,7 +74,8 @@ namespace kbf {
 		void addPresetGroup(const PresetGroup& presetGroup, bool write = true);
 		void addPlayerOverride(const PlayerOverride& playerOverride, bool write = true);
 
-		void deletePreset(const std::string& uuid);
+		void deletePreset(const std::string& uuid, bool validate = true);
+		void deletePresetBundle(const std::string& bundleName);
 		void deletePresetGroup(const std::string& uuid);
 		void deletePlayerOverride(const PlayerData& player);
 
@@ -83,10 +86,16 @@ namespace kbf {
 		void setRegularFontOverride(ImFont* font) { regularFontOverride = font; }
 		ImFont* getRegularFontOverride() const { return regularFontOverride; }
 
+		bool fbsDirectoryFound() const { return std::filesystem::exists(fbsPath); }
+		bool getFBSpresets(std::vector<FBSPreset>* out, bool female = true, std::string bundle = "FBS Presets") const;
+
+		void resolveNameConflicts(std::vector<Preset>& presets) const;
+
 		// const Config& config() { return m_config; }
 
 	private:
 		const std::filesystem::path dataBasePath;
+		const std::filesystem::path fbsPath;
 		const std::filesystem::path defaultConfigsPath = dataBasePath / "DefaultConfigs";
 		const std::filesystem::path presetPath         = dataBasePath / "Presets";
 		const std::filesystem::path presetGroupPath    = dataBasePath / "PresetGroups";
@@ -132,6 +141,8 @@ namespace kbf {
 		bool loadBoneModifiers(const rapidjson::Value& object, std::map<std::string, BoneModifier>* out);
 		bool writePreset(const std::filesystem::path& path, const Preset& preset) const;
 		bool loadPresets();
+
+		bool loadFBSPreset(const std::filesystem::path& path, bool body, bool female, std::string bundle, FBSPreset* out) const;
 
 		std::unordered_map<std::string, PresetGroup> presetGroups;
 		bool loadPresetGroup(const std::filesystem::path& path, PresetGroup* out);

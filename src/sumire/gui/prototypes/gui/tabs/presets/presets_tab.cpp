@@ -19,9 +19,13 @@ namespace kbf {
             openCreatePresetPanel();
         }
 
+        bool canImportFBSpresets = dataManager.fbsDirectoryFound();
+        if (!canImportFBSpresets) ImGui::BeginDisabled();
         if (ImGui::Button("Import FBS Presets as Bundle", buttonSize)) {
-            infoPopupPanel.open("Info", "InfoPanel", "This is an info message!");
+			openImportFBSPresetsPanel();
         }
+		if (!canImportFBSpresets) ImGui::EndDisabled();
+        if (!canImportFBSpresets) ImGui::SetItemTooltip("FBS Presets directory not found.");
         ImGui::Spacing();
 
         if (ImGui::BeginTabBar("PresetTabs")) {
@@ -30,11 +34,15 @@ namespace kbf {
                 drawBundleTab();
                 ImGui::EndTabItem();
             }
+            if (ImGui::IsItemClicked()) closePopouts();
+
             if (ImGui::BeginTabItem("All Presets")) {
                 ImGui::Spacing();
                 drawPresetList();
                 ImGui::EndTabItem();
             }
+            if (ImGui::IsItemClicked()) closePopouts();
+
             ImGui::EndTabBar();
         }
 
@@ -44,13 +52,15 @@ namespace kbf {
 	void PresetsTab::drawPopouts() {
         editPresetPanel.draw();
         createPresetPanel.draw();
-        infoPopupPanel.draw();
+        importFBSPresetsPanel.draw();
+		warnDeleteBundlePanel.draw();
     };
 
     void PresetsTab::closePopouts() {
         editPresetPanel.close();
         createPresetPanel.close();
-        infoPopupPanel.close();
+        importFBSPresetsPanel.close();
+		warnDeleteBundlePanel.close();
 	}
 
     void PresetsTab::drawBundleTab() {
@@ -58,6 +68,11 @@ namespace kbf {
             drawBundleList();
         }
         else {
+            float availableWidth = ImGui::GetContentRegionAvail().x;
+
+			bool needsDisable = warnDeleteBundlePanel.isVisible();
+            if (needsDisable) ImGui::BeginDisabled();
+
             if (ImGui::ArrowButton("##bundleBackButton", ImGuiDir_Left)) {
                 bundleViewed = "";
             }
@@ -67,8 +82,33 @@ namespace kbf {
             ImGui::Text(std::format("Viewing Bundle \"{}\"", bundleViewed).c_str());
             ImGui::PopStyleColor();
 
+            // Delete Button
+            ImGui::SameLine();
+
+            static constexpr const char* kDeleteLabel = "Delete";
+
+            float deleteButtonWidth = ImGui::CalcTextSize(kDeleteLabel).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+            float totalWidth = deleteButtonWidth;
+
+            float deleteButtonPos = availableWidth - deleteButtonWidth;
+            ImGui::SetCursorPosX(deleteButtonPos);
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f)); // Muted red
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+
+            if (ImGui::Button(kDeleteLabel)) {
+                openWarnDeleteBundlePanel(bundleViewed);
+            }
+
+            ImGui::PopStyleColor(3);
+
             ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
             drawPresetList(bundleViewed);
+
+            if (needsDisable) ImGui::EndDisabled();
         }
     }
 
@@ -187,13 +227,30 @@ namespace kbf {
     }
 
     void PresetsTab::drawPresetList(const std::string& bundleFilter) {
+        static bool mustHaveBody = false;
+        static bool mustHaveLegs = false;
+
+        ImGui::Checkbox(" Filter Body", &mustHaveBody);
+		ImGui::SameLine();
+		ImGui::Checkbox(" Filter Legs", &mustHaveLegs);
+
+        static char filterBuffer[128] = "";
+        std::string filterStr{ filterBuffer };
+
+        ImGui::SameLine();
+        ImGui::PushItemWidth(-1);
+        ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
+        ImGui::PopItemWidth();
+
+        ImGui::Spacing();
+
         static bool sortDirAscending;
         static enum class SortCol {
             NONE,
             NAME
         } sortCol;
 
-        std::vector<const Preset*> presets = dataManager.getPresets();
+        std::vector<const Preset*> presets = dataManager.getPresets(filterStr, mustHaveBody, mustHaveLegs);
 
         // Sort
         switch (sortCol)
@@ -208,7 +265,7 @@ namespace kbf {
         if (presets.size() == 0) {
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            constexpr char const* noPresetStr = "No Existing Presets";
+            constexpr char const* noPresetStr = "No Presets Found";
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
             ImGui::PopStyleColor();
@@ -394,6 +451,37 @@ namespace kbf {
             INVOKE_REQUIRED_CALLBACK(openPresetInEditorCb, presetUUID);
         });
     }
+
+    void PresetsTab::openImportFBSPresetsPanel() {
+        importFBSPresetsPanel.openNew("Import FBS Presets", "ImportFBSPresetsPanel", dataManager, wsSymbolFont, wsArmourFont);
+        importFBSPresetsPanel.get()->focus();
+        importFBSPresetsPanel.get()->onCancel([&]() {
+            importFBSPresetsPanel.close();
+        });
+        importFBSPresetsPanel.get()->onImport([&](const std::vector<Preset>& presets) {
+            for (const Preset& preset : presets) {
+                dataManager.addPreset(preset);
+            }
+            importFBSPresetsPanel.close();
+        });
+	}
+
+    void PresetsTab::openWarnDeleteBundlePanel(const std::string& bundleName) {
+        warnDeleteBundlePanel.openNew(
+            std::format("Warning: Delete Bundle {}", bundleName),
+            "WarnDeleteBundlePanel",
+            std::format("Are you sure you want to delete the bundle \"{}\"? All presets in the bundle will be permanently removed.", bundleName),
+            "Delete Bundle",
+            "Cancel",
+            false
+        );
+        warnDeleteBundlePanel.get()->focus();
+        warnDeleteBundlePanel.get()->onOk([this, bundleName]() {
+            dataManager.deletePresetBundle(bundleName);
+            bundleViewed = "";
+            warnDeleteBundlePanel.close();
+        });
+	}
 
 
 }

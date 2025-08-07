@@ -20,7 +20,7 @@ namespace kbf {
 		}
 			
 	private:
-		KBFDataManager kbfDataManager{ SUMIRE_ENGINE_PATH("assets/KBF") };
+		KBFDataManager kbfDataManager{ SUMIRE_ENGINE_PATH("assets/KBF"), "C:\\SteamLibrary\\steamapps\\common\\MonsterHunterWilds\\reframework\\data\\FBSPresets" }; // SUMIRE_ENGINE_PATH("assets/FBSPresets") };
 		KBFWindow kbfWindow{ kbfDataManager };
 
 	};

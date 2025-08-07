@@ -104,10 +104,42 @@ namespace kbf {
     }
 
     void AboutTab::drawTutorialsTab() {
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 15));
         ImGui::Spacing();
         drawTabBarSeparator("Migrating from FBS", "FBSmigrate");
+
+        ImGui::TextWrapped(
+            "There are a few preset settings which are NOT able to be migrated automatically from FBS to KBF, and you will have to adjust these manually after importing your FBS presets."
+        );
+
+        ImGui::TextWrapped(
+            "These settings are:"
+        );
+        ImGui::Indent();
+        WRAP_BULLET("1.", "Manual bone settings - these are ambiguous in FBS, but not in KBF.");
+        WRAP_BULLET("2.", "Face Presets - Unsupported in KBF. Might make it into a future release.");
+        ImGui::Unindent();
+
+        ImGui::TextWrapped(
+            "Additionally, there are some preset settings in KBF which do not exist in FBS, which you may also want to adjust for any imported FBS presets:"
+        );
+
+		ImGui::Indent();
+		WRAP_BULLET("1.", "Preset female / male preference - This is for sorting your presets.");
+		WRAP_BULLET("2.", "Preset bundle - Imported presets be sorted into a single (specified) bundle, sorting these further can allow you to make preset groups easier if you have lots of presets for different models, etc.");
+		ImGui::Unindent();
+
+        ImGui::Spacing();
+        ImGui::TextWrapped(
+            "Alma & Gemma presets must be migrated over manually, but it is recommended to do so anyway as KBF allows you to apply individual presets for each of their outfits."
+        );
+
+
         drawTabBarSeparator("Sharing Presets", "SharingPresets");
+
         drawTabBarSeparator("Manually Updating KBF", "ManualUpdate");
+
+        ImGui::PopStyleVar();
     }
 
     void AboutTab::drawChangelogTab() {

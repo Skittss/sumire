@@ -3,9 +3,10 @@
 #include <sumire/gui/prototypes/gui/tabs/i_tab.hpp>
 
 #include <sumire/gui/prototypes/gui/panels/unique_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/info/info_popup_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/presets/create_preset_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/presets/edit_preset_panel.hpp>
-#include <sumire/gui/prototypes/gui/panels/info/info_popup_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/presets/import_fbs_presets_panel.hpp>
 
 #include <imgui.h>
 
@@ -34,11 +35,14 @@ namespace kbf {
 		void drawPresetList(const std::string& bundleFilter = "");
 		std::string bundleViewed = "";
 
-		UniquePanel<CreatePresetPanel> createPresetPanel;
-		UniquePanel<EditPresetPanel>   editPresetPanel;
-		UniquePanel<InfoPopupPanel>    infoPopupPanel;
+		UniquePanel<CreatePresetPanel>     createPresetPanel;
+		UniquePanel<EditPresetPanel>       editPresetPanel;
+		UniquePanel<ImportFbsPresetsPanel> importFBSPresetsPanel;
+		UniquePanel<InfoPopupPanel>        warnDeleteBundlePanel;
 		void openCreatePresetPanel();
 		void openEditPresetPanel(const std::string& presetUUID);
+		void openImportFBSPresetsPanel();
+		void openWarnDeleteBundlePanel(const std::string& bundleName);
 
 		KBFDataManager& dataManager;
 		ImFont* wsSymbolFont;
