@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sumire/gui/prototypes/data/formats/format_metadata.hpp>
 #include <sumire/gui/prototypes/data/formats/preset.hpp>
 
 #include <unordered_map>
@@ -13,6 +14,8 @@ namespace kbf {
 		bool female;
 		std::unordered_map<ArmourSet, std::string> bodyPresets;
 		std::unordered_map<ArmourSet, std::string> legsPresets;
+
+		FormatMetadata metadata;
 
 		bool operator==(const PresetGroup& other) const {
 			return (

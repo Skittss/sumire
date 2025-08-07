@@ -5,6 +5,7 @@
 #include <sumire/gui/prototypes/data/ids/preset_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/preset_group_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/player_override_ids.hpp>
+#include <sumire/gui/prototypes/data/ids/format_ids.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
@@ -474,6 +475,8 @@ namespace kbf {
 		});
 		if (!config.IsObject() || config.HasParseError()) return false;
 
+		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
 		// Outfits 
 		parseString(config, ALMA_HANDLERS_OUTFIT_ID, ALMA_HANDLERS_OUTFIT_ID, &out->handlersOutfit);
 		parseString(config, ALMA_NEW_WORLD_COMISSION_ID, ALMA_NEW_WORLD_COMISSION_ID, &out->newWorldCommission);
@@ -492,6 +495,8 @@ namespace kbf {
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
 		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(out.metadata.VERSION.c_str());
 		writer.Key(ALMA_HANDLERS_OUTFIT_ID);
 		writer.String(out.handlersOutfit.c_str());
 		writer.Key(ALMA_NEW_WORLD_COMISSION_ID);
@@ -528,6 +533,8 @@ namespace kbf {
 		});
 		if (!config.IsObject() || config.HasParseError()) return false;
 
+		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
 		// Outfits
 		parseString(config, ERIK_HANDLERS_OUTFIT_ID, ERIK_HANDLERS_OUTFIT_ID, &out->handlersOutfit);
 		parseString(config, ERIK_SUMMER_HAT_ID, ERIK_SUMMER_HAT_ID, &out->summerHat);
@@ -541,6 +548,8 @@ namespace kbf {
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
 		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(out.metadata.VERSION.c_str());
 		writer.Key(ERIK_HANDLERS_OUTFIT_ID);
 		writer.String(out.handlersOutfit.c_str());
 		writer.Key(ERIK_SUMMER_HAT_ID);
@@ -567,6 +576,8 @@ namespace kbf {
 		});
 		if (!config.IsObject() || config.HasParseError()) return false;
 
+		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
 		// Outfits
 		parseString(config, GEMMA_SMITHYS_OUTFIT_ID, GEMMA_SMITHYS_OUTFIT_ID, &out->smithysOutfit);
 		parseString(config, GEMMA_SUMMER_COVERALLS_ID, GEMMA_SUMMER_COVERALLS_ID, &out->summerCoveralls);
@@ -580,6 +591,8 @@ namespace kbf {
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
 		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(out.metadata.VERSION.c_str());
 		writer.Key(GEMMA_SMITHYS_OUTFIT_ID);
 		writer.String(out.smithysOutfit.c_str());
 		writer.Key(GEMMA_SUMMER_COVERALLS_ID);
@@ -606,6 +619,8 @@ namespace kbf {
 		});
 		if (!config.IsObject() || config.HasParseError()) return false;
 
+		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
 		parseString(config, NPC_MALE_ID, NPC_MALE_ID, &out->male);
 		parseString(config, NPC_FEMALE_ID, NPC_FEMALE_ID, &out->female);
 
@@ -618,6 +633,8 @@ namespace kbf {
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
 		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(out.metadata.VERSION.c_str());
 		writer.Key(NPC_MALE_ID);
 		writer.String(out.male.c_str());
 		writer.Key(NPC_FEMALE_ID);
@@ -644,6 +661,8 @@ namespace kbf {
 		});
 		if (!config.IsObject() || config.HasParseError()) return false;
 
+		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
 		parseString(config, PLAYER_MALE_ID, PLAYER_MALE_ID, &out->male);
 		parseString(config, PLAYER_FEMALE_ID, PLAYER_FEMALE_ID, &out->female);
 
@@ -656,6 +675,8 @@ namespace kbf {
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
 		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(out.metadata.VERSION.c_str());
 		writer.Key(PLAYER_MALE_ID);
 		writer.String(out.male.c_str());
 		writer.Key(PLAYER_FEMALE_ID);
@@ -680,6 +701,9 @@ namespace kbf {
 		out->name = path.stem().string();
 
 		bool parsed = true;
+
+		parsed &= parseString(presetDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
 		// Metadata
 		parsed &= parseString(presetDoc, PRESET_UUID_ID, PRESET_UUID_ID, &out->uuid);
 		parsed &= parseString(presetDoc, PRESET_BUNDLE_ID, PRESET_BUNDLE_ID, &out->bundle);
@@ -741,6 +765,8 @@ namespace kbf {
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
 		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(preset.metadata.VERSION.c_str());
 		writer.Key(PRESET_UUID_ID);
 		writer.String(preset.uuid.c_str());
 		writer.Key(PRESET_BUNDLE_ID);
@@ -854,6 +880,8 @@ namespace kbf {
 		out->name = path.stem().string();
 
 		bool parsed = true;
+		parsed &= parseString(presetGroupDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
 		parsed &= parseString(presetGroupDoc, PRESET_GROUP_UUID_ID, PRESET_GROUP_UUID_ID, &out->uuid);
 		parsed &= parseBool(presetGroupDoc, PRESET_GROUP_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->female);
 
@@ -906,6 +934,8 @@ namespace kbf {
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
 		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(presetGroup.metadata.VERSION.c_str());
 		writer.Key(PRESET_GROUP_UUID_ID);
 		writer.String(presetGroup.uuid.c_str());
 		writer.Key(PRESET_GROUP_FEMALE_ID);
@@ -992,6 +1022,8 @@ namespace kbf {
 		if (!overrideDoc.IsObject() || overrideDoc.HasParseError()) return false;
 
 		bool parsed = true;
+		parsed &= parseString(overrideDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
 		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PLAYER_NAME_ID, PLAYER_OVERRIDE_PLAYER_NAME_ID, &out->player.name);
 		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, &out->player.hunterId);
 		parsed &= parseBool(overrideDoc, PLAYER_OVERRIDE_PLAYER_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->player.female);
@@ -1009,6 +1041,8 @@ namespace kbf {
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
 		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(playerOverride.metadata.VERSION.c_str());
 		writer.Key(PLAYER_OVERRIDE_PLAYER_NAME_ID);
 		writer.String(playerOverride.player.name.c_str());
 		writer.Key(PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID);

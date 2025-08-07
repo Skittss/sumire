@@ -26,26 +26,26 @@ namespace kbf {
         float width = ImGui::GetWindowSize().x;
 
         std::vector<PlayerData> playerList = {
-            {"Player 1",  "WK5UJ9FQ", false},
-            {"Player 2",  "XK3L8D2R", true},
-            {"Player 3",  "ZQ9N4B7T", false},
-            {"Player 4",  "YH6M1C5V", true},
-            {"Player 5",  "QJ2K8F3W", false},
-            {"Player 6",  "LM4N7D1X", true},
-            {"Player 7",  "TR5P9B2Y", false},
-            {"Player 8",  "ZK3L6F8Q", true},
-            {"Player 9",  "XH2M4C5R", false},
-            {"Player 10", "YJ1N8D3T", true},
-            {"Player 11", "WK5UJ9FA", false},
-            {"Player 12", "XK3L8D2B", true},
-            {"Player 13", "ZQ9N4B7C", false},
-            {"Player 14", "YH6M1C5D", true},
-            {"Player 15", "QJ2K8F3E", false},
-            {"Player 16", "LM4N7D1F", true},
-            {"Player 17", "TR5P9B2G", false},
-            {"Player 18", "ZK3L6F8H", true},
-            {"Player 19", "XH2M4C5I", false},
-            {"Player 20", "YJ1N8D3J", true}
+            PlayerData{"Player 1",  "WK5UJ9FQ", false},
+            PlayerData{"Player 2",  "XK3L8D2R", true},
+            PlayerData{"Player 3",  "ZQ9N4B7T", false},
+            PlayerData{"Player 4",  "YH6M1C5V", true},
+            PlayerData{"Player 5",  "QJ2K8F3W", false},
+            PlayerData{"Player 6",  "LM4N7D1X", true},
+            PlayerData{"Player 7",  "TR5P9B2Y", false},
+            PlayerData{"Player 8",  "ZK3L6F8Q", true},
+            PlayerData{"Player 9",  "XH2M4C5R", false},
+            PlayerData{"Player 10", "YJ1N8D3T", true},
+            PlayerData{"Player 11", "WK5UJ9FA", false},
+            PlayerData{"Player 12", "XK3L8D2B", true},
+            PlayerData{"Player 13", "ZQ9N4B7C", false},
+            PlayerData{"Player 14", "YH6M1C5D", true},
+            PlayerData{"Player 15", "QJ2K8F3E", false},
+            PlayerData{"Player 16", "LM4N7D1F", true},
+            PlayerData{"Player 17", "TR5P9B2G", false},
+            PlayerData{"Player 18", "ZK3L6F8H", true},
+            PlayerData{"Player 19", "XH2M4C5I", false},
+            PlayerData{"Player 20", "YJ1N8D3J", true}
         };
 
         static char filterBuffer[128] = "";

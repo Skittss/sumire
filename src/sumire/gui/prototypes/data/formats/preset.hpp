@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sumire/gui/prototypes/data/formats/format_metadata.hpp>
 #include <sumire/gui/prototypes/data/armour/armour_set.hpp>
 #include <sumire/gui/prototypes/data/bones/bone_modifier.hpp>
 
@@ -23,6 +24,8 @@ namespace kbf {
 		float bodyModLimit = 1.0f;
 		bool  bodyUseSymmetry = true;
 		bool  legsUseSymmetry = true;
+
+		FormatMetadata metadata;
 
 		bool operator==(const Preset& other) const {
 			return (

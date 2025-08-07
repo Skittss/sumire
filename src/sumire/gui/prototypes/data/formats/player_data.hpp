@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sumire/gui/prototypes/data/formats/format_metadata.hpp>
+
 #include <string>
 #include <unordered_map>
 
@@ -9,6 +11,7 @@ namespace kbf {
         std::string name;
         std::string hunterId;
         bool female;
+        FormatMetadata metadata;
 
         bool operator==(const PlayerData& other) const {
             return name == other.name &&
