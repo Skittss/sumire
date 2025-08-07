@@ -14,6 +14,7 @@ namespace kbf {
     public:
         static std::vector<ArmourSet> getFilteredSets(const std::string& filter);
         static bool isValidArmourSet(const std::string& name, bool female);
+        static ArmourSet getArmourSetFromId(const std::string& id);
 
         static ArmourSet DefaultArmourSet() { return ArmourSet{ ANY_ARMOUR_ID, false }; }
 

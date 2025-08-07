@@ -33,6 +33,17 @@ namespace kbf {
         return mapping.find(ArmourSet{ name, female }) != mapping.end();
     }
 
+    ArmourSet ArmourList::getArmourSetFromId(const std::string& id) {
+        if (id.empty()) return DefaultArmourSet();
+
+        for (const auto& [set, armourId] : mapping) {
+            if (armourId.body == id || armourId.legs == id) {
+                return set;
+            }
+        }
+        return DefaultArmourSet();
+	}
+
 	const std::map<ArmourSet, ArmourID> ArmourList::mapping = {
         // Name                          // Female?  // Body ID         // Legs ID
         { ArmourList::DefaultArmourSet()           , { ANY_ARMOUR_ID  , ANY_ARMOUR_ID   } },
@@ -68,7 +79,7 @@ namespace kbf {
         { { "Conga Mail 0/1"             , true  } , { "ch03_013_0012", "ch03_013_0014" } },
         { { "Uth Duna 0/1"               , false } , { "ch03_017_0002", "ch03_017_0004" } },
         { { "Uth Duna 0/1"               , true  } , { "ch03_017_0012", "ch03_017_0014" } },
-        { { "Ingot 0"                    , false } , { "ch03_015_0002",  "ch03_015_0004" } },
+        { { "Ingot 0"                    , false } , { "ch03_015_0002", "ch03_015_0004" } },
         { { "Ingot 0"                    , true  } , { "ch03_015_0012", "ch03_015_0014" } },
         { { "Kranodath 0/1"              , false } , { "ch03_020_0002", ""              } },
         { { "Kranodath 0/1"              , true  } , { "ch03_020_0012", ""              } },
@@ -159,7 +170,7 @@ namespace kbf {
         { { "Seregios 0/1"               , false } , { "ch03_038_0002", "ch03_038_0004" } },
         { { "Seregios 0/1"               , true  } , { "ch03_038_0012", "ch03_038_0014" } },
         { { "Pinion Necklace 0"          , false } , { "ch03_089_0002", ""              } },
-        { { "Hawkheart Jacket 0"         , false } , { "ch03_090_0002", ""              } }, // There IS a female version of this // ...0012
+        { { "Hawkheart Jacket 0"         , false } , { "ch03_090_0002", ""              } }, // There IS a female version of this  ...0012?
         { { "Uth Duna 2"                 , false } , { "ch03_017_3002", "ch03_017_3004" } },
         { { "Uth Duna 2"                 , true  } , { "ch03_017_3012", "ch03_017_3014" } },
         { { "Diver 0"                    , false } , { "ch03_071_0002", "ch03_071_0004" } },
