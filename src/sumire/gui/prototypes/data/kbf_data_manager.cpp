@@ -1011,15 +1011,15 @@ namespace kbf {
 			bool isModifier = isEulerX || isEulerY || isEulerZ || isPosX || isPosY || isPosZ || isScaleX || isScaleY || isScaleZ;
 			if (!isModifier) continue;
 
-			if      (isEulerX) boneName = keyName.substr(0, keyName.find_last_of("EulervecX"));
-			else if (isEulerY) boneName = keyName.substr(0, keyName.find_last_of("EulervecY"));
-			else if (isEulerZ) boneName = keyName.substr(0, keyName.find_last_of("EulervecZ"));
-			else if (isPosX)   boneName = keyName.substr(0, keyName.find_last_of("PosvecX"));
-			else if (isPosY)   boneName = keyName.substr(0, keyName.find_last_of("PosvecY"));
-			else if (isPosZ)   boneName = keyName.substr(0, keyName.find_last_of("PosvecZ"));
-			else if (isScaleX) boneName = keyName.substr(0, keyName.find_last_of("ScalevecX"));
-			else if (isScaleY) boneName = keyName.substr(0, keyName.find_last_of("ScalevecY"));
-			else if (isScaleZ) boneName = keyName.substr(0, keyName.find_last_of("ScalevecZ"));
+			if      (isEulerX) boneName = keyName.substr(0, keyName.size() - std::string("EulervecX").size());
+			else if (isEulerY) boneName = keyName.substr(0, keyName.size() - std::string("EulervecY").size());
+			else if (isEulerZ) boneName = keyName.substr(0, keyName.size() - std::string("EulervecZ").size());
+			else if (isPosX)   boneName = keyName.substr(0, keyName.size() - std::string("PosvecX").size());
+			else if (isPosY)   boneName = keyName.substr(0, keyName.size() - std::string("PosvecY").size());
+			else if (isPosZ)   boneName = keyName.substr(0, keyName.size() - std::string("PosvecZ").size());
+			else if (isScaleX) boneName = keyName.substr(0, keyName.size() - std::string("ScalevecX").size());
+			else if (isScaleY) boneName = keyName.substr(0, keyName.size() - std::string("ScalevecY").size());
+			else if (isScaleZ) boneName = keyName.substr(0, keyName.size() - std::string("ScalevecZ").size());
 
 			float modValue = 0.0f;
 			parsed &= parseFloat(presetDoc, keyName.c_str(), keyName.c_str(), &modValue);
