@@ -1,7 +1,7 @@
 #include <sumire/gui/prototypes/gui/tabs/about/about_tab.hpp>
 
 #include <sumire/gui/prototypes/gui/tabs/about/ascii_art_splash.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/tab_bar_separator.hpp>
+#include <sumire/gui/prototypes/gui/shared/tab_bar_separator.hpp>
 #include <format>
 
 #include <Windows.h>

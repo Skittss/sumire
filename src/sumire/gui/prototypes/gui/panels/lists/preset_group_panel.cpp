@@ -3,7 +3,7 @@
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/alignment.hpp>
+#include <sumire/gui/prototypes/gui/shared/alignment.hpp>
 
 #include <imgui.h>
 

@@ -1,7 +1,7 @@
 #include <sumire/gui/prototypes/gui/tabs/preset_groups/preset_groups_tab.hpp>
 
-#include <sumire/gui/prototypes/gui/tabs/shared/styling_consts.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/alignment.hpp>
+#include <sumire/gui/prototypes/gui/shared/styling_consts.hpp>
+#include <sumire/gui/prototypes/gui/shared/alignment.hpp>
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_group.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>

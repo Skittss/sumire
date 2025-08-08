@@ -1,8 +1,8 @@
 #include <sumire/gui/prototypes/gui/tabs/npc/npc_tab.hpp>
 
-#include <sumire/gui/prototypes/gui/tabs/shared/tab_bar_separator.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/preset_selectors.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/styling_consts.hpp>
+#include <sumire/gui/prototypes/gui/shared/tab_bar_separator.hpp>
+#include <sumire/gui/prototypes/gui/shared/preset_selectors.hpp>
+#include <sumire/gui/prototypes/gui/shared/styling_consts.hpp>
 
 namespace kbf {
 

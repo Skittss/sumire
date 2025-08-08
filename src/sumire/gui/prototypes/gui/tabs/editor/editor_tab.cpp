@@ -1,15 +1,15 @@
 #include <sumire/gui/prototypes/gui/tabs/editor/editor_tab.hpp>
 
-#include <sumire/gui/prototypes/gui/tabs/shared/alignment.hpp>
+#include <sumire/gui/prototypes/gui/shared/alignment.hpp>
+#include <sumire/gui/prototypes/gui/shared/delete_button.hpp>
+#include <sumire/gui/prototypes/gui/shared/bone_slider.hpp>
+#include <sumire/gui/prototypes/gui/shared/styling_consts.hpp>
+#include <sumire/gui/prototypes/gui/shared/sex_marker.hpp>
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/data/ids/special_armour_ids.hpp>
 #include <sumire/gui/prototypes/data/armour/armour_list.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/styling_consts.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/sex_marker.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/delete_button.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/bone_slider.hpp>
 #include <sumire/gui/prototypes/data/bones/default_bones.hpp>
 #include <sumire/gui/prototypes/data/bones/common_bones.hpp>
 #include <sumire/gui/prototypes/data/bones/bone_symmetry_utils.hpp>
