@@ -73,7 +73,7 @@ namespace kbf {
         static char filterBuffer[128] = "";
         std::string filterStr{ filterBuffer };
 
-        drawBundleList(dataManager.getPresetBundles(filterStr, true));
+        drawBundleList(dataManager.getPresetBundlesWithCounts(filterStr, true));
 
         ImGui::PushItemWidth(-1);
         ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
