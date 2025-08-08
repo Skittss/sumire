@@ -1,8 +1,11 @@
 #include <sumire/gui/prototypes/gui/tabs/debug/debug_tab.hpp>
 
+#include <sumire/gui/prototypes/gui/tabs/shared/styling_consts.hpp>
+#include <sumire/gui/prototypes/profiling/cpu_profiler.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 
 #include <chrono>
+#include <sstream>
 
 namespace kbf {
 
@@ -38,7 +41,9 @@ namespace kbf {
     void DebugTab::drawDebugTab() {
         constexpr float padding = 5.0f;
 
+        ImGui::Spacing();
         ImGui::Checkbox("Autoscroll", &consoleAutoscroll);
+        ImGui::Spacing();
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
         if (ImGui::BeginChild("DebugLogScrollWindow")) {
@@ -96,23 +101,58 @@ namespace kbf {
     }
 
     void DebugTab::drawPerformanceTab() {
-        //float fps = frameInfo.frameTime == 0.0f ? 0.0f : 1.0f / frameInfo.frameTime;
+        constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_PadOuterX;
 
-        //std::rotate(cpuLineGraphPoints.begin(), cpuLineGraphPoints.begin() + 1, cpuLineGraphPoints.end());
-        //cpuLineGraphPoints.back() = fps;
+        ImGui::Spacing();
+        ImGui::BeginTable("##PlayerDefaultPresetGroupList", 1, tableFlags);
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, 0.0f));
 
-        //ImGui::PlotLines("", cpuLineGraphPoints.data(), cpuLineGraphPoints.size(),
-        //    0, "FPS", 0.0f, 1000.0f, ImVec2(500.0f, 55.0f));
+        double total_ms = 0.0;
+        for (auto& [blockName, t] : CpuProfiler::GlobalProfiler->getNamedBlocks()) {
+            total_ms += t.ms;
+        
+			drawPerformanceTab_TimingRow(blockName, t.ms);
+        }
 
-        //ImGui::Text("Frame time - %.5f ms (%.1f FPS)", frameInfo.frameTime * 1000.0, fps);
-        //ImGui::Spacing();
+        drawPerformanceTab_TimingRow("Total", total_ms);
 
-        //if (cpuProfiler) {
-        //    for (auto& kv : cpuProfiler->getNamedBlocks()) {
-        //        ImGui::Text("%.5f ms - %s", kv.second.ms, kv.first.c_str());
-        //    }
-        //    ImGui::Spacing();
-        //}
+        ImGui::PopStyleVar();
+        ImGui::EndTable();
+
+    }
+
+    void DebugTab::drawPerformanceTab_TimingRow(std::string blockName, double t) {
+        constexpr ImVec4 timeCol = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        constexpr float selectableHeight = 40.0f;
+        const ImVec2 timingSize = ImGui::CalcTextSize("0.00000 ms");
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        ImGui::Selectable(("##Selectable_" + blockName).c_str(), false, 0, ImVec2(0.0f, selectableHeight));
+
+        ImVec2 blockNameSize = ImGui::CalcTextSize(blockName.c_str());
+        ImVec2 blockNamePos;
+        blockNamePos.x = pos.x;
+        blockNamePos.y = pos.y + (selectableHeight - blockNameSize.y) * 0.5f;
+        ImGui::GetWindowDrawList()->AddText(blockNamePos, ImGui::GetColorU32(ImGuiCol_Text), blockName.c_str());
+
+        // Preset Group Name
+        float endPos = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+
+        ImVec2 presetGroupNamePos;
+        presetGroupNamePos.x = endPos - timingSize.x;
+        presetGroupNamePos.y = pos.y + (selectableHeight - timingSize.y) * 0.5f;
+
+        // Stringify timings to 5 decimal places
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(5) << t << " ms";
+        std::string tStr = oss.str();
+
+        ImGui::PushStyleColor(ImGuiCol_Text, timeCol);
+        ImGui::GetWindowDrawList()->AddText(presetGroupNamePos, ImGui::GetColorU32(ImGuiCol_Text), tStr.c_str());
+        ImGui::PopStyleColor();
     }
 
 }

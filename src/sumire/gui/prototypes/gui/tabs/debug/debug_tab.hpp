@@ -19,6 +19,7 @@ namespace kbf {
 	private:
 		void drawDebugTab();
 		void drawPerformanceTab();
+		void drawPerformanceTab_TimingRow(std::string blockName, double t);
 
 		ImFont* monoFont;
 		bool consoleAutoscroll = true;
