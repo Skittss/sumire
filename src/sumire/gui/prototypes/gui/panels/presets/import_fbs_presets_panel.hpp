@@ -8,6 +8,8 @@
 #include <imgui.h>
 
 #include <functional>
+#include <queue>
+#include <mutex>
 
 namespace kbf {
 
@@ -29,13 +31,23 @@ namespace kbf {
 		std::string bundleName = "Imported FBS Presets";
 		bool presetsFemale = true;
 		std::vector<FBSPreset> presets;
+
+		// Loading threading stuff
+		void postToMainThread(std::function<void()> func);
+		void processCallbacks();
+
+		std::queue<std::function<void()>> callbackQueue;
+		std::mutex callbackMutex;
+		float progressFraction = 0.0f;
+		bool loadAttempted = false;
+		bool loadInProgress = false;
 		bool presetLoadFailed = false;
 
 		void initializeBuffers();
 		char presetBundleBuffer[128];
 
-		bool getPresetsFromFBS();
-
+		void drawLoadingBar(float fraction);
+		void drawContent();
 		void drawPresetList(const std::vector<FBSPreset>& presets, bool autoSwitchOnly, const bool female);
 		void drawArmourSetName(const ArmourSet& armourSet, const float offsetBefore, const float offsetAfter);
 

@@ -20,7 +20,20 @@ namespace kbf {
         ImFont* wsArmourFont
     ) : iPanel(name, strID), dataManager{ dataManager }, wsSymbolFont{ wsSymbolFont }, wsArmourFont{ wsArmourFont } {
         initializeBuffers();
-		presetLoadFailed = !getPresetsFromFBS(); // TODO: Maybe thread this.
+    }
+
+    void ImportFbsPresetsPanel::postToMainThread(std::function<void()> func) {
+        std::lock_guard<std::mutex> lock(callbackMutex);
+        callbackQueue.push(std::move(func));
+    }
+
+    void ImportFbsPresetsPanel::processCallbacks() {
+        std::lock_guard<std::mutex> lock(callbackMutex);
+        while (!callbackQueue.empty()) {
+            auto fn = std::move(callbackQueue.front());
+            callbackQueue.pop();
+            fn();
+        }
     }
 
     void ImportFbsPresetsPanel::initializeBuffers() {
@@ -30,6 +43,7 @@ namespace kbf {
     bool ImportFbsPresetsPanel::draw() {
         bool open = true;
         processFocus();
+        processCallbacks();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
         ImGui::SetNextWindowSize(ImVec2(600, 0), ImGuiCond_Once);
@@ -37,6 +51,44 @@ namespace kbf {
 
         float width = ImGui::GetWindowSize().x;
 
+        if (!loadAttempted && !loadInProgress) {
+            loadInProgress = true;
+            progressFraction = 0.0f;
+
+            std::thread([this]() {
+                bool success = dataManager.getFBSpresets(&presets, true, "", &progressFraction);  // Long-running
+                postToMainThread([this, success]() {
+                    presetLoadFailed = !success;
+                    loadAttempted = true;
+                    loadInProgress = false;
+                });
+            }).detach();
+        }
+
+        if (!loadAttempted) {
+            drawLoadingBar(progressFraction);
+        }
+        else {
+            drawContent();
+        }
+
+        float contentHeight = ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y;
+        ImVec2 newSize = ImVec2(width, contentHeight);
+        ImGui::SetWindowSize(newSize);
+
+        ImGui::End();
+        ImGui::PopStyleVar();
+
+        return open;
+    }
+
+    void ImportFbsPresetsPanel::drawLoadingBar(float fraction) {
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+        ImGui::ProgressBar(fraction);
+        ImGui::PopStyleColor();
+    }
+
+    void ImportFbsPresetsPanel::drawContent() {
         if (presetLoadFailed) {
             const char* failureStr = "Failed to load FBS presets.";
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
@@ -119,19 +171,6 @@ namespace kbf {
         if (bundleEmpty) ImGui::SetItemTooltip("Please provide a bundle name");
 
         if (presetLoadFailed) ImGui::EndDisabled();
-
-        float contentHeight = ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y;
-        ImVec2 newSize = ImVec2(width, contentHeight);
-        ImGui::SetWindowSize(newSize);
-
-        ImGui::End();
-        ImGui::PopStyleVar();
-
-        return open;
-    }
-
-    bool ImportFbsPresetsPanel::getPresetsFromFBS() {
-		return dataManager.getFBSpresets(&presets);
     }
 
     void ImportFbsPresetsPanel::drawPresetList(const std::vector<FBSPreset>& presets, bool autoSwitchOnly, const bool female) {
