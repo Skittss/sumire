@@ -55,6 +55,33 @@ namespace kbf {
 
         static inline std::chrono::system_clock ::time_point now() noexcept { return std::chrono::system_clock::now(); }
 
+        std::string string() const {
+            std::string result;
+            for (const auto& log : stack) {
+                auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(log.timestamp.time_since_epoch()).count();
+
+                std::time_t time_t_seconds = millis / 1000;
+                std::tm local_tm;
+#ifdef _WIN32
+                localtime_s(&local_tm, &time_t_seconds);
+#else
+                localtime_r(&time_t_seconds, &local_tm);
+#endif
+                int milliseconds = millis % 1000;
+
+                std::ostringstream oss;
+                oss << std::setfill('0')
+                    << std::setw(2) << local_tm.tm_hour << ":"
+                    << std::setw(2) << local_tm.tm_min << ":"
+                    << std::setw(2) << local_tm.tm_sec << ":"
+                    << std::setw(4) << milliseconds;
+
+				result += std::format("[{}] {}\n", oss.str(), log.data);
+            }
+
+			return result;
+        }
+
     private:
         size_t limit;
         std::deque<LogData> stack{};

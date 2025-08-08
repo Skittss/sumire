@@ -1,8 +1,9 @@
 #include <sumire/gui/prototypes/gui/tabs/debug/debug_tab.hpp>
 
-#include <sumire/gui/prototypes/gui/tabs/shared/styling_consts.hpp>
+#include <sumire/gui/prototypes/gui/shared/styling_consts.hpp>
 #include <sumire/gui/prototypes/profiling/cpu_profiler.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
+#include <sumire/gui/prototypes/util/string/copy_to_clipboard.hpp>
 
 #include <chrono>
 #include <sstream>
@@ -40,9 +41,26 @@ namespace kbf {
 
     void DebugTab::drawDebugTab() {
         constexpr float padding = 5.0f;
+		const float availableWidth = ImGui::GetContentRegionAvail().x;
 
         ImGui::Spacing();
         ImGui::Checkbox("Autoscroll", &consoleAutoscroll);
+
+        // Delete Button
+        ImGui::SameLine();
+
+        static constexpr const char* kCopyLabel = "Copy to Clipboard";
+
+        float deleteButtonWidth = ImGui::CalcTextSize(kCopyLabel).x + ImGui::GetStyle().FramePadding.x;
+        float totalWidth = deleteButtonWidth;
+
+        float deleteButtonPos = availableWidth - deleteButtonWidth;
+        ImGui::SetCursorPosX(deleteButtonPos);
+
+        if (ImGui::Button(kCopyLabel)) {
+            copyToClipboard(DEBUG_STACK.string());
+        }
+
         ImGui::Spacing();
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
