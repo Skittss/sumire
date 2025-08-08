@@ -39,13 +39,15 @@ namespace kbf {
 		"R_Bust_HJ_00",
 		"L_Bust_HJ_01",
 		"R_Bust_HJ_01",
+		"L_Bust_HJ_02",
+		"R_Bust_HJ_02",
 		"L_Bust_CH_00",
 		"R_Bust_CH_00",
 
 		"L_BustJGL_CH_00",
 		"R_BustJGL_CH_00",
-		"L_BustJGL_HJ_02",
-		"R_BustJGL_HJ_02",
+		"L_Bust_JGL_HJ_02",
+		"R_Bust_JGL_HJ_02",
 	};
 
 	inline std::set<std::string> COMMON_BACK_BONES = {

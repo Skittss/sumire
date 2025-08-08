@@ -28,8 +28,8 @@ namespace kbf {
 		"R_Bust_CH_00",
 		"L_BustJGL_CH_00",
 		"R_BustJGL_CH_00",
-		"L_BustJGL_HJ_02",
-		"R_BustJGL_HJ_02",
+		"L_Bust_JGL_HJ_02",		   // TODO: These aren't exacly common
+		"R_Bust_JGL_HJ_02",		   // TODO: These aren't exacly common
 		// Arms
 		"L_Deltoid_HJ_00",
 		"R_Deltoid_HJ_00",
