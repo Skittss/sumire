@@ -67,6 +67,15 @@ namespace kbf {
 		return false;
 	}
 
+	size_t KBFDataManager::getPresetBundleCount(const std::string& bundleName) const {
+		size_t count = 0;
+		for (const auto& [uuid, preset] : presets) {
+			if (preset.bundle == bundleName) {
+				count++;
+			}
+		}
+		return count;
+	}
 
 	Preset* KBFDataManager::getPresetByUUID(const std::string& uuid) {
 		if (presets.find(uuid) != presets.end()) return &presets.at(uuid);
@@ -109,7 +118,28 @@ namespace kbf {
 		return filteredPresets;
 	}
 
-	std::vector<std::pair<std::string, size_t>> KBFDataManager::getPresetBundles(const std::string& filter, bool sort) const {
+	std::vector<std::string> KBFDataManager::getPresetBundles(const std::string& filter, bool sort) const {
+		std::unordered_set<std::string> presetBundles;
+		std::string filterLower = toLower(filter);
+
+		for (const auto& [uuid, preset] : presets) {
+			if (!preset.bundle.empty()) {
+				std::string bundleNameLower = toLower(preset.bundle);
+				if (filterLower.empty() || bundleNameLower.find(filterLower) != std::string::npos) {
+					presetBundles.insert(preset.bundle);
+				}
+			}
+		}
+
+		std::vector<std::string> sortedPresetBundles(presetBundles.begin(), presetBundles.end());
+		if (sort) {
+			std::sort(sortedPresetBundles.begin(), sortedPresetBundles.end());
+		}
+
+		return sortedPresetBundles;
+	}
+
+	std::vector<std::pair<std::string, size_t>> KBFDataManager::getPresetBundlesWithCounts(const std::string& filter, bool sort) const {
 		std::unordered_map<std::string, size_t> presetBundles;
 		std::string filterLower = toLower(filter);
 
@@ -194,6 +224,46 @@ namespace kbf {
 		return filteredPlayerOverrides;
 	}
 
+	std::vector<std::string> KBFDataManager::getPresetIds(const std::string& filter, bool filterBody, bool filterLegs, bool sort) const {
+		std::vector<std::string> presetIds;
+		std::string filterLower = toLower(filter);
+
+		for (const auto& [uuid, preset] : presets) {
+			std::string presetNameLower = toLower(preset.name);
+			if (filterLower.empty() || presetNameLower.find(filterLower) != std::string::npos) {
+				if (filterBody && !preset.hasBody()) continue;
+				if (filterLegs && !preset.hasLegs()) continue;
+				presetIds.push_back(uuid);
+			}
+		}
+		if (sort) {
+			std::sort(presetIds.begin(), presetIds.end(),
+				[&](const std::string& a, const std::string& b) {
+					return presets.at(a).name < presets.at(b).name;
+				});
+		}
+
+		return presetIds;
+	}
+
+	std::vector<std::string> KBFDataManager::getPresetGroupIds(const std::string& filter, bool sort) const {
+		std::vector<std::string> presetGroupIds;
+		std::string filterLower = toLower(filter);
+		for (const auto& [uuid, presetGroup] : presetGroups) {
+			std::string presetGroupNameLower = toLower(presetGroup.name);
+			if (filterLower.empty() || presetGroupNameLower.find(filterLower) != std::string::npos) {
+				presetGroupIds.push_back(uuid);
+			}
+		}
+		if (sort) {
+			std::sort(presetGroupIds.begin(), presetGroupIds.end(),
+				[&](const std::string& a, const std::string& b) {
+					return presetGroups.at(a).name < presetGroups.at(b).name;
+				});
+		}
+
+		return presetGroupIds;
+	}
 
 	void KBFDataManager::addPreset(const Preset& preset, bool write) {
 		if (presets.find(preset.uuid) != presets.end()) {
@@ -396,7 +466,7 @@ namespace kbf {
 		}
 	}
 
-	bool KBFDataManager::getFBSpresets(std::vector<FBSPreset>* out, bool female, std::string bundle) const {
+	bool KBFDataManager::getFBSpresets(std::vector<FBSPreset>* out, bool female, std::string bundle, float* progressOut) const {
 		if (!out) return false;
 		if (!fbsDirectoryFound()) return false;
 
@@ -404,8 +474,23 @@ namespace kbf {
 
 		bool hasFailure = false;
 
-		// Load all body presets
+		// Count total number of presets in both directories
+		size_t totalPresets = 0;
+		size_t processedCnt = 0;
 		std::filesystem::path bodyPath = this->fbsPath / "Body";
+		std::filesystem::path legPath = this->fbsPath / "Leg";
+		for (const auto& entry : std::filesystem::directory_iterator(bodyPath)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".json") {
+				totalPresets++;
+			}
+		}
+		for (const auto& entry : std::filesystem::directory_iterator(legPath)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".json") {
+				totalPresets++;
+			}
+		}
+
+		// Load all body presets
 		if (!std::filesystem::exists(bodyPath)) {
 			DEBUG_STACK.push(std::format("FBS Body presets directory does not exist at {}", bodyPath.string()), DebugStack::Color::ERROR);
 			return false;
@@ -420,11 +505,14 @@ namespace kbf {
 				else {
 					hasFailure = true;
 				}
+				if (progressOut) { 
+					processedCnt++; 
+					*progressOut = static_cast<float>(processedCnt) / static_cast<float>(totalPresets); 
+				}
 			}
 		}
 
 		// Load all leg presets
-		std::filesystem::path legPath = this->fbsPath / "Leg";
 		if (!std::filesystem::exists(legPath)) {
 			DEBUG_STACK.push(std::format("FBS Leg presets directory does not exist at {}", legPath.string()), DebugStack::Color::ERROR);
 			return false;
@@ -438,6 +526,10 @@ namespace kbf {
 				}
 				else {
 					hasFailure = true;
+				}
+				if (progressOut) {
+					processedCnt++;
+					*progressOut = static_cast<float>(processedCnt) / static_cast<float>(totalPresets);
 				}
 			}
 		}
@@ -466,11 +558,24 @@ namespace kbf {
 		}
 	}
 
+	void KBFDataManager::importKBF(std::string filepath) {
+
+	}
+
+	void KBFDataManager::writeKBF(std::string filepath, KBFFileData data) const {
+
+	}
+
+	void KBFDataManager::writeModArchive(std::string filepath, KBFFileData data) const {
+
+	}
+
 	void KBFDataManager::verifyDirectoriesExist() const {
 		createDirectoryIfNotExists(dataBasePath);
 		createDirectoryIfNotExists(presetPath);
 		createDirectoryIfNotExists(presetGroupPath);
 		createDirectoryIfNotExists(playerOverridePath);
+		createDirectoryIfNotExists(exportsPath);
 	}
 
 	void KBFDataManager::createDirectoryIfNotExists(const std::filesystem::path& path) const {
@@ -565,6 +670,7 @@ namespace kbf {
 		if (!config.IsObject() || config.HasParseError()) return false;
 
 		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parseString(config, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
 
 		// Outfits 
 		parseString(config, ALMA_HANDLERS_OUTFIT_ID, ALMA_HANDLERS_OUTFIT_ID, &out->handlersOutfit);
@@ -586,6 +692,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(out.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(out.metadata.MOD_ARCHIVE.c_str());
 		writer.Key(ALMA_HANDLERS_OUTFIT_ID);
 		writer.String(out.handlersOutfit.c_str());
 		writer.Key(ALMA_NEW_WORLD_COMISSION_ID);
@@ -623,6 +731,7 @@ namespace kbf {
 		if (!config.IsObject() || config.HasParseError()) return false;
 
 		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parseString(config, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
 
 		// Outfits
 		parseString(config, ERIK_HANDLERS_OUTFIT_ID, ERIK_HANDLERS_OUTFIT_ID, &out->handlersOutfit);
@@ -639,6 +748,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(out.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(out.metadata.MOD_ARCHIVE.c_str());
 		writer.Key(ERIK_HANDLERS_OUTFIT_ID);
 		writer.String(out.handlersOutfit.c_str());
 		writer.Key(ERIK_SUMMER_HAT_ID);
@@ -666,6 +777,7 @@ namespace kbf {
 		if (!config.IsObject() || config.HasParseError()) return false;
 
 		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parseString(config, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
 
 		// Outfits
 		parseString(config, GEMMA_SMITHYS_OUTFIT_ID, GEMMA_SMITHYS_OUTFIT_ID, &out->smithysOutfit);
@@ -682,6 +794,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(out.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(out.metadata.MOD_ARCHIVE.c_str());
 		writer.Key(GEMMA_SMITHYS_OUTFIT_ID);
 		writer.String(out.smithysOutfit.c_str());
 		writer.Key(GEMMA_SUMMER_COVERALLS_ID);
@@ -709,6 +823,7 @@ namespace kbf {
 		if (!config.IsObject() || config.HasParseError()) return false;
 
 		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parseString(config, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
 
 		parseString(config, NPC_MALE_ID, NPC_MALE_ID, &out->male);
 		parseString(config, NPC_FEMALE_ID, NPC_FEMALE_ID, &out->female);
@@ -724,6 +839,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(out.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(out.metadata.MOD_ARCHIVE.c_str());
 		writer.Key(NPC_MALE_ID);
 		writer.String(out.male.c_str());
 		writer.Key(NPC_FEMALE_ID);
@@ -751,6 +868,7 @@ namespace kbf {
 		if (!config.IsObject() || config.HasParseError()) return false;
 
 		parseString(config, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parseString(config, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
 
 		parseString(config, PLAYER_MALE_ID, PLAYER_MALE_ID, &out->male);
 		parseString(config, PLAYER_FEMALE_ID, PLAYER_FEMALE_ID, &out->female);
@@ -766,6 +884,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(out.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(out.metadata.MOD_ARCHIVE.c_str());
 		writer.Key(PLAYER_MALE_ID);
 		writer.String(out.male.c_str());
 		writer.Key(PLAYER_FEMALE_ID);
@@ -792,7 +912,8 @@ namespace kbf {
 		bool parsed = true;
 
 		parsed &= parseString(presetDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
-
+		parsed &= parseString(presetDoc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
+		
 		// Metadata
 		parsed &= parseString(presetDoc, PRESET_UUID_ID, PRESET_UUID_ID, &out->uuid);
 		parsed &= parseString(presetDoc, PRESET_BUNDLE_ID, PRESET_BUNDLE_ID, &out->bundle);
@@ -856,6 +977,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(preset.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(preset.metadata.MOD_ARCHIVE.c_str());
 		writer.Key(PRESET_UUID_ID);
 		writer.String(preset.uuid.c_str());
 		writer.Key(PRESET_BUNDLE_ID);
@@ -1061,6 +1184,7 @@ namespace kbf {
 
 		bool parsed = true;
 		parsed &= parseString(presetGroupDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parsed &= parseString(presetGroupDoc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
 
 		parsed &= parseString(presetGroupDoc, PRESET_GROUP_UUID_ID, PRESET_GROUP_UUID_ID, &out->uuid);
 		parsed &= parseBool(presetGroupDoc, PRESET_GROUP_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->female);
@@ -1116,6 +1240,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(presetGroup.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(presetGroup.metadata.MOD_ARCHIVE.c_str());
 		writer.Key(PRESET_GROUP_UUID_ID);
 		writer.String(presetGroup.uuid.c_str());
 		writer.Key(PRESET_GROUP_FEMALE_ID);
@@ -1203,6 +1329,7 @@ namespace kbf {
 
 		bool parsed = true;
 		parsed &= parseString(overrideDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parsed &= parseString(overrideDoc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
 
 		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PLAYER_NAME_ID, PLAYER_OVERRIDE_PLAYER_NAME_ID, &out->player.name);
 		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, &out->player.hunterId);
@@ -1223,6 +1350,8 @@ namespace kbf {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(playerOverride.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(playerOverride.metadata.MOD_ARCHIVE.c_str());
 		writer.Key(PLAYER_OVERRIDE_PLAYER_NAME_ID);
 		writer.String(playerOverride.player.name.c_str());
 		writer.Key(PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID);

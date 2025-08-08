@@ -7,6 +7,7 @@
 #include <sumire/gui/prototypes/data/formats/player_override.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_group_defaults.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_defaults.hpp>
+#include <sumire/gui/prototypes/data/formats/kbf_file_data.hpp>
 
 #include <rapidjson/document.h>
 #include <imgui.h>
@@ -19,7 +20,7 @@ namespace kbf {
 	class KBFDataManager {
 	public:
 		KBFDataManager(const std::string& path, const std::string& fbsPath) 
-			: dataBasePath{ path }, fbsPath{ fbsPath } {}
+			: dataBasePath{ std::filesystem::absolute(path) }, fbsPath{ std::filesystem::absolute(fbsPath) } {}
 
 		void loadData();
 
@@ -56,6 +57,7 @@ namespace kbf {
 		bool presetExists(const std::string& name) const;
 		bool presetGroupExists(const std::string& name) const;
 		bool playerOverrideExists(const PlayerData& player) const;
+		size_t getPresetBundleCount(const std::string& bundleName) const;
 
 		Preset* getPresetByUUID(const std::string& uuid);
 		PresetGroup* getPresetGroupByUUID(const std::string& uuid);
@@ -65,10 +67,15 @@ namespace kbf {
 		const PlayerOverride* getPlayerOverride(const PlayerData& player) const { return const_cast<KBFDataManager*>(this)->getPlayerOverride(player); }
 
 		std::vector<const Preset*> getPresets(const std::string& filter = "", bool filterBody = false, bool filterLegs = false, bool sort = false) const;
-		std::vector<std::pair<std::string, size_t>> getPresetBundles(const std::string& filter = "", bool sort = false) const;
+		std::vector<std::string> getPresetBundles(const std::string& filter = "", bool sort = false) const;
+		std::vector<std::pair<std::string, size_t>> getPresetBundlesWithCounts(const std::string& filter = "", bool sort = false) const;
 		std::vector<std::string> getPresetsInBundle(const std::string& bundleName) const;
 		std::vector<const PresetGroup*> getPresetGroups(const std::string& filter = "", bool sort = false) const;
 		std::vector<const PlayerOverride*> getPlayerOverrides(const std::string& filter = "", bool sort = false) const;
+
+		std::vector<std::string> getPresetIds(const std::string& filter = "", bool filterBody = false, bool filterLegs = false, bool sort = false) const;
+		std::vector<std::string> getPresetGroupIds(const std::string& filter = "", bool sort = false) const;
+		std::vector<std::string> getPlayerOverrideIds(const std::string& filter = "", bool sort = false) const;
 
 		void addPreset(const Preset& preset, bool write = true);
 		void addPresetGroup(const PresetGroup& presetGroup, bool write = true);
@@ -87,26 +94,31 @@ namespace kbf {
 		ImFont* getRegularFontOverride() const { return regularFontOverride; }
 
 		bool fbsDirectoryFound() const { return std::filesystem::exists(fbsPath); }
-		bool getFBSpresets(std::vector<FBSPreset>* out, bool female = true, std::string bundle = "FBS Presets") const;
+		bool getFBSpresets(std::vector<FBSPreset>* out, bool female = true, std::string bundle = "FBS Presets", float* progressOut = nullptr) const;
 
 		void resolveNameConflicts(std::vector<Preset>& presets) const;
 
+		void importKBF(std::string filepath);
+		void writeKBF(std::string filepath, KBFFileData data) const;
+		void writeModArchive(std::string filepath, KBFFileData data) const;
+
 		// const Config& config() { return m_config; }
 
-	private:
 		const std::filesystem::path dataBasePath;
 		const std::filesystem::path fbsPath;
 		const std::filesystem::path defaultConfigsPath = dataBasePath / "DefaultConfigs";
 		const std::filesystem::path presetPath         = dataBasePath / "Presets";
 		const std::filesystem::path presetGroupPath    = dataBasePath / "PresetGroups";
 		const std::filesystem::path playerOverridePath = dataBasePath / "PlayerOverrides";
+		const std::filesystem::path exportsPath        = dataBasePath / "Exports";
 
-		const std::filesystem::path almaConfigPath   = defaultConfigsPath / "alma.json";
-		const std::filesystem::path erikConfigPath   = defaultConfigsPath / "erik.json";
-		const std::filesystem::path gemmaConfigPath  = defaultConfigsPath / "gemma.json";
-		const std::filesystem::path npcConfigPath    = defaultConfigsPath / "npc.json";
-		const std::filesystem::path playerConfigPath = defaultConfigsPath / "players.json";
+		const std::filesystem::path almaConfigPath     = defaultConfigsPath / "alma.json";
+		const std::filesystem::path erikConfigPath     = defaultConfigsPath / "erik.json";
+		const std::filesystem::path gemmaConfigPath    = defaultConfigsPath / "gemma.json";
+		const std::filesystem::path npcConfigPath      = defaultConfigsPath / "npc.json";
+		const std::filesystem::path playerConfigPath   = defaultConfigsPath / "players.json";
 
+	private:
 		void verifyDirectoriesExist() const;
 		void createDirectoryIfNotExists(const std::filesystem::path& path) const;
 
