@@ -4,6 +4,8 @@
 #include <sumire/gui/prototypes/gui/tabs/shared/tab_bar_separator.hpp>
 #include <format>
 
+#include <Windows.h>
+
 #define WRAP_BULLET(bullet, text) ImGui::TextWrapped(bullet); ImGui::SameLine(); ImGui::TextWrapped(text)
 
 namespace kbf {
@@ -33,11 +35,6 @@ namespace kbf {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 15));
         ImGui::Spacing();
 
-        drawTabBarSeparator("Version", "Version");
-        ImGui::Text(std::format("Kana's Body Framework v{}", SUMIRE_VERSION).c_str());
-        
-        ImGui::Spacing();
-
         drawTabBarSeparator("Support", "Support");
         ImGui::TextWrapped(
             "A lot of time and effort went into making this plugin. It needed to be written from scratch in c++ for performance and functionality reasons, and was subsequently much more difficult than making a lua script.");
@@ -45,8 +42,17 @@ namespace kbf {
             "Nobody should ever be forced to pay for mods - but - if you like KBF, please consider dropping me some change on Ko-fi! c:"
         );
 
-        ImGui::Button("Ko-Fi", ImVec2(ImGui::GetContentRegionAvail().x, 0));
+        if (ImGui::Button("Ko-Fi", ImVec2(ImGui::GetContentRegionAvail().x, 50.0f))) {
+#if defined(_WIN32)
+            ShellExecute(0, 0, "https://ko-fi.com/kana00", 0, 0, SW_SHOW);
+#endif
+        }
 
+        ImGui::Spacing();
+
+        drawTabBarSeparator("Version", "Version");
+        ImGui::Text(std::format("Kana's Body Framework v{}", SUMIRE_VERSION).c_str());
+        
         ImGui::Spacing();
 
         drawTabBarSeparator("What is Kana's Body Framework?", "WhatIsKBF");
@@ -109,6 +115,28 @@ namespace kbf {
         drawTabBarSeparator("Migrating from FBS", "FBSmigrate");
 
         ImGui::TextWrapped(
+            "The quickest way to migrate from FBS to KBF is as follows:"
+        );
+        ImGui::Indent();
+        WRAP_BULLET("1.", "Import your FBS Player presets via Presets > Import FBS Presets as Bundle.");
+        WRAP_BULLET("2.", "Create a Preset Group from the created bundle via Preset Groups > Create From Preset Bundle.");
+        WRAP_BULLET("3.", "Ensure that the correct presets are being used for the correct armour pieces via Editor > Edit a Preset Group > Assigned Presets.");
+        WRAP_BULLET("4.", "Assign the created preset group and presets to players and npcs in the \"Players\" / \"NPCs tabs\".");
+        ImGui::Unindent();
+
+        ImGui::TextWrapped(
+			"Step 3 is particularly important if you received a notification at set 2 saying that there were some conflicts with the presets you imported."
+        );
+
+        ImGui::TextWrapped(
+			"If you have many (unused) presets in your FBS folder, you can restrict the import to only active presets by checking the \"Import Autoswitch Presets Only\" checkbox in the import panel during Step 1."
+        );
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(
             "There are a few preset settings which are NOT able to be migrated automatically from FBS to KBF, and you will have to adjust these manually after importing your FBS presets."
         );
 
@@ -121,19 +149,30 @@ namespace kbf {
         ImGui::Unindent();
 
         ImGui::TextWrapped(
+            "Manual bones will be imported and show up in the editor for reference only, but will have no effect. You should replace these with modifiers on the specific bones they are supposed to affect."
+        );
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(
             "Additionally, there are some preset settings in KBF which do not exist in FBS, which you may also want to adjust for any imported FBS presets:"
         );
 
 		ImGui::Indent();
 		WRAP_BULLET("1.", "Preset female / male preference - This is for sorting your presets.");
-		WRAP_BULLET("2.", "Preset bundle - Imported presets be sorted into a single (specified) bundle, sorting these further can allow you to make preset groups easier if you have lots of presets for different models, etc.");
+		WRAP_BULLET("2.", "Preset bundle - Imported presets are sorted into a single (specified) bundle, sorting these further can allow you to make preset groups easier if you have lots of presets for different models, etc.");
 		ImGui::Unindent();
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
 
         ImGui::Spacing();
         ImGui::TextWrapped(
             "Alma & Gemma presets must be migrated over manually, but it is recommended to do so anyway as KBF allows you to apply individual presets for each of their outfits."
         );
-
 
         drawTabBarSeparator("Sharing Presets", "SharingPresets");
 
