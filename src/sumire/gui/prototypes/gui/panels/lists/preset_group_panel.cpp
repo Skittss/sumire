@@ -3,6 +3,7 @@
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
+#include <sumire/gui/prototypes/gui/tabs/shared/alignment.hpp>
 
 #include <imgui.h>
 
@@ -66,6 +67,13 @@ namespace kbf {
             ImGui::PopStyleColor();
 
             if (presetGroups.size() > 0) ImGui::Separator();
+        } 
+        else if (presetGroups.size() == 0) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+            constexpr char const* noPresetGroupStr = "No Existing Preset Groups";
+            preAlignCellContentHorizontal(noPresetGroupStr);
+            ImGui::Text(noPresetGroupStr);
+            ImGui::PopStyleColor();
         }
 
         for (const PresetGroup* group : presetGroups)
