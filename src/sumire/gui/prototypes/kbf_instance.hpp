@@ -2,6 +2,7 @@
 
 #include <sumire/gui/prototypes/gui/kbf_window.hpp>
 #include <sumire/gui/prototypes/data/kbf_data_manager.hpp>
+#include <sumire/gui/prototypes/profiling/cpu_profiler.hpp>
 
 namespace kbf {
 
@@ -13,10 +14,16 @@ namespace kbf {
 		void initialize() {
 			kbfDataManager.loadData();
 			kbfWindow.initialize();
+
+			CpuProfiler::GlobalProfiler = CpuProfiler::Builder()
+				.addBlock("Draw UI")
+				.build();
 		}
 
 		void draw() {
+			BEGIN_CPU_PROFILING_BLOCK(CpuProfiler::GlobalProfiler.get(), "Draw UI");
 			kbfWindow.draw();
+			END_CPU_PROFILING_BLOCK(CpuProfiler::GlobalProfiler.get(), "Draw UI");
 		}
 			
 	private:

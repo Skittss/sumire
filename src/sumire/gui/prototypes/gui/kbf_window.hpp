@@ -55,7 +55,7 @@ namespace kbf {
 		DebugTab        debugTab;
 		AboutTab        aboutTab;
 
-		KBFTab tab = KBFTab::Players;
+		KBFTab tab = KBFTab::About;
 
 		ImFont* mainFont;
 		ImFont* wildsSymbolsFont;
