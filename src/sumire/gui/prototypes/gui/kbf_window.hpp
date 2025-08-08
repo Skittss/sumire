@@ -7,6 +7,7 @@
 #include <sumire/gui/prototypes/gui/tabs/presets/presets_tab.hpp>
 #include <sumire/gui/prototypes/gui/tabs/preset_groups/preset_groups_tab.hpp>
 #include <sumire/gui/prototypes/gui/tabs/editor/editor_tab.hpp>
+#include <sumire/gui/prototypes/gui/tabs/share/share_tab.hpp>
 #include <sumire/gui/prototypes/gui/tabs/debug/debug_tab.hpp>
 #include <sumire/gui/prototypes/gui/tabs/settings/settings_tab.hpp>
 #include <sumire/gui/prototypes/gui/tabs/about/about_tab.hpp>
@@ -51,6 +52,7 @@ namespace kbf {
 		PresetGroupsTab presetGroupsTab{ dataManager };
 		PresetsTab      presetsTab{ dataManager };
 		EditorTab       editorTab{ dataManager };
+		ShareTab        shareTab{ dataManager };
 		SettingsTab     settingsTab;
 		DebugTab        debugTab;
 		AboutTab        aboutTab;

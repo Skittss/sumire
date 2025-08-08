@@ -1,9 +1,9 @@
 ﻿#include <sumire/gui/prototypes/gui/kbf_window.hpp>
 
-#include <sumire/gui/prototypes/gui/tabs/shared/tab_bar_separator.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/preset_selectors.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/styling_consts.hpp>
-#include <sumire/gui/prototypes/gui/tabs/shared/alignment.hpp>
+#include <sumire/gui/prototypes/gui/shared/tab_bar_separator.hpp>
+#include <sumire/gui/prototypes/gui/shared/preset_selectors.hpp>
+#include <sumire/gui/prototypes/gui/shared/styling_consts.hpp>
+#include <sumire/gui/prototypes/gui/shared/alignment.hpp>
 
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 #include <sumire/gui/prototypes/data/ids/font_symbols.hpp>
@@ -69,6 +69,8 @@ namespace kbf {
         presetsTab.setArmourFont(wildsArmourFont);
         editorTab.setSymbolFont(wildsSymbolsFont);
         editorTab.setArmourFont(wildsArmourFont);
+		shareTab.setSymbolFont(wildsSymbolsFont);
+		shareTab.setArmourFont(wildsArmourFont);
         debugTab.setMonoFont(monoFont);
         aboutTab.setAsciiFont(monoFontTiny);
 
@@ -81,8 +83,8 @@ namespace kbf {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 5));
         ImGui::PushStyleVar(ImGuiStyleVar_TabBarBorderSize, 2.0f);
 
-        ImGui::SetNextWindowSize(ImVec2(600, 800), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(600, 500), ImVec2(FLT_MAX, FLT_MAX));
+        ImGui::SetNextWindowSize(ImVec2(670, 800), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(670, 500), ImVec2(FLT_MAX, FLT_MAX));
         ImGui::Begin("Kana's Body Framework", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse);
         ImGui::PushFont(mainFont);
 
@@ -110,6 +112,7 @@ namespace kbf {
             drawKbfMenuItem("Preset Groups", KBFTab::PresetGroups);
             drawKbfMenuItem("Presets",       KBFTab::Presets);
             drawKbfMenuItem("Editor",        KBFTab::Editor);
+			drawKbfMenuItem("Share",         KBFTab::Share);
             drawKbfMenuItem("Settings",      KBFTab::Settings);
             drawKbfMenuItem("Debug",         KBFTab::Debug);
             drawKbfMenuItem("About",         KBFTab::About);
@@ -134,6 +137,9 @@ namespace kbf {
         case KBFTab::Editor:
             editorTab.draw();
             break;
+        case KBFTab::Share:
+            shareTab.draw();
+            break;
         case KBFTab::Settings:
             settingsTab.draw();
             break;
@@ -152,6 +158,7 @@ namespace kbf {
         presetsTab.drawPopouts();
         presetGroupsTab.drawPopouts();
         editorTab.drawPopouts();
+        shareTab.drawPopouts();
         settingsTab.drawPopouts();
         debugTab.drawPopouts();
         aboutTab.drawPopouts();
@@ -173,6 +180,9 @@ namespace kbf {
             break;
         case KBFTab::Editor:
             editorTab.closePopouts();
+            break;
+        case KBFTab::Share:
+            shareTab.closePopouts();
             break;
         case KBFTab::Settings:
             settingsTab.closePopouts();

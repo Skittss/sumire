@@ -8,6 +8,7 @@ namespace kbf {
 		PresetGroups,
 		Presets,
 		Editor,
+		Share,
 		Settings,
 		Debug,
 		About
