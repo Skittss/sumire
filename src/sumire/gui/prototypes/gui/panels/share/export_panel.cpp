@@ -86,7 +86,7 @@ namespace kbf {
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Player Override")) {
-                drawPlayerOverrideSelector();
+                drawPlayerOverrideList();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
@@ -125,7 +125,10 @@ namespace kbf {
         const bool disableCreateButton = nameEmpty || pathNotExists;
         if (disableCreateButton) ImGui::BeginDisabled();
         if (ImGui::Button(kCreateLabel)) {
-            // TODO
+            KBFFileData data = getKbfFileData();
+			std::string filename = archive ? exportName + ".zip" : exportName + ".kbf";
+			std::filesystem::path filePath = exportPath / filename;
+			INVOKE_REQUIRED_CALLBACK(createCallback, filePath.string(), data);
         }
         if (disableCreateButton) ImGui::EndDisabled();
         if (nameEmpty) ImGui::SetItemTooltip("Please provide a name");
@@ -155,10 +158,11 @@ namespace kbf {
 
         // Fixed-height, scrollable region
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, childItemSpacing);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, childWindowPadding);
         ImGui::BeginChild("ItemSelectorGroupChild", ImVec2(0, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-        const float selectableHeight = 30.0f;
         static bool isDragging = false;
         static bool dragStarted = false;
         static std::unordered_set<std::string> selectedDuringDrag{};
@@ -182,6 +186,7 @@ namespace kbf {
         if (presets.size() == 0) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
             constexpr char const* noPresetStr = "No Presets Found.";
+            ImGui::Spacing();
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
             ImGui::PopStyleColor();
@@ -191,26 +196,26 @@ namespace kbf {
         {
             ImVec2 pos = ImGui::GetCursorScreenPos();
 
-            bool selected = selectedPresets.find(preset->uuid) != selectedPresets.end();
+            bool selected = checkPresetSelected(preset);
 
             bool hovered = false;
-            if (DragSelectable(("##Selectable_Preset_" + preset->uuid).c_str(), false, selectableHeight, &hovered)) {
-                if (selected) selectedPresets.erase(preset->uuid);
-                else          selectedPresets.insert(preset->uuid);
+            if (DragSelectable(("##Selectable_Preset_" + preset->uuid).c_str(), selected, selectableHeight, &hovered)) {
+                if (selected) deselectPreset(preset);
+                else          selectPreset(preset);
                 selected = !selected;
                 selectedDuringDrag.insert(preset->uuid);
             }
 
             bool alreadySelectedThisDrag = selectedDuringDrag.find(preset->uuid) != selectedDuringDrag.end();
             if (isDragging && hovered && !alreadySelectedThisDrag) {
-                if (selected) selectedPresets.erase(preset->uuid);
-                else          selectedPresets.insert(preset->uuid);
+                if (selected) deselectPreset(preset);
+                else          selectPreset(preset);
                 selected = !selected;
                 selectedDuringDrag.insert(preset->uuid);
             }
 
             ImVec2 tickMarkPos;
-            tickMarkPos.x = pos.x + ImGui::GetStyle().ItemSpacing.x;
+            tickMarkPos.x = pos.x + listPaddingX + ImGui::GetStyle().ItemSpacing.x;
             tickMarkPos.y = pos.y + (selectableHeight) * 0.5f;
 
             if (selected) {
@@ -219,107 +224,129 @@ namespace kbf {
                 ImGui::PopStyleColor();
             }
 
-            const float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-
-            // Sex Mark
-            std::string sexMarkSymbol = preset->female ? WS_FONT_FEMALE : WS_FONT_MALE;
-            ImVec4 sexMarkerCol = preset->female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
-
-            ImGui::PushFont(wsSymbolFont);
-
-            constexpr float sexMarkerSpacingAfter = 5.0f;
-            constexpr float sexMarkerVerticalAlignOffset = 5.0f;
-            ImVec2 sexMarkerSize = ImGui::CalcTextSize(sexMarkSymbol.c_str());
-            ImVec2 sexMarkerPos;
-            sexMarkerPos.x = pos.x + 3.0f * ImGui::GetStyle().ItemSpacing.x;
-            sexMarkerPos.y = pos.y + (selectableHeight - sexMarkerSize.y) * 0.5f + sexMarkerVerticalAlignOffset;
-            ImGui::GetWindowDrawList()->AddText(sexMarkerPos, ImGui::GetColorU32(sexMarkerCol), sexMarkSymbol.c_str());
-
-            ImGui::PopFont();
-
-            ImGui::PushFont(dataManager.getRegularFontOverride());
-
-            // Group name... floating because imgui has no vertical alignment STILL :(
-            constexpr float playerNameSpacingAfter = 5.0f;
-            ImVec2 playerNameSize = ImGui::CalcTextSize(preset->name.c_str());
-            ImVec2 playerNamePos;
-            playerNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
-            playerNamePos.y = pos.y + (selectableHeight - playerNameSize.y) * 0.5f;
-            ImGui::GetWindowDrawList()->AddText(playerNamePos, ImGui::GetColorU32(ImGuiCol_Text), preset->name.c_str());
-
-            std::string bundleStr = "(" + preset->bundle + ")";
-            ImVec2 bundleStrSize = ImGui::CalcTextSize(bundleStr.c_str());
-            ImVec2 bundleStrPos;
-            bundleStrPos.x = playerNamePos.x + playerNameSize.x + playerNameSpacingAfter;
-            bundleStrPos.y = pos.y + (selectableHeight - bundleStrSize.y) * 0.5f;
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            ImGui::GetWindowDrawList()->AddText(bundleStrPos, ImGui::GetColorU32(ImGuiCol_Text), bundleStr.c_str());
-            ImGui::PopStyleColor();
-
-            ImGui::PopFont();
-
-            // Legs Mark
-            constexpr ImVec4 armourMissingCol{ 1.0f, 1.0f, 1.0f, 0.1f };
-            constexpr ImVec4 armourPresentCol{ 1.0f, 1.0f, 1.0f, 1.0f };
-            constexpr float armourVerticalAlignOffset = 2.5f;
-            ImGui::PushFont(wsSymbolFont);
-
-            ImVec2 legMarkSize = ImGui::CalcTextSize(WS_FONT_LEGS);
-            ImVec2 legMarkPos;
-            legMarkPos.x = ImGui::GetCursorScreenPos().x + contentRegionWidth - legMarkSize.x - ImGui::GetStyle().ItemSpacing.x;
-            legMarkPos.y = pos.y + (selectableHeight - legMarkSize.y) * 0.5f + armourVerticalAlignOffset;
-
-            ImGui::PushStyleColor(ImGuiCol_Text, preset->hasLegs() ? armourPresentCol : armourMissingCol);
-            ImGui::GetWindowDrawList()->AddText(legMarkPos, ImGui::GetColorU32(ImGuiCol_Text), WS_FONT_LEGS);
-            ImGui::PopStyleColor();
-
-            // Body Mark
-            ImVec2 bodyMarkSize = ImGui::CalcTextSize(WS_FONT_BODY);
-            ImVec2 bodyMarkPos;
-            bodyMarkPos.x = legMarkPos.x - bodyMarkSize.x - ImGui::GetStyle().ItemSpacing.x;
-            bodyMarkPos.y = pos.y + (selectableHeight - bodyMarkSize.y) * 0.5f + armourVerticalAlignOffset;
-
-            ImGui::PushStyleColor(ImGuiCol_Text, preset->hasBody() ? armourPresentCol : armourMissingCol);
-            ImGui::GetWindowDrawList()->AddText(bodyMarkPos, ImGui::GetColorU32(ImGuiCol_Text), WS_FONT_BODY);
-            ImGui::PopStyleColor();
-
-            // Armour Sex Mark
-            std::string armourSexMarkSymbol = preset->armour.female ? WS_FONT_FEMALE : WS_FONT_MALE;
-            ImVec4 armourSexMarkerCol = preset->armour.female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
-
-            constexpr float armourSexMarkerVerticalAlignOffset = 5.0f;
-            ImVec2 armourSexMarkerSize = ImGui::CalcTextSize(armourSexMarkSymbol.c_str());
-            ImVec2 armourSexMarkerPos;
-            armourSexMarkerPos.x = bodyMarkPos.x - armourSexMarkerSize.x - ImGui::GetStyle().ItemSpacing.x;
-            armourSexMarkerPos.y = pos.y + (selectableHeight - armourSexMarkerSize.y) * 0.5f + armourSexMarkerVerticalAlignOffset;
-            ImGui::GetWindowDrawList()->AddText(armourSexMarkerPos, ImGui::GetColorU32(armourSexMarkerCol), armourSexMarkSymbol.c_str());
-
-            ImGui::PopFont();
-
-            ImGui::PushFont(wsArmourFont);
-
-            // Armour Name
-            ImVec2 armourNameSize = ImGui::CalcTextSize(preset->armour.name.c_str());
-            ImVec2 armourNamePos;
-            armourNamePos.x = armourSexMarkerPos.x - armourNameSize.x - ImGui::GetStyle().ItemSpacing.x;
-            armourNamePos.y = pos.y + (selectableHeight - armourNameSize.y) * 0.5f;
-
-            ImVec4 armourNameCol = preset->armour.name == ANY_ARMOUR_ID ? ImVec4(0.365f, 0.678f, 0.886f, 0.8f) : ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-            ImGui::PushStyleColor(ImGuiCol_Text, armourNameCol);
-            ImGui::GetWindowDrawList()->AddText(armourNamePos, ImGui::GetColorU32(ImGuiCol_Text), preset->armour.name.c_str());
-            ImGui::PopStyleColor();
-
-            ImGui::PopFont();
+            drawPresetSelector(preset, pos, selectableHeight);
         }
 
         ImGui::EndChild();
+        ImGui::PopStyleVar(2);
         ImGui::PopStyleColor();
 
+        ImGui::Spacing();
         if (ImGui::Button("Clear")) selectedPresets.clear();
+        ImGui::SameLine();
+        if (ImGui::Button("Select All")) {
+            for (const Preset* preset : presets) selectPreset(preset);
+        }
         ImGui::SameLine();
         ImGui::PushItemWidth(-1);
         ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
         ImGui::PopItemWidth();
+    }
+
+    void ExportPanel::drawPresetSelector(const Preset* preset, ImVec2 pos, float selectableHeight) const {
+        const float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+
+        // Sex Mark
+        std::string sexMarkSymbol = preset->female ? WS_FONT_FEMALE : WS_FONT_MALE;
+        ImVec4 sexMarkerCol = preset->female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+        ImGui::PushFont(wsSymbolFont);
+
+        constexpr float sexMarkerSpacingAfter = 5.0f;
+        constexpr float sexMarkerVerticalAlignOffset = 5.0f;
+        ImVec2 sexMarkerSize = ImGui::CalcTextSize(sexMarkSymbol.c_str());
+        ImVec2 sexMarkerPos;
+        sexMarkerPos.x = pos.x + listPaddingX +  3.0f * ImGui::GetStyle().ItemSpacing.x;
+        sexMarkerPos.y = pos.y + (selectableHeight - sexMarkerSize.y) * 0.5f + sexMarkerVerticalAlignOffset;
+        ImGui::GetWindowDrawList()->AddText(sexMarkerPos, ImGui::GetColorU32(sexMarkerCol), sexMarkSymbol.c_str());
+
+        ImGui::PopFont();
+
+        ImGui::PushFont(dataManager.getRegularFontOverride());
+
+        // Group name... floating because imgui has no vertical alignment STILL :(
+        constexpr float playerNameSpacingAfter = 5.0f;
+        ImVec2 playerNameSize = ImGui::CalcTextSize(preset->name.c_str());
+        ImVec2 playerNamePos;
+        playerNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
+        playerNamePos.y = pos.y + (selectableHeight - playerNameSize.y) * 0.5f;
+        ImGui::GetWindowDrawList()->AddText(playerNamePos, ImGui::GetColorU32(ImGuiCol_Text), preset->name.c_str());
+
+        std::string bundleStr = "(" + preset->bundle + ")";
+        ImVec2 bundleStrSize = ImGui::CalcTextSize(bundleStr.c_str());
+        ImVec2 bundleStrPos;
+        bundleStrPos.x = playerNamePos.x + playerNameSize.x + playerNameSpacingAfter;
+        bundleStrPos.y = pos.y + (selectableHeight - bundleStrSize.y) * 0.5f;
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+        ImGui::GetWindowDrawList()->AddText(bundleStrPos, ImGui::GetColorU32(ImGuiCol_Text), bundleStr.c_str());
+        ImGui::PopStyleColor();
+
+        ImGui::PopFont();
+
+        // Legs Mark
+        constexpr ImVec4 armourMissingCol{ 1.0f, 1.0f, 1.0f, 0.1f };
+        constexpr ImVec4 armourPresentCol{ 1.0f, 1.0f, 1.0f, 1.0f };
+        constexpr float armourVerticalAlignOffset = 2.5f;
+        ImGui::PushFont(wsSymbolFont);
+
+        ImVec2 legMarkSize = ImGui::CalcTextSize(WS_FONT_LEGS);
+        ImVec2 legMarkPos;
+        legMarkPos.x = ImGui::GetCursorScreenPos().x + contentRegionWidth - legMarkSize.x - ImGui::GetStyle().ItemSpacing.x - listPaddingX;
+        legMarkPos.y = pos.y + (selectableHeight - legMarkSize.y) * 0.5f + armourVerticalAlignOffset;
+
+        ImGui::PushStyleColor(ImGuiCol_Text, preset->hasLegs() ? armourPresentCol : armourMissingCol);
+        ImGui::GetWindowDrawList()->AddText(legMarkPos, ImGui::GetColorU32(ImGuiCol_Text), WS_FONT_LEGS);
+        ImGui::PopStyleColor();
+
+        // Body Mark
+        ImVec2 bodyMarkSize = ImGui::CalcTextSize(WS_FONT_BODY);
+        ImVec2 bodyMarkPos;
+        bodyMarkPos.x = legMarkPos.x - bodyMarkSize.x - ImGui::GetStyle().ItemSpacing.x;
+        bodyMarkPos.y = pos.y + (selectableHeight - bodyMarkSize.y) * 0.5f + armourVerticalAlignOffset;
+
+        ImGui::PushStyleColor(ImGuiCol_Text, preset->hasBody() ? armourPresentCol : armourMissingCol);
+        ImGui::GetWindowDrawList()->AddText(bodyMarkPos, ImGui::GetColorU32(ImGuiCol_Text), WS_FONT_BODY);
+        ImGui::PopStyleColor();
+
+        // Armour Sex Mark
+        std::string armourSexMarkSymbol = preset->armour.female ? WS_FONT_FEMALE : WS_FONT_MALE;
+        ImVec4 armourSexMarkerCol = preset->armour.female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+        constexpr float armourSexMarkerVerticalAlignOffset = 5.0f;
+        ImVec2 armourSexMarkerSize = ImGui::CalcTextSize(armourSexMarkSymbol.c_str());
+        ImVec2 armourSexMarkerPos;
+        armourSexMarkerPos.x = bodyMarkPos.x - armourSexMarkerSize.x - ImGui::GetStyle().ItemSpacing.x;
+        armourSexMarkerPos.y = pos.y + (selectableHeight - armourSexMarkerSize.y) * 0.5f + armourSexMarkerVerticalAlignOffset;
+        ImGui::GetWindowDrawList()->AddText(armourSexMarkerPos, ImGui::GetColorU32(armourSexMarkerCol), armourSexMarkSymbol.c_str());
+
+        ImGui::PopFont();
+
+        ImGui::PushFont(wsArmourFont);
+
+        // Armour Name
+        ImVec2 armourNameSize = ImGui::CalcTextSize(preset->armour.name.c_str());
+        ImVec2 armourNamePos;
+        armourNamePos.x = armourSexMarkerPos.x - armourNameSize.x - ImGui::GetStyle().ItemSpacing.x;
+        armourNamePos.y = pos.y + (selectableHeight - armourNameSize.y) * 0.5f;
+
+        ImVec4 armourNameCol = preset->armour.name == ANY_ARMOUR_ID ? ImVec4(0.365f, 0.678f, 0.886f, 0.8f) : ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        ImGui::PushStyleColor(ImGuiCol_Text, armourNameCol);
+        ImGui::GetWindowDrawList()->AddText(armourNamePos, ImGui::GetColorU32(ImGuiCol_Text), preset->armour.name.c_str());
+        ImGui::PopStyleColor();
+
+        ImGui::PopFont();
+    }
+
+    bool ExportPanel::checkPresetSelected(const Preset* preset) const {
+        return selectedPresets.find(preset->uuid) != selectedPresets.end();
+	}
+
+    void ExportPanel::selectPreset(const Preset* preset) {
+        selectedPresets.insert(preset->uuid);
+	}
+
+    void ExportPanel::deselectPreset(const Preset* preset) {
+        selectedPresets.erase(preset->uuid);
     }
 
     void ExportPanel::drawPresetGroupList() {
@@ -327,6 +354,7 @@ namespace kbf {
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
         constexpr char const* exportHintStr = "Click & Drag to select items to include in the export.";
+        ImGui::Spacing();
         preAlignCellContentHorizontal(exportHintStr);
         ImGui::Text(exportHintStr);
         ImGui::Spacing();
@@ -334,10 +362,11 @@ namespace kbf {
 
         // Fixed-height, scrollable region
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, childItemSpacing);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, childWindowPadding);
         ImGui::BeginChild("ItemSelectorGroupChild", ImVec2(0, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-        const float selectableHeight = 30.0f;
         static bool isDragging = false;
         static bool dragStarted = false;
         static std::unordered_set<std::string> selectedDuringDrag{};
@@ -361,6 +390,7 @@ namespace kbf {
         if (presetGroups.size() == 0) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
             constexpr char const* noPresetStr = "No Preset Groups Found.";
+            ImGui::Spacing();
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
             ImGui::PopStyleColor();
@@ -370,48 +400,26 @@ namespace kbf {
         {
             ImVec2 pos = ImGui::GetCursorScreenPos();
 
-            bool selected = selectedPresetGroups.find(presetGroup->uuid) != selectedPresetGroups.end();
-            if (selected) {
-                for (const auto& [_, id] : presetGroup->bodyPresets) {
-                    if (selectedPresets.find(id) == selectedPresets.end()) {
-                        selected = false;
-                        break;
-                    }
-                }
-                for (const auto& [_, id] : presetGroup->legsPresets) {
-                    if (selectedPresets.find(id) == selectedPresets.end()) {
-                        selected = false;
-                        break;
-                    }
-                }
-            }
+            bool selected = checkPresetGroupSelected(presetGroup);
 
             bool hovered = false;
-            if (DragSelectable(("##Selectable_Preset_" + presetGroup->uuid).c_str(), false, selectableHeight, &hovered)) {
-                if (selected) selectedPresetGroups.erase(presetGroup->uuid);
-                else {
-                    selectedPresetGroups.insert(presetGroup->uuid);
-                    std::ranges::for_each(presetGroup->bodyPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
-                    std::ranges::for_each(presetGroup->legsPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
-                }
+            if (DragSelectable(("##Selectable_Preset_" + presetGroup->uuid).c_str(), selected, selectableHeight, &hovered)) {
+                if (selected) deselectPresetGroup(presetGroup);
+				else          selectPresetGroup(presetGroup);
                 selected = !selected;
                 selectedDuringDrag.insert(presetGroup->uuid);
             }
 
             bool alreadySelectedThisDrag = selectedDuringDrag.find(presetGroup->uuid) != selectedDuringDrag.end();
             if (isDragging && hovered && !alreadySelectedThisDrag) {
-                if (selected) selectedPresetGroups.erase(presetGroup->uuid);
-                else {
-                    selectedPresetGroups.insert(presetGroup->uuid);
-                    std::ranges::for_each(presetGroup->bodyPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
-                    std::ranges::for_each(presetGroup->legsPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
-                }
+                if (selected) deselectPresetGroup(presetGroup);
+                else          selectPresetGroup(presetGroup);
                 selected = !selected;
                 selectedDuringDrag.insert(presetGroup->uuid);
             }
 
             ImVec2 tickMarkPos;
-            tickMarkPos.x = pos.x + ImGui::GetStyle().ItemSpacing.x;
+            tickMarkPos.x = pos.x + listPaddingX + ImGui::GetStyle().ItemSpacing.x;
             tickMarkPos.y = pos.y + (selectableHeight) * 0.5f;
 
             if (selected) {
@@ -420,53 +428,93 @@ namespace kbf {
                 ImGui::PopStyleColor();
             }
 
-            const float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-
-            // Sex Mark
-            std::string sexMarkSymbol = presetGroup->female ? WS_FONT_FEMALE : WS_FONT_MALE;
-            ImVec4 sexMarkerCol = presetGroup->female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
-
-            ImGui::PushFont(wsSymbolFont);
-
-            constexpr float sexMarkerSpacingAfter = 5.0f;
-            constexpr float sexMarkerVerticalAlignOffset = 5.0f;
-            ImVec2 sexMarkerSize = ImGui::CalcTextSize(sexMarkSymbol.c_str());
-            ImVec2 sexMarkerPos;
-            sexMarkerPos.x = pos.x + ImGui::GetStyle().ItemSpacing.x * 3.0f;
-            sexMarkerPos.y = pos.y + (selectableHeight - sexMarkerSize.y) * 0.5f + sexMarkerVerticalAlignOffset;
-            ImGui::GetWindowDrawList()->AddText(sexMarkerPos, ImGui::GetColorU32(sexMarkerCol), sexMarkSymbol.c_str());
-
-            ImGui::PopFont();
-
-            // Group name
-            ImVec2 presetGroupNameSize = ImGui::CalcTextSize(presetGroup->name.c_str());
-            ImVec2 presetGroupNamePos;
-            presetGroupNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
-            presetGroupNamePos.y = pos.y + (selectableHeight - presetGroupNameSize.y) * 0.5f;
-            ImGui::GetWindowDrawList()->AddText(presetGroupNamePos, ImGui::GetColorU32(ImGuiCol_Text), presetGroup->name.c_str());
-
-            std::string presetCountStr;
-            if (presetGroup->size() == 0) presetCountStr = "Empty";
-            else if (presetGroup->size() == 1) presetCountStr = "1 Preset";
-            else presetCountStr = std::to_string(presetGroup->size()) + " Presets";
-
-            ImVec2 rightTextSize = ImGui::CalcTextSize(presetCountStr.c_str());
-            float hunterIdCursorPosX = ImGui::GetCursorScreenPos().x + contentRegionWidth - rightTextSize.x - ImGui::GetStyle().ItemSpacing.x;
-            float hunterIdCursorPosY = ImGui::GetItemRectMin().y + 4.0f;  // Same Y as the selectable item, plus vertical alignment
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            ImGui::GetWindowDrawList()->AddText(ImVec2(hunterIdCursorPosX, hunterIdCursorPosY), ImGui::GetColorU32(ImGuiCol_Text), presetCountStr.c_str());
-            ImGui::PopStyleColor();
+            drawPresetGroupSelector(presetGroup, pos, selectableHeight);
         }
 
         ImGui::EndChild();
+        ImGui::PopStyleVar(2);
         ImGui::PopStyleColor();
 
+        ImGui::Spacing();
         if (ImGui::Button("Clear")) selectedPresetGroups.clear();
+        ImGui::SameLine();
+        if (ImGui::Button("Select All")) {
+            for (const PresetGroup* presetGroup : presetGroups) selectPresetGroup(presetGroup);
+        }
         ImGui::SameLine();
         ImGui::PushItemWidth(-1);
         ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
         ImGui::PopItemWidth();
+    }
+
+    void ExportPanel::drawPresetGroupSelector(const PresetGroup* presetGroup, ImVec2 pos, float selectableHeight) const {
+        const float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+
+        // Sex Mark
+        std::string sexMarkSymbol = presetGroup->female ? WS_FONT_FEMALE : WS_FONT_MALE;
+        ImVec4 sexMarkerCol = presetGroup->female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+        ImGui::PushFont(wsSymbolFont);
+
+        constexpr float sexMarkerSpacingAfter = 5.0f;
+        constexpr float sexMarkerVerticalAlignOffset = 5.0f;
+        ImVec2 sexMarkerSize = ImGui::CalcTextSize(sexMarkSymbol.c_str());
+        ImVec2 sexMarkerPos;
+        sexMarkerPos.x = pos.x + listPaddingX + ImGui::GetStyle().ItemSpacing.x * 3.0f;
+        sexMarkerPos.y = pos.y + (selectableHeight - sexMarkerSize.y) * 0.5f + sexMarkerVerticalAlignOffset;
+        ImGui::GetWindowDrawList()->AddText(sexMarkerPos, ImGui::GetColorU32(sexMarkerCol), sexMarkSymbol.c_str());
+
+        ImGui::PopFont();
+
+        // Group name
+        ImVec2 presetGroupNameSize = ImGui::CalcTextSize(presetGroup->name.c_str());
+        ImVec2 presetGroupNamePos;
+        presetGroupNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
+        presetGroupNamePos.y = pos.y + (selectableHeight - presetGroupNameSize.y) * 0.5f;
+        ImGui::GetWindowDrawList()->AddText(presetGroupNamePos, ImGui::GetColorU32(ImGuiCol_Text), presetGroup->name.c_str());
+
+        std::string presetCountStr;
+        if (presetGroup->size() == 0) presetCountStr = "Empty";
+        else if (presetGroup->size() == 1) presetCountStr = "1 Preset";
+        else presetCountStr = std::to_string(presetGroup->size()) + " Presets";
+
+        ImVec2 rightTextSize = ImGui::CalcTextSize(presetCountStr.c_str());
+        float hunterIdCursorPosX = ImGui::GetCursorScreenPos().x + contentRegionWidth - rightTextSize.x - ImGui::GetStyle().ItemSpacing.x - listPaddingX;
+        float hunterIdCursorPosY = ImGui::GetItemRectMin().y + (selectableHeight - rightTextSize.y) * 0.5f;;  // Same Y as the selectable item, plus vertical alignment
+
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+        ImGui::GetWindowDrawList()->AddText(ImVec2(hunterIdCursorPosX, hunterIdCursorPosY), ImGui::GetColorU32(ImGuiCol_Text), presetCountStr.c_str());
+        ImGui::PopStyleColor();
+    }
+
+    bool ExportPanel::checkPresetGroupSelected(const PresetGroup* presetGroup) const {
+        bool selected = selectedPresetGroups.find(presetGroup->uuid) != selectedPresetGroups.end();
+        if (selected) {
+            for (const auto& [_, id] : presetGroup->bodyPresets) {
+                if (selectedPresets.find(id) == selectedPresets.end()) {
+                    selected = false;
+                    break;
+                }
+            }
+            for (const auto& [_, id] : presetGroup->legsPresets) {
+                if (selectedPresets.find(id) == selectedPresets.end()) {
+                    selected = false;
+                    break;
+                }
+            }
+        }
+
+        return selected;
+    }
+
+    void ExportPanel::selectPresetGroup(const PresetGroup* presetGroup) {
+        selectedPresetGroups.insert(presetGroup->uuid);
+        std::ranges::for_each(presetGroup->bodyPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
+        std::ranges::for_each(presetGroup->legsPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
+    }
+
+    void ExportPanel::deselectPresetGroup(const PresetGroup* presetGroup) {
+        selectedPresetGroups.erase(presetGroup->uuid);
     }
 
     void ExportPanel::drawPresetBundleList() {
@@ -474,6 +522,7 @@ namespace kbf {
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
         constexpr char const* exportHintStr = "Click & Drag to select items to include in the export.";
+        ImGui::Spacing();
         preAlignCellContentHorizontal(exportHintStr);
         ImGui::Text(exportHintStr);
         ImGui::Spacing();
@@ -481,10 +530,11 @@ namespace kbf {
 
         // Fixed-height, scrollable region
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, childItemSpacing);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, childWindowPadding);
         ImGui::BeginChild("ItemSelectorGroupChild", ImVec2(0, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-        const float selectableHeight = 30.0f;
         static bool isDragging = false;
         static bool dragStarted = false;
         static std::unordered_set<std::string> selectedDuringDrag{};
@@ -509,6 +559,7 @@ namespace kbf {
         if (bundles.size() == 0) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
             constexpr char const* noPresetStr = "No Bundles Found.";
+            ImGui::Spacing();
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
             ImGui::PopStyleColor();
@@ -523,32 +574,26 @@ namespace kbf {
 
             ImVec2 pos = ImGui::GetCursorScreenPos();
 
-            bool selected = true;
-            for (const auto& id : bundleIds) {
-                if (selectedPresets.find(id) == selectedPresets.end()) {
-                    selected = false;
-                    break;
-                }
-			}
+			bool selected = checkPresetBundleSelected(bundleIds);
 
             bool hovered = false;
-            if (DragSelectable(("##Selectable_Preset_" + bundleName).c_str(), false, selectableHeight, &hovered)) {
-                if (selected) std::ranges::for_each(bundleIds, [&](auto& id) { selectedPresets.erase(id); });
-                else          std::ranges::for_each(bundleIds, [&](auto& id) { selectedPresets.insert(id); });
+            if (DragSelectable(("##Selectable_Preset_" + bundleName).c_str(), selected, selectableHeight, &hovered)) {
+                if (selected) deselectPresetBundle(bundleIds);
+                else          selectPresetBundle(bundleIds);
                 selected = !selected;
                 selectedDuringDrag.insert(bundleName);
             }
 
             bool alreadySelectedThisDrag = selectedDuringDrag.find(bundleName) != selectedDuringDrag.end();
             if (isDragging && hovered && !alreadySelectedThisDrag) {
-                if (selected) std::ranges::for_each(bundleIds, [&](auto& id) { selectedPresets.erase(id); });
-                else          std::ranges::for_each(bundleIds, [&](auto& id) { selectedPresets.insert(id); });
+                if (selected) deselectPresetBundle(bundleIds);
+                else          selectPresetBundle(bundleIds);
                 selected = !selected;
                 selectedDuringDrag.insert(bundleName);
             }
 
             ImVec2 tickMarkPos;
-            tickMarkPos.x = pos.x + ImGui::GetStyle().ItemSpacing.x;
+            tickMarkPos.x = pos.x + listPaddingX + ImGui::GetStyle().ItemSpacing.x;
             tickMarkPos.y = pos.y + (selectableHeight) * 0.5f;
 
             if (selected) {
@@ -557,45 +602,80 @@ namespace kbf {
                 ImGui::PopStyleColor();
             }
 
-            size_t count = dataManager.getPresetBundleCount(bundleName);
-
-            // Group name... floating because imgui has no vertical alignment STILL :(
-            ImVec2 labelSize = ImGui::CalcTextSize(bundleName.c_str());
-            ImVec2 labelPos;
-            labelPos.x = pos.x + ImGui::GetStyle().ItemSpacing.x * 3.0f;
-            labelPos.y = pos.y + (selectableHeight - labelSize.y) * 0.5f;
-
-            ImGui::GetWindowDrawList()->AddText(labelPos, ImGui::GetColorU32(ImGuiCol_Text), bundleName.c_str());
-
-            // Similarly for preset count
-            const size_t nPresets = count;
-            std::string rightText = std::to_string(nPresets);
-            if (nPresets == 0) rightText = "Empty";
-            else if (nPresets == 1) rightText += " Preset";
-            else rightText += " Presets";
-
-            ImVec2 rightTextSize = ImGui::CalcTextSize(rightText.c_str());
-            float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-            float cursorPosX = ImGui::GetCursorScreenPos().x + contentRegionWidth - rightTextSize.x - ImGui::GetStyle().ItemSpacing.x;
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            ImGui::GetWindowDrawList()->AddText(ImVec2(cursorPosX, labelPos.y), ImGui::GetColorU32(ImGuiCol_Text), rightText.c_str());
-            ImGui::PopStyleColor();
+			drawPresetBundleSelector(bundleName, pos, selectableHeight);
         }
 
         ImGui::EndChild();
+        ImGui::PopStyleVar(2);
         ImGui::PopStyleColor();
 
+        ImGui::Spacing();
+        if (ImGui::Button("Clear")) selectedPresets.clear();
+        ImGui::SameLine();
+        if (ImGui::Button("Select All")) {
+            for (const auto& bundleInfo : bundles) {
+                std::vector<std::string> bundleIds = dataManager.getPresetsInBundle(bundleInfo.first);
+                std::ranges::for_each(bundleIds, [&](auto& id) { selectedPresets.insert(id); });
+            }
+        }
+        ImGui::SameLine();
         ImGui::PushItemWidth(-1);
         ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
         ImGui::PopItemWidth();
     }
 
-    void ExportPanel::drawPlayerOverrideSelector() {
+    void ExportPanel::drawPresetBundleSelector(const std::string& bundleName, ImVec2 pos, float selectableHeight) const {
+        size_t count = dataManager.getPresetBundleCount(bundleName);
+
+        // Group name... floating because imgui has no vertical alignment STILL :(
+        ImVec2 labelSize = ImGui::CalcTextSize(bundleName.c_str());
+        ImVec2 labelPos;
+        labelPos.x = pos.x + listPaddingX + ImGui::GetStyle().ItemSpacing.x * 3.0f;
+        labelPos.y = pos.y + (selectableHeight - labelSize.y) * 0.5f;
+
+        ImGui::GetWindowDrawList()->AddText(labelPos, ImGui::GetColorU32(ImGuiCol_Text), bundleName.c_str());
+
+        // Similarly for preset count
+        const size_t nPresets = count;
+        std::string rightText = std::to_string(nPresets);
+        if (nPresets == 0) rightText = "Empty";
+        else if (nPresets == 1) rightText += " Preset";
+        else rightText += " Presets";
+
+        ImVec2 rightTextSize = ImGui::CalcTextSize(rightText.c_str());
+        float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+        float cursorPosX = ImGui::GetCursorScreenPos().x + contentRegionWidth - rightTextSize.x - ImGui::GetStyle().ItemSpacing.x - listPaddingX;
+
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+        ImGui::GetWindowDrawList()->AddText(ImVec2(cursorPosX, labelPos.y), ImGui::GetColorU32(ImGuiCol_Text), rightText.c_str());
+        ImGui::PopStyleColor();
+    }
+
+    bool ExportPanel::checkPresetBundleSelected(const std::vector<std::string>& bundleIds) const {
+        bool selected = true;
+        for (const auto& id : bundleIds) {
+            if (selectedPresets.find(id) == selectedPresets.end()) {
+                selected = false;
+                break;
+            }
+        }
+        return selected;
+	}
+
+    void ExportPanel::selectPresetBundle(const std::vector<std::string>& bundleIds) {
+        std::ranges::for_each(bundleIds, [&](auto& id) { selectedPresets.insert(id); });
+    }
+
+    void ExportPanel::deselectPresetBundle(const std::vector<std::string>& bundleIds) {
+        std::ranges::for_each(bundleIds, [&](auto& id) { selectedPresets.erase(id); });
+    }
+
+    void ExportPanel::drawPlayerOverrideList() {
         std::string filterStr{ filterBuffer };
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
         constexpr char const* exportHintStr = "Click & Drag to select items to include in the export.";
+        ImGui::Spacing();
         preAlignCellContentHorizontal(exportHintStr);
         ImGui::Text(exportHintStr);
         ImGui::Spacing();
@@ -603,10 +683,11 @@ namespace kbf {
 
         // Fixed-height, scrollable region
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, childItemSpacing);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, childWindowPadding);
         ImGui::BeginChild("ItemSelectorGroupChild", ImVec2(0, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         float contentRegionWidth = ImGui::GetContentRegionAvail().x;
-        const float selectableHeight = 30.0f;
         static bool isDragging = false;
         static bool dragStarted = false;
         static std::unordered_set<PlayerData> selectedDuringDrag{};
@@ -630,6 +711,7 @@ namespace kbf {
         if (playerOverrides.size() == 0) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
             constexpr char const* noPresetStr = "No Overrides Found.";
+            ImGui::Spacing();
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
             ImGui::PopStyleColor();
@@ -639,24 +721,13 @@ namespace kbf {
         {
             ImVec2 pos = ImGui::GetCursorScreenPos();
 
-            bool selected = true;
-            if (selectedPlayerOverrides.find(override->player) == selectedPlayerOverrides.end()) {
-                selected = false;
-            }
+            bool selected = checkPlayerOverrideSelected(override);
 
             // Need to add the preset if added, and just remove override if not.
             bool hovered = false;
-            if (DragSelectable(("##Selectable_Preset_" + override->player.string()).c_str(), false, selectableHeight, &hovered)) {
-                if (selected) selectedPlayerOverrides.erase(override->player);
-                else {
-					selectedPlayerOverrides.insert(override->player);
-                    if (!override->presetGroup.empty()) {
-				        const PresetGroup* presetGroup = dataManager.getPresetGroupByUUID(override->presetGroup);
-                        selectedPresetGroups.insert(presetGroup->uuid);
-                        std::ranges::for_each(presetGroup->bodyPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
-                        std::ranges::for_each(presetGroup->legsPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
-                    }
-                }
+            if (DragSelectable(("##Selectable_Preset_" + override->player.string()).c_str(), selected, selectableHeight, &hovered)) {
+                if (selected) deselectPlayerOverride(override);
+                else          selectPlayerOverride(override);
                 selected = !selected;
                 selectedDuringDrag.insert(override->player);
             }
@@ -664,22 +735,14 @@ namespace kbf {
             bool alreadySelectedThisDrag = selectedDuringDrag.find(override->player) != selectedDuringDrag.end();
             if (isDragging && hovered && !alreadySelectedThisDrag) {
                 const PresetGroup* presetGroup = dataManager.getPresetGroupByUUID(override->presetGroup);
-                if (selected) selectedPlayerOverrides.erase(override->player);
-                else {
-                    selectedPlayerOverrides.insert(override->player);
-                    if (!override->presetGroup.empty()) {
-                        const PresetGroup* presetGroup = dataManager.getPresetGroupByUUID(override->presetGroup);
-                        selectedPresetGroups.insert(presetGroup->uuid);
-                        std::ranges::for_each(presetGroup->bodyPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
-                        std::ranges::for_each(presetGroup->legsPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
-                    }
-                }
+                if (selected) deselectPlayerOverride(override);
+				else          selectPlayerOverride(override);
                 selected = !selected;
                 selectedDuringDrag.insert(override->player);
             }
 
             ImVec2 tickMarkPos;
-            tickMarkPos.x = pos.x + ImGui::GetStyle().ItemSpacing.x;
+            tickMarkPos.x = pos.x + listPaddingX + ImGui::GetStyle().ItemSpacing.x;
             tickMarkPos.y = pos.y + (selectableHeight) * 0.5f;
 
             if (selected) {
@@ -688,87 +751,137 @@ namespace kbf {
                 ImGui::PopStyleColor();
             }
 
-            // Sex Mark
-            std::string sexMarkSymbol = override->player.female ? WS_FONT_FEMALE : WS_FONT_MALE;
-            ImVec4 sexMarkerCol = override->player.female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
-
-            ImGui::PushFont(wsSymbolFont);
-
-            constexpr float sexMarkerSpacingAfter = 5.0f;
-            constexpr float sexMarkerVerticalAlignOffset = 5.0f;
-            ImVec2 sexMarkerSize = ImGui::CalcTextSize(sexMarkSymbol.c_str());
-            ImVec2 sexMarkerPos;
-            sexMarkerPos.x = pos.x + 3.0f * ImGui::GetStyle().ItemSpacing.x;
-            sexMarkerPos.y = pos.y + (selectableHeight - sexMarkerSize.y) * 0.5f + sexMarkerVerticalAlignOffset;
-            ImGui::GetWindowDrawList()->AddText(sexMarkerPos, ImGui::GetColorU32(sexMarkerCol), sexMarkSymbol.c_str());
-
-            ImGui::PopFont();
-
-            // Player name
-            constexpr float playerNameSpacingAfter = 5.0f;
-            ImVec2 playerNameSize = ImGui::CalcTextSize(override->player.name.c_str());
-            ImVec2 playerNamePos;
-            playerNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
-            playerNamePos.y = pos.y + (selectableHeight - playerNameSize.y) * 0.5f;
-            ImGui::GetWindowDrawList()->AddText(playerNamePos, ImGui::GetColorU32(ImGuiCol_Text), override->player.name.c_str());
-
-            // Preset Group
-            const PresetGroup* activeGroup = dataManager.getPresetGroupByUUID(override->presetGroup);
-
-            // Sex Mark
-            bool female = false;
-            float presetGroupSexMarkSpacing = ImGui::GetStyle().ItemSpacing.x;
-            float presetGroupSexMarkSpacingBefore = 0.0f;
-            float endPos = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
-            if (activeGroup) {
-                bool female = activeGroup->female;
-                presetGroupSexMarkSpacing = 15.0f;
-                presetGroupSexMarkSpacingBefore = 10.0f;
-
-                std::string presetGroupSexMarkSymbol = female ? WS_FONT_FEMALE : WS_FONT_MALE;
-                ImVec4 presetGroupSexMarkerCol = female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
-
-                ImVec2 presetGroupSexMarkerSize = ImGui::CalcTextSize(presetGroupSexMarkSymbol.c_str());
-                ImVec2 presetGroupSexMarkerPos;
-                presetGroupSexMarkerPos.x = endPos - presetGroupSexMarkSpacingBefore - ImGui::GetStyle().ItemSpacing.x;
-                presetGroupSexMarkerPos.y = pos.y + (selectableHeight - presetGroupSexMarkerSize.y) * 0.5f;
-
-                ImGui::PushFont(wsSymbolFont);
-                ImGui::GetWindowDrawList()->AddText(presetGroupSexMarkerPos, ImGui::GetColorU32(presetGroupSexMarkerCol), presetGroupSexMarkSymbol.c_str());
-                ImGui::PopFont();
-            }
-
-            // Group Name
-            std::string presetGroupName = override->presetGroup.empty() || activeGroup == nullptr ? "Default" : activeGroup->name;
-            ImVec2 currentGroupStrSize = ImGui::CalcTextSize(presetGroupName.c_str());
-            ImVec2 currentGroupStrPos;
-            currentGroupStrPos.x = endPos - (currentGroupStrSize.x + presetGroupSexMarkSpacing + presetGroupSexMarkSpacingBefore);
-            currentGroupStrPos.y = pos.y + (selectableHeight - currentGroupStrSize.y) * 0.5f;
-
-            ImVec4 presetGroupCol = activeGroup == nullptr ? ImVec4(0.365f, 0.678f, 0.886f, 0.8f) : ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-            ImGui::PushStyleColor(ImGuiCol_Text, presetGroupCol);
-            ImGui::GetWindowDrawList()->AddText(currentGroupStrPos, ImGui::GetColorU32(ImGuiCol_Text), presetGroupName.c_str());
-            ImGui::PopStyleColor();
-
-            // Hunter ID
-            std::string hunterIdStr = "(" + override->player.hunterId + ")";
-            ImVec2 hunterIdStrSize = ImGui::CalcTextSize(hunterIdStr.c_str());
-            ImVec2 hunterIdStrPos;
-            hunterIdStrPos.x = playerNamePos.x + playerNameSize.x + playerNameSpacingAfter;
-            hunterIdStrPos.y = pos.y + (selectableHeight - hunterIdStrSize.y) * 0.5f;
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            ImGui::GetWindowDrawList()->AddText(hunterIdStrPos, ImGui::GetColorU32(ImGuiCol_Text), hunterIdStr.c_str());
-            ImGui::PopStyleColor();
+            drawPlayerOverrideSelector(override, pos, selectableHeight);
         }
 
         ImGui::EndChild();
+        ImGui::PopStyleVar(2);
         ImGui::PopStyleColor();
 
+        ImGui::Spacing();
         if (ImGui::Button("Clear")) selectedPlayerOverrides.clear();
+        ImGui::SameLine();
+        if (ImGui::Button("Select All")) {
+            for (const PlayerOverride* override : playerOverrides) selectPlayerOverride(override);
+        }
         ImGui::SameLine();
         ImGui::PushItemWidth(-1);
         ImGui::InputTextWithHint("##Search", "Search...", filterBuffer, IM_ARRAYSIZE(filterBuffer));
         ImGui::PopItemWidth();
+    }
+
+    void ExportPanel::drawPlayerOverrideSelector(const PlayerOverride* override, ImVec2 pos, float selectableHeight) const {
+        // Sex Mark
+        std::string sexMarkSymbol = override->player.female ? WS_FONT_FEMALE : WS_FONT_MALE;
+        ImVec4 sexMarkerCol = override->player.female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+        ImGui::PushFont(wsSymbolFont);
+
+        constexpr float sexMarkerSpacingAfter = 5.0f;
+        constexpr float sexMarkerVerticalAlignOffset = 5.0f;
+        ImVec2 sexMarkerSize = ImGui::CalcTextSize(sexMarkSymbol.c_str());
+        ImVec2 sexMarkerPos;
+        sexMarkerPos.x = pos.x + listPaddingX + 3.0f * ImGui::GetStyle().ItemSpacing.x;
+        sexMarkerPos.y = pos.y + (selectableHeight - sexMarkerSize.y) * 0.5f + sexMarkerVerticalAlignOffset;
+        ImGui::GetWindowDrawList()->AddText(sexMarkerPos, ImGui::GetColorU32(sexMarkerCol), sexMarkSymbol.c_str());
+
+        ImGui::PopFont();
+
+        // Player name
+        constexpr float playerNameSpacingAfter = 5.0f;
+        ImVec2 playerNameSize = ImGui::CalcTextSize(override->player.name.c_str());
+        ImVec2 playerNamePos;
+        playerNamePos.x = sexMarkerPos.x + sexMarkerSize.x + sexMarkerSpacingAfter;
+        playerNamePos.y = pos.y + (selectableHeight - playerNameSize.y) * 0.5f;
+        ImGui::GetWindowDrawList()->AddText(playerNamePos, ImGui::GetColorU32(ImGuiCol_Text), override->player.name.c_str());
+
+        // Preset Group
+        const PresetGroup* activeGroup = dataManager.getPresetGroupByUUID(override->presetGroup);
+
+        // Sex Mark
+        bool female = false;
+        float presetGroupSexMarkSpacing = ImGui::GetStyle().ItemSpacing.x;
+        float presetGroupSexMarkSpacingBefore = 0.0f;
+        float endPos = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+        if (activeGroup) {
+            bool female = activeGroup->female;
+            presetGroupSexMarkSpacing = 15.0f;
+            presetGroupSexMarkSpacingBefore = 10.0f;
+
+            std::string presetGroupSexMarkSymbol = female ? WS_FONT_FEMALE : WS_FONT_MALE;
+            ImVec4 presetGroupSexMarkerCol = female ? ImVec4(0.76f, 0.50f, 0.24f, 1.0f) : ImVec4(0.50f, 0.70f, 0.33f, 1.0f);
+
+            ImVec2 presetGroupSexMarkerSize = ImGui::CalcTextSize(presetGroupSexMarkSymbol.c_str());
+            ImVec2 presetGroupSexMarkerPos;
+            presetGroupSexMarkerPos.x = endPos - presetGroupSexMarkSpacingBefore - ImGui::GetStyle().ItemSpacing.x - listPaddingX;
+            presetGroupSexMarkerPos.y = pos.y + (selectableHeight - presetGroupSexMarkerSize.y) * 0.5f;
+
+            ImGui::PushFont(wsSymbolFont);
+            ImGui::GetWindowDrawList()->AddText(presetGroupSexMarkerPos, ImGui::GetColorU32(presetGroupSexMarkerCol), presetGroupSexMarkSymbol.c_str());
+            ImGui::PopFont();
+        }
+
+        // Group Name
+        std::string presetGroupName = override->presetGroup.empty() || activeGroup == nullptr ? "Default" : activeGroup->name;
+        ImVec2 currentGroupStrSize = ImGui::CalcTextSize(presetGroupName.c_str());
+        ImVec2 currentGroupStrPos;
+        currentGroupStrPos.x = endPos - (currentGroupStrSize.x + presetGroupSexMarkSpacing + presetGroupSexMarkSpacingBefore + listPaddingX);
+        currentGroupStrPos.y = pos.y + (selectableHeight - currentGroupStrSize.y) * 0.5f;
+
+        ImVec4 presetGroupCol = activeGroup == nullptr ? ImVec4(0.365f, 0.678f, 0.886f, 0.8f) : ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        ImGui::PushStyleColor(ImGuiCol_Text, presetGroupCol);
+        ImGui::GetWindowDrawList()->AddText(currentGroupStrPos, ImGui::GetColorU32(ImGuiCol_Text), presetGroupName.c_str());
+        ImGui::PopStyleColor();
+
+        // Hunter ID
+        std::string hunterIdStr = "(" + override->player.hunterId + ")";
+        ImVec2 hunterIdStrSize = ImGui::CalcTextSize(hunterIdStr.c_str());
+        ImVec2 hunterIdStrPos;
+        hunterIdStrPos.x = playerNamePos.x + playerNameSize.x + playerNameSpacingAfter;
+        hunterIdStrPos.y = pos.y + (selectableHeight - hunterIdStrSize.y) * 0.5f;
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+        ImGui::GetWindowDrawList()->AddText(hunterIdStrPos, ImGui::GetColorU32(ImGuiCol_Text), hunterIdStr.c_str());
+        ImGui::PopStyleColor();
+    }
+
+    bool ExportPanel::checkPlayerOverrideSelected(const PlayerOverride* override) const {
+        bool selected = selectedPlayerOverrides.find(override->player) != selectedPlayerOverrides.end();
+        if (selected && !override->presetGroup.empty() && selectedPresetGroups.find(override->presetGroup) == selectedPresetGroups.end()) {
+            selected = false;
+        }
+
+        return selected;
+    }
+
+    void ExportPanel::selectPlayerOverride(const PlayerOverride* override) {
+        selectedPlayerOverrides.insert(override->player);
+        if (!override->presetGroup.empty()) {
+            const PresetGroup* presetGroup = dataManager.getPresetGroupByUUID(override->presetGroup);
+            selectedPresetGroups.insert(presetGroup->uuid);
+            std::ranges::for_each(presetGroup->bodyPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
+            std::ranges::for_each(presetGroup->legsPresets, [&](auto& entry) { selectedPresets.insert(entry.second); });
+        }
+	}
+
+    void ExportPanel::deselectPlayerOverride(const PlayerOverride* override) {
+        selectedPlayerOverrides.erase(override->player);
+	}
+
+    KBFFileData ExportPanel::getKbfFileData() const {
+        KBFFileData kbfData;
+        for (const auto& presetGroupId : selectedPresetGroups) {
+            const PresetGroup* presetGroup = dataManager.getPresetGroupByUUID(presetGroupId);
+            if (presetGroup) kbfData.presetGroups.push_back(*presetGroup);
+        }
+        for (const auto& presetId : selectedPresets) {
+            const Preset* preset = dataManager.getPresetByUUID(presetId);
+            if (preset) kbfData.presets.push_back(*preset);
+		}
+        for (const auto& playerData : selectedPlayerOverrides) {
+            const PlayerOverride* override = dataManager.getPlayerOverride(playerData);
+            if (override) kbfData.playerOverrides.push_back(*override);
+        }
+		return kbfData;
     }
 
     std::string ExportPanel::getExportPathFileDialog() {

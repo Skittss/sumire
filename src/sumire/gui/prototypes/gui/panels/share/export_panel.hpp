@@ -45,11 +45,35 @@ namespace kbf {
 		char exportPathBuffer[256];
 		char filterBuffer[128];
 
+		constexpr static float selectableHeight = 35.0f;
+		constexpr static float listPaddingX = 10.0f;
+		constexpr static ImVec2 childWindowPadding = ImVec2(0, 0);
+		constexpr static ImVec2 childItemSpacing = ImVec2(8, 0);
 		void drawPresetList();
-		void drawPresetGroupList();
-		void drawPresetBundleList();
+		void drawPresetSelector(const Preset* preset, ImVec2 pos, float selectableHeight) const;
+		bool checkPresetSelected(const Preset* preset) const;
+		void selectPreset(const Preset* preset);
+		void deselectPreset(const Preset* preset);
 
-		void drawPlayerOverrideSelector();
+		void drawPresetGroupList();
+		void drawPresetGroupSelector(const PresetGroup* presetGroup, ImVec2 pos, float selectableHeight) const;
+		bool checkPresetGroupSelected(const PresetGroup* presetGroup) const;
+		void selectPresetGroup(const PresetGroup* presetGroup);
+		void deselectPresetGroup(const PresetGroup* presetGroup);
+
+		void drawPresetBundleList();
+		void drawPresetBundleSelector(const std::string& bundleName, ImVec2 pos, float selectableHeight) const;
+		bool checkPresetBundleSelected(const std::vector<std::string>& bundleIds) const;
+		void selectPresetBundle(const std::vector<std::string>& bundleIds);
+		void deselectPresetBundle(const std::vector<std::string>& bundleIds);
+
+		void drawPlayerOverrideList();
+		void drawPlayerOverrideSelector(const PlayerOverride* override, ImVec2 pos, float selectableHeight) const;
+		bool checkPlayerOverrideSelected(const PlayerOverride* override) const;
+		void selectPlayerOverride(const PlayerOverride* override);
+		void deselectPlayerOverride(const PlayerOverride* override);
+
+		KBFFileData getKbfFileData() const;
 
 		// Path prompt 
 		std::string getExportPathFileDialog();
