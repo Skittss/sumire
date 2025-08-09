@@ -85,6 +85,7 @@ namespace kbf {
         });
         exportPanel.get()->onCreate([&](std::string filepath, KBFFileData data) {
             dataManager.writeKBF(filepath, data);
+            exportPanel.close();
         });
     }
 
@@ -96,6 +97,7 @@ namespace kbf {
         });
         exportPanel.get()->onCreate([&](std::string filepath, KBFFileData data) {
             dataManager.writeModArchive(filepath, data);
+            exportPanel.close();
         });
     }
 

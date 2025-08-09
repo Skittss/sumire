@@ -8,13 +8,11 @@
 #include <sumire/gui/prototypes/data/ids/preset_group_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/player_override_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/format_ids.hpp>
+#include <sumire/gui/prototypes/data/ids/kbf_file_ids.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 #include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
-
-#include <rapidjson/prettywriter.h>
-#include <rapidjson/stringbuffer.h>
 
 #include <filesystem>
 #include <fstream>
@@ -558,16 +556,53 @@ namespace kbf {
 		}
 	}
 
-	void KBFDataManager::importKBF(std::string filepath) {
-
+	bool KBFDataManager::importKBF(std::string filepath) {
+		return false;
 	}
 
-	void KBFDataManager::writeKBF(std::string filepath, KBFFileData data) const {
+	bool KBFDataManager::writeKBF(std::string filepath, KBFFileData data) const {
+		rapidjson::StringBuffer s;
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
+		writer.StartObject();
+		writer.Key(FORMAT_VERSION_ID);
+		writer.String(data.metadata.VERSION.c_str());
+		writer.Key(FORMAT_MOD_ARCHIVE_ID);
+		writer.String(data.metadata.MOD_ARCHIVE.c_str());
+		writer.Key(KBF_FILE_PRESETS_GROUPS_ID);
+		writer.StartObject();
+		for (const PresetGroup& presetGroup : data.presetGroups) {
+			writer.Key(presetGroup.uuid.c_str());
+			writePresetGroupJsonContent(presetGroup, writer);
+		}
+		writer.EndObject();
+		writer.Key(KBF_FILE_PRESETS_ID);
+		writer.StartObject();
+		for (const Preset& preset : data.presets) {
+			writer.Key(preset.uuid.c_str());
+			writePresetJsonContent(preset, writer);
+		}
+		writer.EndObject();
+		writer.Key(KBF_FILE_PLAYER_OVERRIDES_ID);
+		writer.StartObject();
+		for (const PlayerOverride& playerOverride : data.playerOverrides) {
+			writer.Key(getPlayerOverrideFilename(playerOverride.player).c_str());
+			writePlayerOverrideJsonContent(playerOverride, writer);
+		}
+		writer.EndObject();
+		writer.EndObject();
+
+		bool success = writeJsonFile(filepath, s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write kbf file: \"{}\"", filepath), DebugStack::Color::ERROR);
+		}
+
+		return success;
 	}
 
-	void KBFDataManager::writeModArchive(std::string filepath, KBFFileData data) const {
-
+	bool KBFDataManager::writeModArchive(std::string filepath, KBFFileData data) const {
+		return false;
 	}
 
 	void KBFDataManager::verifyDirectoriesExist() const {
@@ -974,6 +1009,21 @@ namespace kbf {
 		rapidjson::StringBuffer s;
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
+		writePresetJsonContent(preset, writer);
+
+		bool success = writeJsonFile(path.string(), s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write preset {} ({}) to {}", preset.name, preset.uuid, path.string()), DebugStack::Color::ERROR);
+		}
+
+		return success;
+	}
+
+	void KBFDataManager::writePresetJsonContent(
+		const Preset& preset, 
+		rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer
+	) const {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(preset.metadata.VERSION.c_str());
@@ -1027,7 +1077,7 @@ namespace kbf {
 			compactWriter.EndObject();
 
 			return buf;
-			};
+		};
 
 		// Body Bone Modifiers (compact)
 		writer.Key(PRESET_BONE_MODIFIERS_BODY_ID);
@@ -1051,14 +1101,6 @@ namespace kbf {
 		}
 		writer.EndObject();
 		writer.EndObject();
-
-		bool success = writeJsonFile(path.string(), s.GetString());
-
-		if (!success) {
-			DEBUG_STACK.push(std::format("Failed to write preset {} ({}) to {}", preset.name, preset.uuid, path.string()), DebugStack::Color::ERROR);
-		}
-
-		return success;
 	}
 
 	bool KBFDataManager::loadPresets() {
@@ -1237,6 +1279,21 @@ namespace kbf {
 		rapidjson::StringBuffer s;
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
+		writePresetGroupJsonContent(presetGroup, writer);
+
+		bool success = writeJsonFile(path.string(), s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write preset {} ({}) to {}", presetGroup.name, presetGroup.uuid, path.string()), DebugStack::Color::ERROR);
+		}
+
+		return success;
+	}
+
+	void KBFDataManager::writePresetGroupJsonContent(
+		const PresetGroup& presetGroup, 
+		rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer
+	) const {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(presetGroup.metadata.VERSION.c_str());
@@ -1261,7 +1318,7 @@ namespace kbf {
 			compactWriter.EndObject();
 
 			return buf;
-		};
+			};
 
 		// Body Presets (compact)
 		writer.Key(PRESET_GROUP_BODY_PRESETS_ID);
@@ -1289,14 +1346,6 @@ namespace kbf {
 		}
 		writer.EndObject();
 		writer.EndObject();
-
-		bool success = writeJsonFile(path.string(), s.GetString());
-
-		if (!success) {
-			DEBUG_STACK.push(std::format("Failed to write preset {} ({}) to {}", presetGroup.name, presetGroup.uuid, path.string()), DebugStack::Color::ERROR);
-		}
-
-		return success;
 	}
 
 	bool KBFDataManager::loadPresetGroups() {
@@ -1347,6 +1396,21 @@ namespace kbf {
 		rapidjson::StringBuffer s;
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
 
+		writePlayerOverrideJsonContent(playerOverride, writer);
+
+		bool success = writeJsonFile(path.string(), s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write player override for player {} to {}", playerOverride.player.string(), path.string()), DebugStack::Color::ERROR);
+		}
+
+		return success;
+	}
+
+	void KBFDataManager::writePlayerOverrideJsonContent(
+		const PlayerOverride& playerOverride, 
+		rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer
+	) const {
 		writer.StartObject();
 		writer.Key(FORMAT_VERSION_ID);
 		writer.String(playerOverride.metadata.VERSION.c_str());
@@ -1361,14 +1425,6 @@ namespace kbf {
 		writer.Key(PLAYER_OVERRIDE_PRESET_GROUP_UUID_ID);
 		writer.String(playerOverride.presetGroup.c_str());
 		writer.EndObject();
-
-		bool success = writeJsonFile(path.string(), s.GetString());
-
-		if (!success) {
-			DEBUG_STACK.push(std::format("Failed to write player override for player {} to {}", playerOverride.player.string(), path.string()), DebugStack::Color::ERROR);
-		}
-
-		return success;
 	}
 
 	bool KBFDataManager::loadPlayerOverrides() {
