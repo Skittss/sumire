@@ -87,6 +87,6 @@ namespace kbf {
         std::deque<LogData> stack{};
     };
 
-    inline DebugStack DEBUG_STACK{ 1000 };
+    inline DebugStack DEBUG_STACK{ 2000 };
 
 }
