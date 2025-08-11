@@ -186,7 +186,180 @@ namespace kbf {
     }
 
     void AboutTab::drawTutorials_ManuallyUpdatingKBF() {
+        ImGui::TextWrapped(
+            "KBF comes with a set of default presets for all armours in the game, but these may not always be up to date with the latest content if you're playing before I release an official update."
+		);
 
+        ImGui::TextWrapped(
+            "If you want to update KBF with the latest armours before I do it, you can do so by manually adding them to the armour list in the kbf data folder:"
+		);
+
+        startCodeListing("##ArmourListPathEntry");
+        ImGui::Indent();
+        ImGui::TextWrapped(dataManager.armourListPath.string().c_str());
+        ImGui::Unindent();
+        endCodeListing();
+
+        ImGui::TextWrapped(
+            "Any changes made will not be reflected until you restart the plugin / game. On restart, it is recommended to check Debug > Log to ensure your modified list was properly loaded (if not - a fallback is used)."
+        );
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(
+            "You must use the same format as is provided to add custom entries - namely, the following object structure:"
+        );
+
+        startCodeListing("##ArmourListEntryFormat");
+        ImGui::Indent();
+        ImGui::TextWrapped("{...");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"[ARMOUR NAME]\": {");
+		ImGui::Indent();
+        ImGui::TextWrapped("\"female\": {\"body\": \"[ARMOUR ID]\", \"legs\": \"[ARMOUR ID]\"},");
+        ImGui::TextWrapped("\"male\": {\"body\": \"[ARMOUR ID]\", \"legs\": \"[ARMOUR ID]\"}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        endCodeListing();
+
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(
+            "To maintain compatibility with future updates I make to this list, type the armour name EXACTLY as it appears in-game in English, followed by what armour variants exist (i.e. 0 = alpha only, 0/1 = alpha & beta, 2 = gamma). Note that DLC armours (layered armours only) do not need any variants in their name."
+        );
+
+        ImGui::TextWrapped(
+			"Female entries within an armour set are optional, but the male entry must always be present for your modified list to load."
+        );
+        ImGui::TextWrapped(
+            "Similarly, body and legs entries are also optional, but again, at least one of them must be present per female / male entry for your modified list to load."
+        );
+
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(
+            "The following examples show some correct and incorrect usages of this data format."
+        );
+
+        ImGui::Spacing();
+
+		// Green text for correct entries, red for incorrect
+
+        // Correct examples
+        ImGui::SeparatorText("Complete Entry (valid)");
+
+        startCodeListing("##ArmourListEntryComplete");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+        ImGui::Indent();
+        ImGui::TextWrapped("{...");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"Hope 0\": {");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"female\": {\"body\": \"ch03_001_0012\", \"legs\": \"ch03_001_0014\"},");
+        ImGui::TextWrapped("\"male\": {\"body\": \"ch03_001_0002\", \"legs\": \"ch03_001_0004\"}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::PopStyleColor();
+        endCodeListing();
+
+		ImGui::SeparatorText("Optional Female Entry (valid)");
+
+        startCodeListing("##ArmourListEntryOptionalFemale");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+        ImGui::Indent();
+        ImGui::TextWrapped("{...");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"Guild Cross 0\": {");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"male\": {\"body\": \"ch03_073_0002\", \"legs\": \"ch03_073_0004\"}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::PopStyleColor();
+        endCodeListing();
+
+        ImGui::SeparatorText("Optional Body Entry (valid)");
+
+        startCodeListing("##ArmourListEntryOptionalBody");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+        ImGui::Indent();
+        ImGui::TextWrapped("{...");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"Gajau 0\": {");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"female\": { \"legs\": \"ch03_052_0014\"},");
+        ImGui::TextWrapped("\"male\": {\"legs\": \"ch03_052_0004\"}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::PopStyleColor();
+        endCodeListing();
+
+        ImGui::SeparatorText("Optional Female/Legs Entry (valid)");
+
+        startCodeListing("##ArmourListEntryOptionalFemaleAndLegs");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+        ImGui::Indent();
+        ImGui::TextWrapped("{...");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"Pinion Necklace 0\": {");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"male\": {\"body\": \"ch03_089_0002\"}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::PopStyleColor();
+        endCodeListing();
+
+        ImGui::SeparatorText("Empty Female/Male Entry (invalid)");
+
+        // Incorrect example
+        startCodeListing("##ArmourListEntryEmpty");
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+        ImGui::Indent();
+        ImGui::TextWrapped("{...");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"Afi 0\": {");
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::PopStyleColor();
+        endCodeListing();
+
+        ImGui::SeparatorText("Empty Body/Legs Entry (invalid)");
+
+        // Incorrect example
+        startCodeListing("##ArmourListEntryEmptyLegs/Body");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+        ImGui::Indent();
+        ImGui::TextWrapped("{...");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"Seregios 0/1\": {");
+        ImGui::Indent();
+        ImGui::TextWrapped("\"female\": {},");
+        ImGui::TextWrapped("\"male\": {\"body\": \"ch03_038_0002\", \"legs\": \"ch03_038_0004\"}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::TextWrapped("}");
+        ImGui::Unindent();
+        ImGui::PopStyleColor();
+        endCodeListing();
     }
 
     void AboutTab::drawChangelogTab() {
@@ -198,5 +371,22 @@ namespace kbf {
             //ImGui::Unindent();
         }
     }
+
+    void AboutTab::startCodeListing(const std::string& strID) {
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.02f, 0.02f, 0.02f, 1.0f));
+        ImGui::BeginChild(strID.c_str(), ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::PushFont(monoFont);
+        ImGui::Spacing();
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 4));
+    }
+
+    void AboutTab::endCodeListing() {
+        ImGui::PopStyleVar();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::PopFont();
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+	}
 
 }
