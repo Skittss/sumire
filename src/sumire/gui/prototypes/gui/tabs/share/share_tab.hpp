@@ -26,6 +26,8 @@ namespace kbf {
 	private:
 		KBFDataManager& dataManager;
 
+		void drawModArchiveList();
+
 		std::string getImportFileDialog();
 
 		// Thread-safe task queue
@@ -38,9 +40,13 @@ namespace kbf {
 		void postToMainThread(std::function<void()> func);
 		void processCallbacks();
 
-		UniquePanel<ExportPanel> exportPanel;
+		UniquePanel<ExportPanel>    exportPanel;
+		UniquePanel<InfoPopupPanel> importInfoPanel;
+		UniquePanel<InfoPopupPanel> exportInfoPanel;
 		void openExportFilePanel();
 		void openExportModArchivePanel();
+		void openImportInfoPanel(bool success, size_t nConflicts);
+		void openExportInfoPanel(bool success);
 
 		ImFont* wsSymbolFont = nullptr;
 		ImFont* wsArmourFont = nullptr;
