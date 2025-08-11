@@ -1,0 +1,283 @@
+{
+    "Afi 0": {
+        "female": {"body":"ch03_081_0012","legs":"ch03_081_0014"},
+        "male": {"body":"ch03_081_0002","legs":"ch03_081_0004"}
+    },
+    "Ajarakan 0/1": {
+        "female": {"body":"ch03_024_0012","legs":"ch03_024_0014"},
+        "male": {"body":"ch03_024_0002","legs":"ch03_024_0004"}
+    },
+    "Alloy 0": {
+        "female": {"body":"ch03_010_0012","legs":"ch03_010_0014"},
+        "male": {"body":"ch03_010_0002","legs":"ch03_010_0004"}
+    },
+    "Any": {
+        "male": {"body":"Any","legs":"Any"}
+    },
+    "Arkveld 0/1": {
+        "female": {"body":"ch03_032_0012","legs":"ch03_032_0014"},
+        "male": {"body":"ch03_032_0002","legs":"ch03_032_0004"}
+    },
+    "Artian 0": {
+        "female": {"body":"ch03_051_0012","legs":"ch03_051_0014"},
+        "male": {"body":"ch03_051_0002","legs":"ch03_051_0004"}
+    },
+    "Azuz 0": {
+        "male": {"body":"ch03_047_0002","legs":"ch03_047_0004"}
+    },
+    "Balahara 0/1": {
+        "female": {"body":"ch03_014_0012","legs":"ch03_014_0014"},
+        "male": {"body":"ch03_014_0002","legs":"ch03_014_0004"}
+    },
+    "Battle 0": {
+        "female": {"body":"ch03_057_0012","legs":"ch03_057_0014"},
+        "male": {"body":"ch03_057_0002","legs":"ch03_057_0004"}
+    },
+    "Blango 0/1": {
+        "female": {"body":"ch03_041_0012","legs":"ch03_041_0014"},
+        "male": {"body":"ch03_041_0002","legs":"ch03_041_0004"}
+    },
+    "Blossom 0": {
+        "female": {"body":"ch03_075_0012","legs":"ch03_075_0014"},
+        "male": {"body":"ch03_075_0002","legs":"ch03_075_0004"}
+    },
+    "Bone 0": {
+        "female": {"body":"ch03_004_0012","legs":"ch03_004_0014"},
+        "male": {"body":"ch03_004_0002","legs":"ch03_004_0004"}
+    },
+    "Butterfly 0": {
+        "female": {"body":"ch03_054_0012","legs":"ch03_054_0014"},
+        "male": {"body":"ch03_054_0002","legs":"ch03_054_0004"}
+    },
+    "Chainmail 0": {
+        "female": {"body":"ch03_006_0012","legs":"ch03_006_0014"},
+        "male": {"body":"ch03_006_0002","legs":"ch03_006_0004"}
+    },
+    "Chatacabra 0/1": {
+        "female": {"body":"ch03_008_0012","legs":"ch03_008_0014"},
+        "male": {"body":"ch03_008_0002","legs":"ch03_008_0004"}
+    },
+    "Clerk 0": {
+        "female": {"body":"ch03_074_0012","legs":"ch03_074_0014"},
+        "male": {"body":"ch03_074_0002","legs":"ch03_074_0004"}
+    },
+    "Commission 0": {
+        "female": {"body":"ch03_050_0012","legs":"ch03_050_0014"},
+        "male": {"body":"ch03_050_0002","legs":"ch03_050_0004"}
+    },
+    "Conga Mail 0/1": {
+        "female": {"body":"ch03_013_0012","legs":"ch03_013_0014"},
+        "male": {"body":"ch03_013_0002","legs":"ch03_013_0004"}
+    },
+    "Cypurrpunk": {
+        "female": {"body":"ch03_080_0012","legs":"ch03_080_0014"},
+        "male": {"body":"ch03_080_0002","legs":"ch03_080_0004"}
+    },
+    "Dahaad 0/1": {
+        "female": {"body":"ch03_029_0012","legs":"ch03_029_0014"},
+        "male": {"body":"ch03_029_0002","legs":"ch03_029_0004"}
+    },
+    "Damascus 0": {
+        "female": {"body":"ch03_025_0012","legs":"ch03_025_0014"},
+        "male": {"body":"ch03_025_0002","legs":"ch03_025_0004"}
+    },
+    "Death Stench 0/1": {
+        "female": {"body":"ch03_053_0012","legs":"ch03_053_0014"},
+        "male": {"body":"ch03_053_0002","legs":"ch03_053_0004"}
+    },
+    "Diver 0": {
+        "female": {"body":"ch03_071_0012","legs":"ch03_071_0014"},
+        "male": {"body":"ch03_071_0002","legs":"ch03_071_0004"}
+    },
+    "Dober 0": {
+        "female": {"body":"ch03_019_0012","legs":"ch03_019_0014"},
+        "male": {"body":"ch03_019_0002","legs":"ch03_019_0004"}
+    },
+    "Doshaguma 0/1": {
+        "female": {"body":"ch03_003_0012","legs":"ch03_003_0014"},
+        "male": {"body":"ch03_003_0002","legs":"ch03_003_0004"}
+    },
+    "Feudal Soldier": {
+        "male": {"body":"ch03_061_0002","legs":"ch03_061_0004"}
+    },
+    "Gajau 0": {
+        "female": {"legs":"ch03_052_0014"},
+        "male": {"legs":"ch03_052_0004"}
+    },
+    "Gore 0/1": {
+        "female": {"body":"ch03_042_0012","legs":"ch03_042_0014"},
+        "male": {"body":"ch03_042_0002","legs":"ch03_042_0004"}
+    },
+    "Gravios 0/1": {
+        "female": {"body":"ch03_040_0012","legs":"ch03_040_0014"},
+        "male": {"body":"ch03_040_0002","legs":"ch03_040_0004"}
+    },
+    "Guardian Arkveld 0/1": {
+        "female": {"body":"ch03_032_5012","legs":"ch03_032_5014"},
+        "male": {"body":"ch03_032_5002","legs":"ch03_032_5004"}
+    },
+    "Guardian Doshaguma 0/1": {
+        "female": {"body":"ch03_003_5012","legs":"ch03_003_5014"},
+        "male": {"body":"ch03_003_5002","legs":"ch03_003_5004"}
+    },
+    "Guardian Ebony Odogaron 0/1": {
+        "female": {"body":"ch03_030_6012","legs":"ch03_030_6014"},
+        "male": {"body":"ch03_030_6002","legs":"ch03_030_6004"}
+    },
+    "Guardian Fulgur 0/1": {
+        "female": {"body":"ch03_043_6012","legs":"ch03_043_6014"},
+        "male": {"body":"ch03_043_6002","legs":"ch03_043_6004"}
+    },
+    "Guardian Rathalos 0/1": {
+        "female": {"body":"ch03_036_5012","legs":"ch03_036_5014"},
+        "male": {"body":"ch03_036_5002","legs":"ch03_036_5004"}
+    },
+    "Guild Ace 0": {
+        "male": {"body":"ch03_062_0002","legs":"ch03_062_0004"}
+    },
+    "Guild Cross 0": {
+        "male": {"body":"ch03_073_0002","legs":"ch03_073_0004"}
+    },
+    "Guild Knight": {
+        "male": {"body":"ch03_060_0002","legs":"ch03_060_0004"}
+    },
+    "Gypceros 0/1": {
+        "female": {"body":"ch03_037_0012","legs":"ch03_037_0014"},
+        "male": {"body":"ch03_037_0002","legs":"ch03_037_0004"}
+    },
+    "Hawkheart Jacket 0": {
+        "male": {"body":"ch03_090_0002"}
+    },
+    "High Metal 0": {
+        "female": {"body":"ch03_056_0012","legs":"ch03_056_0014"},
+        "male": {"body":"ch03_056_0002","legs":"ch03_056_0004"}
+    },
+    "Hirabami 0/1": {
+        "female": {"body":"ch03_023_0012","legs":"ch03_023_0014"},
+        "male": {"body":"ch03_023_0002","legs":"ch03_023_0004"}
+    },
+    "Hope 0": {
+        "female": {"body":"ch03_001_0012","legs":"ch03_001_0014"},
+        "male": {"body":"ch03_001_0002","legs":"ch03_001_0004"}
+    },
+    "Ingot 0": {
+        "female": {"body":"ch03_015_0012","legs":"ch03_015_0014"},
+        "male": {"body":"ch03_015_0002","legs":"ch03_015_0004"}
+    },
+    "Innerwear 0": {
+        "female": {"body":"ch03_002_0012","legs":"ch03_002_0014"},
+        "male": {"body":"ch03_002_0002","legs":"ch03_002_0004"}
+    },
+    "Innerwear 1": {
+        "female": {"body":"ch03_002_1012","legs":"ch03_002_1014"},
+        "male": {"body":"ch03_002_1002","legs":"ch03_002_1004"}
+    },
+    "King Beetle 0": {
+        "female": {"body":"ch03_055_0012","legs":"ch03_055_0014"},
+        "male": {"body":"ch03_055_0002","legs":"ch03_055_0004"}
+    },
+    "Kranodath 0/1": {
+        "female": {"body":"ch03_020_0012"},
+        "male": {"body":"ch03_020_0002"}
+    },
+    "Kunafa 0": {
+        "male": {"body":"ch03_046_0002","legs":"ch03_046_0004"}
+    },
+    "Kut-Ku 0/1": {
+        "female": {"body":"ch03_034_0012","legs":"ch03_034_0014"},
+        "male": {"body":"ch03_034_0002","legs":"ch03_034_0004"}
+    },
+    "Lagiacrus 0/1": {
+        "female": {"body":"ch03_039_0012","legs":"ch03_039_0014"},
+        "male": {"body":"ch03_039_0002","legs":"ch03_039_0004"}
+    },
+    "Lala Barina 0/1": {
+        "female": {"body":"ch03_012_0012","legs":"ch03_012_0014"},
+        "male": {"body":"ch03_012_0002","legs":"ch03_012_0004"}
+    },
+    "Leather 0": {
+        "female": {"body":"ch03_005_0012","legs":"ch03_005_0014"},
+        "male": {"body":"ch03_005_0002","legs":"ch03_005_0004"}
+    },
+    "Melahoa 0": {
+        "female": {"body":"ch03_058_0012","legs":"ch03_058_0014"},
+        "male": {"body":"ch03_058_0002","legs":"ch03_058_0004"}
+    },
+    "Mizutsune 0/1": {
+        "female": {"body":"ch03_066_0012","legs":"ch03_066_0014"},
+        "male": {"body":"ch03_066_0002","legs":"ch03_066_0004"}
+    },
+    "Nerscylla 0/1": {
+        "female": {"body":"ch03_022_0012","legs":"ch03_022_0014"},
+        "male": {"body":"ch03_022_0002","legs":"ch03_022_0004"}
+    },
+    "Noblesse": {
+        "male": {"body":"ch03_067_0002","legs":"ch03_067_0004"}
+    },
+    "Nu Udra 0/1": {
+        "female": {"body":"ch03_027_0012","legs":"ch03_027_0014"},
+        "male": {"body":"ch03_027_0002","legs":"ch03_027_0004"}
+    },
+    "Numinous 0/1": {
+        "female": {"body":"ch03_059_0112","legs":"ch03_059_0114"},
+        "male": {"body":"ch03_059_0102","legs":"ch03_059_0104"}
+    },
+    "Pinion Necklace 0": {
+        "male": {"body":"ch03_089_0002"}
+    },
+    "Piragill 0/1": {
+        "female": {"legs":"ch03_011_0014"},
+        "male": {"legs":"ch03_011_0004"}
+    },
+    "Quematrice 0/1": {
+        "female": {"body":"ch03_009_0012","legs":"ch03_009_0014"},
+        "male": {"body":"ch03_009_0002","legs":"ch03_009_0004"}
+    },
+    "Rathalos 0/1": {
+        "female": {"body":"ch03_036_0012","legs":"ch03_036_0014"},
+        "male": {"body":"ch03_036_0002","legs":"ch03_036_0004"}
+    },
+    "Rathian 0/1": {
+        "female": {"body":"ch03_035_0012","legs":"ch03_035_0014"},
+        "male": {"body":"ch03_035_0002","legs":"ch03_035_0004"}
+    },
+    "Rey Dau 0/1": {
+        "female": {"body":"ch03_021_0012","legs":"ch03_021_0014"},
+        "male": {"body":"ch03_021_0002","legs":"ch03_021_0004"}
+    },
+    "Rey Dau 2": {
+        "female": {"body":"ch03_021_3012","legs":"ch03_021_3014"},
+        "male": {"body":"ch03_021_3002","legs":"ch03_021_3004"}
+    },
+    "Rompopolo 0/1": {
+        "female": {"body":"ch03_018_0012","legs":"ch03_018_0014"},
+        "male": {"body":"ch03_018_0002","legs":"ch03_018_0004"}
+    },
+    "Sakuratide 0/1": {
+        "female": {"body":"ch03_069_0012","legs":"ch03_069_0014"},
+        "male": {"body":"ch03_069_0002","legs":"ch03_069_0004"}
+    },
+    "Seregios 0/1": {
+        "female": {"body":"ch03_038_0012","legs":"ch03_038_0014"},
+        "male": {"body":"ch03_038_0002","legs":"ch03_038_0004"}
+    },
+    "Sild 0": {
+        "male": {"body":"ch03_048_0002"}
+    },
+    "Uth Duna 0/1": {
+        "female": {"body":"ch03_017_0012","legs":"ch03_017_0014"},
+        "male": {"body":"ch03_017_0002","legs":"ch03_017_0004"}
+    },
+    "Uth Duna 2": {
+        "female": {"body":"ch03_017_3012","legs":"ch03_017_3014"},
+        "male": {"body":"ch03_017_3002","legs":"ch03_017_3004"}
+    },
+    "Vespoid 0/1": {
+        "female": {"body":"ch03_028_0012","legs":"ch03_028_0014"},
+        "male": {"body":"ch03_028_0002","legs":"ch03_028_0004"}
+    },
+    "Xu Wu 0/1": {
+        "female": {"body":"ch03_031_0012","legs":"ch03_031_0014"},
+        "male": {"body":"ch03_031_0002","legs":"ch03_031_0004"}
+    }
+}
