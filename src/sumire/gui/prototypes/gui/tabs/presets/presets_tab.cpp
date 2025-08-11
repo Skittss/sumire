@@ -467,10 +467,15 @@ namespace kbf {
 	}
 
     void PresetsTab::openWarnDeleteBundlePanel(const std::string& bundleName) {
+        auto messages = std::vector<std::string>{
+            std::format("Are you sure you want to delete the bundle \"{}\"?", bundleName),
+            "All presets in the bundle will be permanently removed."
+        };
+
         warnDeleteBundlePanel.openNew(
-            std::format("Warning: Delete Bundle {}", bundleName),
+            std::format("Warning: Delete Bundle \"{}\"", bundleName),
             "WarnDeleteBundlePanel",
-            std::format("Are you sure you want to delete the bundle \"{}\"? All presets in the bundle will be permanently removed.", bundleName),
+            messages,
             "Delete Bundle",
             "Cancel",
             false

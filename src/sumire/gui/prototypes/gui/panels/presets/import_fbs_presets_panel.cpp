@@ -296,7 +296,7 @@ namespace kbf {
             processedPreset.bundle = bundleName;
             presetsToCreate.push_back(processedPreset);
         }
-        dataManager.resolveNameConflicts(presetsToCreate);
+        dataManager.resolvePresetNameConflicts(presetsToCreate);
 
         return presetsToCreate;
     }

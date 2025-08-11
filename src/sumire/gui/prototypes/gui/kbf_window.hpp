@@ -53,7 +53,7 @@ namespace kbf {
 		PresetsTab      presetsTab{ dataManager };
 		EditorTab       editorTab{ dataManager };
 		ShareTab        shareTab{ dataManager };
-		SettingsTab     settingsTab;
+		SettingsTab     settingsTab{ dataManager };
 		DebugTab        debugTab;
 		AboutTab        aboutTab;
 
