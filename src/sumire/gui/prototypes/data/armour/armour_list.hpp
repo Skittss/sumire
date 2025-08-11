@@ -10,6 +10,8 @@
 
 namespace kbf {
 
+    typedef std::map<ArmourSet, ArmourID> ArmourMapping;
+
     class ArmourList {
     public:
         static std::vector<ArmourSet> getFilteredSets(const std::string& filter);
@@ -18,8 +20,8 @@ namespace kbf {
 
         static ArmourSet DefaultArmourSet() { return ArmourSet{ ANY_ARMOUR_ID, false }; }
 
-    private:
-        const static std::map<ArmourSet, ArmourID> mapping;
+        const static ArmourMapping FALLBACK_MAPPING;
+        static ArmourMapping ACTIVE_MAPPING;
 
     };
 

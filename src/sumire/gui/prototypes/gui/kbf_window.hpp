@@ -55,7 +55,7 @@ namespace kbf {
 		ShareTab        shareTab{ dataManager };
 		SettingsTab     settingsTab{ dataManager };
 		DebugTab        debugTab;
-		AboutTab        aboutTab;
+		AboutTab        aboutTab{ dataManager };
 
 		KBFTab tab = KBFTab::About;
 

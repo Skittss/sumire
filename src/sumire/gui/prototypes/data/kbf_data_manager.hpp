@@ -8,6 +8,7 @@
 #include <sumire/gui/prototypes/data/formats/preset_group_defaults.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_defaults.hpp>
 #include <sumire/gui/prototypes/data/formats/kbf_file_data.hpp>
+#include <sumire/gui/prototypes/data/armour/armour_list.hpp>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
@@ -133,6 +134,8 @@ namespace kbf {
 		const std::filesystem::path npcConfigPath      = defaultConfigsPath / "npc.json";
 		const std::filesystem::path playerConfigPath   = defaultConfigsPath / "players.json";
 
+		const std::filesystem::path armourListPath = dataBasePath / "armour_list.json";
+
 	private:
 		void verifyDirectoriesExist() const;
 		void createDirectoryIfNotExists(const std::filesystem::path& path) const;
@@ -198,6 +201,11 @@ namespace kbf {
 		void validatePresetGroups();
 		void validateDefaultConfigs_Presets();
 		bool validatePresetExists(std::string& uuid) const;
+
+		bool loadArmourList(const std::filesystem::path& path, ArmourMapping* out);
+		bool loadArmourListData(const rapidjson::Value& doc, ArmourMapping* out) const;
+		bool writeArmourList(const std::filesystem::path& path, const ArmourMapping& mapping) const;
+		void writeArmourListJsonContent(const ArmourMapping& mapping, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
 
 		BoneCacheManager boneCacheManager;
 

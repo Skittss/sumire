@@ -11,7 +11,7 @@ namespace kbf {
         std::string filterLower = toLower(filter);
 
         std::vector<ArmourSet> filteredSets;
-        for (const auto& [set, id] : mapping) {
+        for (const auto& [set, id] : ACTIVE_MAPPING) {
             std::string setLower = toLower(set.name);
 
             if (noFilter || setLower.find(filterLower) != std::string::npos) {
@@ -30,13 +30,13 @@ namespace kbf {
 	}
 
     bool ArmourList::isValidArmourSet(const std::string& name, bool female) {
-        return mapping.find(ArmourSet{ name, female }) != mapping.end();
+        return ACTIVE_MAPPING.find(ArmourSet{ name, female }) != ACTIVE_MAPPING.end();
     }
 
     ArmourSet ArmourList::getArmourSetFromId(const std::string& id) {
         if (id.empty()) return DefaultArmourSet();
 
-        for (const auto& [set, armourId] : mapping) {
+        for (const auto& [set, armourId] : ACTIVE_MAPPING) {
             if (armourId.body == id || armourId.legs == id) {
                 return set;
             }
@@ -44,7 +44,7 @@ namespace kbf {
         return DefaultArmourSet();
 	}
 
-	const std::map<ArmourSet, ArmourID> ArmourList::mapping = {
+	const ArmourMapping ArmourList::FALLBACK_MAPPING = {
         // Name                          // Female?  // Body ID         // Legs ID
         { ArmourList::DefaultArmourSet()           , { ANY_ARMOUR_ID  , ANY_ARMOUR_ID   } },
         { { "Innerwear 0"                , false } , { "ch03_002_0002", "ch03_002_0004" } },
@@ -183,4 +183,6 @@ namespace kbf {
         { { "Feudal Soldier"             , false } , { "ch03_061_0002", "ch03_061_0004" } },
         // Note: ch02 is MALE body, ch03 is FEMALE body.
     };
+
+    ArmourMapping ArmourList::ACTIVE_MAPPING = ArmourList::FALLBACK_MAPPING;
 }

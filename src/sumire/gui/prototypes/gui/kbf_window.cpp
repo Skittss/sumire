@@ -72,7 +72,8 @@ namespace kbf {
 		shareTab.setSymbolFont(wildsSymbolsFont);
 		shareTab.setArmourFont(wildsArmourFont);
         debugTab.setMonoFont(monoFont);
-        aboutTab.setAsciiFont(monoFontTiny);
+        aboutTab.setMonoFontTiny(monoFontTiny);
+        aboutTab.setMonoFont(monoFont);
 
         dataManager.setRegularFontOverride(mainFont);
     }

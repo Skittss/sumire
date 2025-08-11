@@ -14,11 +14,13 @@
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 #include <sumire/gui/prototypes/util/io/zip_file.hpp>
+#include <sumire/gui/prototypes/data/ids/armour_list_ids.hpp>
 
 #include <filesystem>
 #include <fstream>
 #include <format>
 #include <unordered_set>
+#include <set>
 #include <unordered_map>
 
 namespace kbf {
@@ -39,6 +41,10 @@ namespace kbf {
 
 		validateObjectsUsingPresets();
 		validateObjectsUsingPresetGroups();
+
+		// UNCOMMENT IF YOU WANT TO WRITE THE DEFAULT ARMOUR LIST.
+		//writeArmourList(armourListPath, ArmourList::FALLBACK_MAPPING);
+		loadArmourList(armourListPath, &ArmourList::ACTIVE_MAPPING);
 	}
 
 	void KBFDataManager::clearData() {
@@ -1585,7 +1591,7 @@ namespace kbf {
 			compactWriter.EndObject();
 
 			return buf;
-			};
+		};
 
 		// Body Presets (compact)
 		writer.Key(PRESET_GROUP_BODY_PRESETS_ID);
@@ -1956,6 +1962,171 @@ namespace kbf {
 			return false;
 		}
 		return true;
+	}
+
+	bool KBFDataManager::loadArmourList(const std::filesystem::path& path, ArmourMapping* out) {
+		assert(out != nullptr);
+
+		DEBUG_STACK.push(std::format("Loading armour list from \"{}\"", path.string()), DebugStack::Color::INFO);
+
+		rapidjson::Document armourListDoc = loadConfigJson(path.string(), nullptr);
+		if (!armourListDoc.IsObject() || armourListDoc.HasParseError()) {
+			DEBUG_STACK.push(std::format("Failed to parse Armour List at \"{}\". Using internal fallback...", path.string()), DebugStack::Color::ERROR);
+			return false;
+		}
+
+		bool parsed = loadArmourListData(armourListDoc, out);
+
+		if (!parsed) {
+			DEBUG_STACK.push(std::format("Failed to parse Armour List at \"{}\". Using internal fallback...", path.string()), DebugStack::Color::ERROR);
+			*out = ArmourList::FALLBACK_MAPPING;
+		}
+		else {
+			DEBUG_STACK.push(std::format("Successfully loaded Armour List from \"{}\"", path.string()), DebugStack::Color::SUCCESS);
+		}
+
+		return parsed;
+	}
+
+	bool KBFDataManager::loadArmourListData(const rapidjson::Value& doc, ArmourMapping* out) const {
+		assert(out != nullptr);
+
+		bool parsed = true;
+
+		for (const auto& armourSet : doc.GetObject()) {
+			std::string name = armourSet.name.GetString();
+			if (armourSet.value.IsObject()) {
+
+				bool hasEntry = false;
+				if (armourSet.value.HasMember(ARMOUR_LIST_FEMALE_ID) && armourSet.value[ARMOUR_LIST_FEMALE_ID].IsObject()) {
+					const auto& femaleArmour = armourSet.value[ARMOUR_LIST_FEMALE_ID].GetObject();
+					ArmourSet set{ name, true };
+					ArmourID id;
+
+					bool hasBodyOrLegs = false;
+					if (femaleArmour.HasMember(ARMOUR_LIST_BODY_ID) && femaleArmour[ARMOUR_LIST_BODY_ID].IsString()) {
+						id.body = femaleArmour[ARMOUR_LIST_BODY_ID].GetString();
+						hasBodyOrLegs = true;
+					}
+					if (femaleArmour.HasMember(ARMOUR_LIST_LEGS_ID) && femaleArmour[ARMOUR_LIST_LEGS_ID].IsString()) {
+						id.legs = femaleArmour[ARMOUR_LIST_LEGS_ID].GetString();
+						hasBodyOrLegs = true;
+					}
+
+					if (!hasBodyOrLegs) {
+						DEBUG_STACK.push(std::format("Failed to parse armour list entry: \"{}\" (Female). No body or legs entries found.", name), DebugStack::Color::ERROR);
+					}
+
+					out->emplace(set, id);
+					
+					hasEntry |= hasBodyOrLegs;
+				}
+
+				if (armourSet.value.HasMember(ARMOUR_LIST_MALE_ID) && armourSet.value[ARMOUR_LIST_MALE_ID].IsObject()) {
+					const auto& maleArmour = armourSet.value[ARMOUR_LIST_MALE_ID].GetObject();
+					ArmourSet set{ name, false };
+					ArmourID id;
+
+					bool hasBodyOrLegs = false;
+					if (maleArmour.HasMember(ARMOUR_LIST_BODY_ID) && maleArmour[ARMOUR_LIST_BODY_ID].IsString()) {
+						id.body = maleArmour[ARMOUR_LIST_BODY_ID].GetString();
+						hasBodyOrLegs = true;
+					}
+					if (maleArmour.HasMember(ARMOUR_LIST_LEGS_ID) && maleArmour[ARMOUR_LIST_LEGS_ID].IsString()) {
+						id.legs = maleArmour[ARMOUR_LIST_LEGS_ID].GetString();
+						hasBodyOrLegs = true;
+					}
+
+					if (!hasBodyOrLegs) {
+						DEBUG_STACK.push(std::format("Failed to parse armour list entry: \"{}\" (Male). No body or legs entries found.", name), DebugStack::Color::ERROR);
+					}
+
+					out->emplace(set, id);
+					
+					hasEntry |= hasBodyOrLegs;
+				}
+
+				if (!hasEntry) {
+					parsed = false;
+					DEBUG_STACK.push(std::format("Failed to parse armour list entry: \"{}\". No body or legs entries found.", name), DebugStack::Color::ERROR);
+				}
+			}
+			else {
+				DEBUG_STACK.push(std::format("Failed to parse armour list entry: {}. Expected an object, but got a different type.", name), DebugStack::Color::ERROR);
+			}
+		}
+
+		return parsed;
+	}
+
+	bool KBFDataManager::writeArmourList(const std::filesystem::path& path, const ArmourMapping& mapping) const {
+		DEBUG_STACK.push(std::format("Writing armour list to {}", path.string()), DebugStack::Color::INFO);
+
+		rapidjson::StringBuffer s;
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+
+		writeArmourListJsonContent(mapping, writer);
+
+		bool success = writeJsonFile(path.string(), s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write armour list to {}", path.string()), DebugStack::Color::ERROR);
+		}
+
+		return success;
+	}
+
+	void KBFDataManager::writeArmourListJsonContent(
+		const ArmourMapping& mapping, 
+		rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer
+	) const {
+		std::set<std::string> armourNames;
+		for (const auto& [set, _] : mapping) {
+			armourNames.insert(set.name);
+		}
+
+		auto writeCompactArmourSet = [](const ArmourSet& armourSet, const ArmourMapping& mapping) {
+			rapidjson::StringBuffer buf;
+			rapidjson::Writer<rapidjson::StringBuffer> compactWriter(buf); // one-line writer
+
+			compactWriter.StartObject();
+			if (!mapping.at(armourSet).body.empty()) {
+				compactWriter.Key(ARMOUR_LIST_BODY_ID);
+				compactWriter.String(mapping.at(armourSet).body.c_str());
+			}
+			if (!mapping.at(armourSet).legs.empty()) {
+				compactWriter.Key(ARMOUR_LIST_LEGS_ID);
+				compactWriter.String(mapping.at(armourSet).legs.c_str());
+			}
+			compactWriter.EndObject();
+
+			return buf;
+		};
+
+		writer.StartObject();
+		for (const std::string& name : armourNames) {
+			writer.Key(name.c_str());
+			writer.StartObject();
+
+			ArmourSet femaleArmour{ name, true };
+			if (mapping.find(femaleArmour) != mapping.end()) {
+				writer.Key(ARMOUR_LIST_FEMALE_ID);
+
+				rapidjson::StringBuffer compactBuf = writeCompactArmourSet(femaleArmour, mapping);
+				writer.RawValue(compactBuf.GetString(), compactBuf.GetSize(), rapidjson::kObjectType);
+			}
+
+			ArmourSet maleArmour{ name, false };
+			if (mapping.find(maleArmour) != mapping.end()) {
+				writer.Key(ARMOUR_LIST_MALE_ID);
+
+				rapidjson::StringBuffer compactBuf = writeCompactArmourSet(maleArmour, mapping);
+				writer.RawValue(compactBuf.GetString(), compactBuf.GetSize(), rapidjson::kObjectType);
+			}
+
+			writer.EndObject();
+		}
+		writer.EndObject();
 	}
 
 }
