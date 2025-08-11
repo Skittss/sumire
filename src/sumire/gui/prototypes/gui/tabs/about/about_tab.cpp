@@ -112,8 +112,15 @@ namespace kbf {
     void AboutTab::drawTutorialsTab() {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 15));
         ImGui::Spacing();
-        drawTabBarSeparator("Migrating from FBS", "FBSmigrate");
 
+        if (ImGui::CollapsingHeader("Migrating From FBS"))    drawTutorials_MigratingFromFbs();
+        if (ImGui::CollapsingHeader("Sharing Presets"))       drawTutorials_SharingPresets();
+        if (ImGui::CollapsingHeader("Manually Updating KBF")) drawTutorials_ManuallyUpdatingKBF();
+
+        ImGui::PopStyleVar();
+    }
+
+    void AboutTab::drawTutorials_MigratingFromFbs() {
         ImGui::TextWrapped(
             "The quickest way to migrate from FBS to KBF is as follows:"
         );
@@ -125,11 +132,11 @@ namespace kbf {
         ImGui::Unindent();
 
         ImGui::TextWrapped(
-			"Step 3 is particularly important if you received a notification at set 2 saying that there were some conflicts with the presets you imported."
+            "Step 3 is particularly important if you received a notification at set 2 saying that there were some conflicts with the presets you imported."
         );
 
         ImGui::TextWrapped(
-			"If you have many (unused) presets in your FBS folder, you can restrict the import to only active presets by checking the \"Import Autoswitch Presets Only\" checkbox in the import panel during Step 1."
+            "If you have many (unused) presets in your FBS folder, you can restrict the import to only active presets by checking the \"Import Autoswitch Presets Only\" checkbox in the import panel during Step 1."
         );
 
         ImGui::Spacing();
@@ -160,34 +167,36 @@ namespace kbf {
             "Additionally, there are some preset settings in KBF which do not exist in FBS, which you may also want to adjust for any imported FBS presets:"
         );
 
-		ImGui::Indent();
-		WRAP_BULLET("1.", "Preset female / male preference - This is for sorting your presets.");
-		WRAP_BULLET("2.", "Preset bundle - Imported presets are sorted into a single (specified) bundle, sorting these further can allow you to make preset groups easier if you have lots of presets for different models, etc.");
-		ImGui::Unindent();
+        ImGui::Indent();
+        WRAP_BULLET("1.", "Preset female / male preference - This is for sorting your presets.");
+        WRAP_BULLET("2.", "Preset bundle - Imported presets are sorted into a single (specified) bundle, sorting these further can allow you to make preset groups easier if you have lots of presets for different models, etc.");
+        ImGui::Unindent();
 
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
 
-        ImGui::Spacing();
         ImGui::TextWrapped(
             "Alma & Gemma presets must be migrated over manually, but it is recommended to do so anyway as KBF allows you to apply individual presets for each of their outfits."
         );
+    }
 
-        drawTabBarSeparator("Sharing Presets", "SharingPresets");
+    void AboutTab::drawTutorials_SharingPresets() {
 
-        drawTabBarSeparator("Manually Updating KBF", "ManualUpdate");
+    }
 
-        ImGui::PopStyleVar();
+    void AboutTab::drawTutorials_ManuallyUpdatingKBF() {
+
     }
 
     void AboutTab::drawChangelogTab() {
         ImGui::Spacing();
-        drawTabBarSeparator("v0.1", "v0.1");
-        ImGui::Spacing();
-        //ImGui::Indent();
-        WRAP_BULLET("-", "Initial Release! :)");
-        //ImGui::Unindent();
+        if (ImGui::CollapsingHeader("v0.1", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Spacing();
+            //ImGui::Indent();
+            WRAP_BULLET("-", "Initial Release! :)");
+            //ImGui::Unindent();
+        }
     }
 
 }

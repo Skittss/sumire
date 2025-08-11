@@ -18,7 +18,12 @@ namespace kbf {
 
 	private:
 		void drawInfoTab();
+
 		void drawTutorialsTab();
+		void drawTutorials_MigratingFromFbs();
+		void drawTutorials_SharingPresets();
+		void drawTutorials_ManuallyUpdatingKBF();
+
 		void drawChangelogTab();
 
 		ImFont* monoFontTiny;
