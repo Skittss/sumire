@@ -121,11 +121,14 @@ namespace kbf {
         bool nameEmpty = exportName.empty();
         bool pathEmpty = exportPath.empty();
         bool pathNotExists = pathEmpty || !std::filesystem::exists(exportPath); // TODO Don't check this each frame
+		bool noContent = selectedPresetGroups.size() == 0 && selectedPresets.size() == 0 && selectedPlayerOverrides.size() == 0;
 
-        const bool disableCreateButton = nameEmpty || pathNotExists;
+        const bool disableCreateButton = nameEmpty || pathEmpty || pathNotExists || noContent;
         if (disableCreateButton) ImGui::BeginDisabled();
         if (ImGui::Button(kCreateLabel)) {
             KBFFileData data = getKbfFileData();
+            addModArchiveTags(data);
+
 			std::string filename = archive ? exportName + ".zip" : exportName + ".kbf";
 			std::filesystem::path filePath = exportPath / filename;
 			INVOKE_REQUIRED_CALLBACK(createCallback, filePath.string(), data);
@@ -134,6 +137,7 @@ namespace kbf {
         if (nameEmpty) ImGui::SetItemTooltip("Please provide a name");
 		else if (pathEmpty) ImGui::SetItemTooltip("Please provide an export path");
         else if (pathNotExists) ImGui::SetItemTooltip("Export path does not exist");
+        else if (noContent) ImGui::SetItemTooltip("Please select some data to include in the export");
 
         float contentHeight = ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y;
         ImVec2 newSize = ImVec2(width, contentHeight);
@@ -185,7 +189,7 @@ namespace kbf {
 
         if (presets.size() == 0) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            constexpr char const* noPresetStr = "No Presets Found.";
+            constexpr char const* noPresetStr = "\nNo Presets Found.";
             ImGui::Spacing();
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
@@ -389,7 +393,7 @@ namespace kbf {
 
         if (presetGroups.size() == 0) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            constexpr char const* noPresetStr = "No Preset Groups Found.";
+            constexpr char const* noPresetStr = "\nNo Preset Groups Found.";
             ImGui::Spacing();
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
@@ -558,7 +562,7 @@ namespace kbf {
 
         if (bundles.size() == 0) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            constexpr char const* noPresetStr = "No Bundles Found.";
+            constexpr char const* noPresetStr = "\nNo Bundles Found.";
             ImGui::Spacing();
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
@@ -710,8 +714,7 @@ namespace kbf {
 
         if (playerOverrides.size() == 0) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-            constexpr char const* noPresetStr = "No Overrides Found.";
-            ImGui::Spacing();
+            constexpr char const* noPresetStr = "\nNo Overrides Found.";
             preAlignCellContentHorizontal(noPresetStr);
             ImGui::Text(noPresetStr);
             ImGui::PopStyleColor();
@@ -882,6 +885,15 @@ namespace kbf {
             if (override) kbfData.playerOverrides.push_back(*override);
         }
 		return kbfData;
+    }
+
+    void ExportPanel::addModArchiveTags(KBFFileData& data) const {
+        if (!archive) return;
+
+        data.metadata.MOD_ARCHIVE = exportName;
+        for (PresetGroup& presetGroup : data.presetGroups)          presetGroup.metadata.MOD_ARCHIVE = exportName;
+        for (Preset& preset : data.presets)                         preset.metadata.MOD_ARCHIVE = exportName;
+		for (PlayerOverride& playerOverride : data.playerOverrides) playerOverride.metadata.MOD_ARCHIVE = exportName;
     }
 
     std::string ExportPanel::getExportPathFileDialog() {

@@ -74,6 +74,7 @@ namespace kbf {
 		void deselectPlayerOverride(const PlayerOverride* override);
 
 		KBFFileData getKbfFileData() const;
+		void addModArchiveTags(KBFFileData& data) const;
 
 		// Path prompt 
 		std::string getExportPathFileDialog();
