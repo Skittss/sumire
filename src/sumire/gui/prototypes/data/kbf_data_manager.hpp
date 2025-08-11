@@ -26,6 +26,8 @@ namespace kbf {
 			: dataBasePath{ std::filesystem::absolute(path) }, fbsPath{ std::filesystem::absolute(fbsPath) } {}
 
 		void loadData();
+		void clearData();
+		void reloadData();
 
 		// TODO: If can ever be bothered, most of this can be abstracted to 3 
 		//        JSON handler classes that derive from some base.
@@ -80,9 +82,9 @@ namespace kbf {
 		std::vector<std::string> getPresetGroupIds(const std::string& filter = "", bool sort = false) const;
 		std::vector<std::string> getPlayerOverrideIds(const std::string& filter = "", bool sort = false) const;
 
-		void addPreset(const Preset& preset, bool write = true);
-		void addPresetGroup(const PresetGroup& presetGroup, bool write = true);
-		void addPlayerOverride(const PlayerOverride& playerOverride, bool write = true);
+		bool addPreset(const Preset& preset, bool write = true);
+		bool addPresetGroup(const PresetGroup& presetGroup, bool write = true);
+		bool addPlayerOverride(const PlayerOverride& playerOverride, bool write = true);
 
 		void deletePreset(const std::string& uuid, bool validate = true);
 		void deletePresetBundle(const std::string& bundleName);
@@ -99,11 +101,21 @@ namespace kbf {
 		bool fbsDirectoryFound() const { return std::filesystem::exists(fbsPath); }
 		bool getFBSpresets(std::vector<FBSPreset>* out, bool female = true, std::string bundle = "FBS Presets", float* progressOut = nullptr) const;
 
-		void resolveNameConflicts(std::vector<Preset>& presets) const;
+		void resolvePresetNameConflicts(std::vector<Preset>& presets) const;
+		void resolvePresetGroupNameConflicts(std::vector<PresetGroup>& presets) const;
 
-		bool importKBF(std::string filepath);
+		bool importKBF(std::string filepath, size_t* conflcitsCount = nullptr);
+		bool readKBF(std::string filepath, KBFFileData* out) const;
 		bool writeKBF(std::string filepath, KBFFileData data) const;
 		bool writeModArchive(std::string filepath, KBFFileData data) const;
+		void deleteLocalModArchive(std::string name);
+
+		struct ModArchiveCounts {
+			size_t presetGroups = 0;
+			size_t presets = 0;
+			size_t playerOverrides = 0;
+		};
+		std::unordered_map<std::string, ModArchiveCounts> getModArchiveInfo() const;
 
 		// const Config& config() { return m_config; }
 
@@ -153,7 +165,8 @@ namespace kbf {
 		// .... Too bad!
 		std::unordered_map<std::string, Preset> presets; // index by uuid
 		bool loadPreset(const std::filesystem::path& path, Preset* out);
-		bool loadBoneModifiers(const rapidjson::Value& object, std::map<std::string, BoneModifier>* out);
+		bool loadPresetData(const rapidjson::Value& doc, Preset* out) const;
+		bool loadBoneModifiers(const rapidjson::Value& object, std::map<std::string, BoneModifier>* out) const;
 		bool writePreset(const std::filesystem::path& path, const Preset& preset) const;
 		void writePresetJsonContent(const Preset& preset, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
 		bool loadPresets();
@@ -162,13 +175,15 @@ namespace kbf {
 
 		std::unordered_map<std::string, PresetGroup> presetGroups;
 		bool loadPresetGroup(const std::filesystem::path& path, PresetGroup* out);
-		bool loadAssignedPresets(const rapidjson::Value& object, std::unordered_map<ArmourSet, std::string>* out);
+		bool loadPresetGroupData(const rapidjson::Value& doc, PresetGroup* out) const;
+		bool loadAssignedPresets(const rapidjson::Value& object, std::unordered_map<ArmourSet, std::string>* out) const;
 		bool writePresetGroup(const std::filesystem::path& path, const PresetGroup& presetGroup) const;
 		void writePresetGroupJsonContent(const PresetGroup& presetGroup, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
 		bool loadPresetGroups();
 
 		std::unordered_map<PlayerData, PlayerOverride> playerOverrides;
 		bool loadPlayerOverride(const std::filesystem::path& path, PlayerOverride* out);
+		bool loadPlayerOverrideData(const rapidjson::Value& doc, PlayerOverride* out) const;
 		bool writePlayerOverride(const std::filesystem::path& path, const PlayerOverride& playerOverride) const;
 		void writePlayerOverrideJsonContent(const PlayerOverride& playerOverride, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
 		bool loadPlayerOverrides();

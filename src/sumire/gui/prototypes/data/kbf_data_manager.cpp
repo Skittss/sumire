@@ -13,6 +13,7 @@
 #include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
+#include <sumire/gui/prototypes/util/io/zip_file.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -22,6 +23,8 @@
 
 namespace kbf {
 	void KBFDataManager::loadData() {
+		DEBUG_STACK.push("Loading Data...", DebugStack::Color::DEBUG);
+
 		verifyDirectoriesExist();
 
 		loadAlmaConfig(&presetDefaults.alma);
@@ -36,6 +39,22 @@ namespace kbf {
 
 		validateObjectsUsingPresets();
 		validateObjectsUsingPresetGroups();
+	}
+
+	void KBFDataManager::clearData() {
+		DEBUG_STACK.push("Clearing Data...", DebugStack::Color::DEBUG);
+
+		presetDefaults = {};
+		presetGroupDefaults = {};
+
+		presets.clear();
+		presetGroups.clear();
+		playerOverrides.clear();
+	}
+
+	void KBFDataManager::reloadData() {
+		clearData();
+		loadData();
 	}
 
 	bool KBFDataManager::presetExists(const std::string& name) const {
@@ -263,10 +282,10 @@ namespace kbf {
 		return presetGroupIds;
 	}
 
-	void KBFDataManager::addPreset(const Preset& preset, bool write) {
+	bool KBFDataManager::addPreset(const Preset& preset, bool write) {
 		if (presets.find(preset.uuid) != presets.end()) {
-			DEBUG_STACK.push(std::format("Tried to add new preset with UUID {}, but a preset with this UUID already exists. Skipping...", preset.uuid), DebugStack::Color::WARNING);
-			return;
+			DEBUG_STACK.push(std::format("Tried to add new preset {} with UUID {}, but a preset with this UUID already exists. Skipping...", preset.name, preset.uuid), DebugStack::Color::WARNING);
+			return false;
 		}
 		presets.emplace(preset.uuid, preset);
 
@@ -279,15 +298,17 @@ namespace kbf {
 		else {
 			DEBUG_STACK.push(std::format("Added new preset (NON-PERSISTENT): {} ({})", preset.name, preset.uuid), DebugStack::Color::SUCCESS);
 		}
+
+		return true;
 	}
 
 
-	void KBFDataManager::addPresetGroup(const PresetGroup& presetGroup, bool write) {
+	bool KBFDataManager::addPresetGroup(const PresetGroup& presetGroup, bool write) {
 		if (presetGroups.find(presetGroup.uuid) != presetGroups.end()) {
-			DEBUG_STACK.push(std::format("Tried to add new preset group with UUID {}, but a preset with this UUID already exists. Skipping...", 
-				presetGroup.uuid
+			DEBUG_STACK.push(std::format("Tried to add new preset group {} with UUID {}, but a preset with this UUID already exists. Skipping...", 
+				presetGroup.name, presetGroup.uuid
 			), DebugStack::Color::WARNING);
-			return;
+			return false;
 		}
 		presetGroups.emplace(presetGroup.uuid, presetGroup);
 
@@ -300,14 +321,16 @@ namespace kbf {
 		else {
 			DEBUG_STACK.push(std::format("Added new preset group (NON-PERSISTENT): {} ({})", presetGroup.name, presetGroup.uuid), DebugStack::Color::SUCCESS);
 		}
+
+		return true;
 	}
 
-	void KBFDataManager::addPlayerOverride(const PlayerOverride& playerOverride, bool write) {
+	bool KBFDataManager::addPlayerOverride(const PlayerOverride& playerOverride, bool write) {
 		const PlayerData& player = playerOverride.player;
 
 		if (playerOverrides.find(playerOverride.player) != playerOverrides.end()) {
 			DEBUG_STACK.push(std::format("Tried to add new player override for player {}, but an override for this player already exists. Skipping...", player.string()), DebugStack::Color::WARNING);
-			return;
+			return false;
 		}
 		playerOverrides.emplace(player, playerOverride);
 
@@ -320,6 +343,8 @@ namespace kbf {
 		else {
 			DEBUG_STACK.push(std::format("Added new player override (NON-PERSISTENT): {}", player.string()), DebugStack::Color::SUCCESS);
 		}
+
+		return true;
 	}
 
 	void KBFDataManager::deletePreset(const std::string& uuid, bool validate) {
@@ -532,10 +557,25 @@ namespace kbf {
 			}
 		}
 
+		// Do a pass to make any body/leg presets with the name name uniquely identifyable
+		std::unordered_map<std::string, Preset*> existingNames;
+		for (FBSPreset& fbspreset : *out) {
+			if (existingNames.find(fbspreset.preset.name) != existingNames.end()) {
+				// Rename them
+				Preset* existingPreset = existingNames.at(fbspreset.preset.name);
+				Preset* duplicatePreset = &fbspreset.preset;
+				duplicatePreset->name = std::format("{} ({})", duplicatePreset->name, duplicatePreset->hasBody() ? "Body" : "Legs");
+				existingPreset->name  = std::format("{} ({})", existingPreset->name,  existingPreset->hasBody() ? "Body" : "Legs");
+			}
+			else {
+				existingNames.emplace(fbspreset.preset.name, &fbspreset.preset);
+			}
+		}
+
 		return true;
 	}
 
-	void KBFDataManager::resolveNameConflicts(std::vector<Preset>& presets) const {
+	void KBFDataManager::resolvePresetNameConflicts(std::vector<Preset>& presets) const {
 		if (presets.empty()) return;
 
 		// Resolve name conflicts by appending a number to the name if it already exists
@@ -556,8 +596,119 @@ namespace kbf {
 		}
 	}
 
-	bool KBFDataManager::importKBF(std::string filepath) {
-		return false;
+	void KBFDataManager::resolvePresetGroupNameConflicts(std::vector<PresetGroup>& presetGroups) const {
+		if (presetGroups.empty()) return;
+
+		// Resolve name conflicts by appending a number to the name if it already exists
+		std::unordered_map<std::string, int> nameCount;
+		for (auto& presetGroup : presetGroups) {
+			std::string name = presetGroup.name;
+
+			std::string newName = name;
+			size_t count = 1;
+			while (presetGroupExists(newName) && count < 1000) {
+				// Try appending a number to the name until its unique
+				newName = std::format("{} ({})", name, count);
+				count++;
+			}
+
+			// Update the preset group name
+			presetGroup.name = newName;
+		}
+	}
+
+	bool KBFDataManager::importKBF(std::string filepath, size_t* conflictsCount) {
+		DEBUG_STACK.push(std::format("Importing KBF file: \"{}\"", filepath), DebugStack::Color::INFO);
+
+		KBFFileData data;
+		bool success = readKBF(filepath, &data);
+
+		if (!success) return false;
+
+		resolvePresetNameConflicts(data.presets);
+		resolvePresetGroupNameConflicts(data.presetGroups);
+
+		size_t nConflicts = 0;
+
+		for (Preset& preset : data.presets)                         nConflicts += !addPreset(preset, true);
+		for (PresetGroup& presetGroup : data.presetGroups)          nConflicts += !addPresetGroup(presetGroup, true);
+		for (PlayerOverride& playerOverride : data.playerOverrides) nConflicts += !addPlayerOverride(playerOverride, true);
+
+		if (conflictsCount != nullptr) *conflictsCount = nConflicts;
+		return success;
+	}
+
+	bool KBFDataManager::readKBF(std::string filepath, KBFFileData* out) const {
+		assert(out != nullptr);
+
+		rapidjson::Document doc = loadConfigJson(filepath, nullptr);
+		if (!doc.IsObject() || doc.HasParseError()) return false;
+
+		bool parsed = true;
+		parsed &= parseString(doc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parsed &= parseString(doc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+
+		// Load presets
+		parsed &= parseObject(doc, KBF_FILE_PRESETS_ID, KBF_FILE_PRESETS_ID);
+		if (parsed) {
+			const rapidjson::Value& presets = doc[KBF_FILE_PRESETS_ID];
+			for (const auto& preset : presets.GetObject()) {
+				Preset presetOut;
+				presetOut.name = preset.name.GetString();
+
+				if (preset.value.IsObject()) {
+					parsed &= loadPresetData(preset.value, &presetOut);
+
+					out->presets.push_back(std::move(presetOut));
+				}
+				else {
+					DEBUG_STACK.push(std::format("Failed to parse preset {} in KBF \"{}\". Expected an object, but got a different type.", presetOut.name, filepath), DebugStack::Color::ERROR);
+				}
+			}
+		}
+
+		// Load Preset Groups
+		parsed &= parseObject(doc, KBF_FILE_PRESETS_GROUPS_ID, KBF_FILE_PRESETS_GROUPS_ID);
+		if (parsed) {
+			const rapidjson::Value& presetGroups = doc[KBF_FILE_PRESETS_GROUPS_ID];
+			for (const auto& presetGroup : presetGroups.GetObject()) {
+				PresetGroup presetGroupOut;
+				presetGroupOut.name = presetGroup.name.GetString();
+
+				if (presetGroup.value.IsObject()) {
+					parsed &= loadPresetGroupData(presetGroup.value, &presetGroupOut);
+
+					out->presetGroups.push_back(std::move(presetGroupOut));
+				}
+				else {
+					DEBUG_STACK.push(std::format("Failed to parse preset group {} in .KBF \"{}\". Expected an object, but got a different type.", presetGroupOut.name, filepath), DebugStack::Color::ERROR);
+				}
+			}
+		}
+
+		// Load Player Overrides
+		parsed &= parseObject(doc, KBF_FILE_PLAYER_OVERRIDES_ID, KBF_FILE_PLAYER_OVERRIDES_ID);
+		if (parsed) {
+			const rapidjson::Value& playerOverrides = doc[KBF_FILE_PLAYER_OVERRIDES_ID];
+			for (const auto& override : playerOverrides.GetObject()) {
+				PlayerOverride overrideOut;
+
+				if (override.value.IsObject()) {
+					parsed &= loadPlayerOverrideData(override.value, &overrideOut);
+
+					out->playerOverrides.push_back(std::move(overrideOut));
+				}
+				else {
+					DEBUG_STACK.push(std::format("Failed to parse player override {} in .KBF \"{}\". Expected an object, but got a different type.", override.name.GetString(), filepath), DebugStack::Color::ERROR);
+				}
+			}
+		}
+
+		if (!parsed) {
+			DEBUG_STACK.push(std::format("Failed to parse KBF {}. One or more required values were invalid / missing. Please rectify or remove the file.", filepath), DebugStack::Color::ERROR);
+		}
+
+		return parsed;
 	}
 
 	bool KBFDataManager::writeKBF(std::string filepath, KBFFileData data) const {
@@ -572,14 +723,14 @@ namespace kbf {
 		writer.Key(KBF_FILE_PRESETS_GROUPS_ID);
 		writer.StartObject();
 		for (const PresetGroup& presetGroup : data.presetGroups) {
-			writer.Key(presetGroup.uuid.c_str());
+			writer.Key(presetGroup.name.c_str());
 			writePresetGroupJsonContent(presetGroup, writer);
 		}
 		writer.EndObject();
 		writer.Key(KBF_FILE_PRESETS_ID);
 		writer.StartObject();
 		for (const Preset& preset : data.presets) {
-			writer.Key(preset.uuid.c_str());
+			writer.Key(preset.name.c_str());
 			writePresetJsonContent(preset, writer);
 		}
 		writer.EndObject();
@@ -602,7 +753,109 @@ namespace kbf {
 	}
 
 	bool KBFDataManager::writeModArchive(std::string filepath, KBFFileData data) const {
-		return false;
+		try {
+			miniz_cpp::zip_file zip;
+
+			// Add PresetGroups
+			for (const PresetGroup& presetGroup : data.presetGroups) {
+				std::ostringstream oss;
+				oss << "reframework/data/KBF/PresetGroups/" << presetGroup.name << ".json";
+
+				rapidjson::StringBuffer s;
+				rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+				writePresetGroupJsonContent(presetGroup, writer);
+
+				zip.writestr(oss.str(), s.GetString());
+			}
+
+			// Add Presets
+			for (const Preset& preset : data.presets) {
+				std::ostringstream oss;
+				oss << "reframework/data/KBF/Presets/" << preset.name << ".json";
+
+				rapidjson::StringBuffer s;
+				rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+				writePresetJsonContent(preset, writer);
+
+				zip.writestr(oss.str(), s.GetString());
+			}
+
+			// Add PlayerOverrides
+			for (const PlayerOverride& override : data.playerOverrides) {
+				std::ostringstream oss;
+				oss << "reframework/data/KBF/PlayerOverrides/" << getPlayerOverrideFilename(override.player) << ".json";
+
+				rapidjson::StringBuffer s;
+				rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+				writePlayerOverrideJsonContent(override, writer);
+
+				zip.writestr(oss.str(), s.GetString());
+			}
+
+			// Save the archive to disk
+			zip.save(filepath);
+			return true;
+		}
+		catch (const std::exception& e) {
+			DEBUG_STACK.push(std::format("Error writing zip file @ \"{}\": {}", filepath, e.what()), DebugStack::Color::ERROR);
+			return false;
+		}
+	}
+
+	void KBFDataManager::deleteLocalModArchive(std::string name) {
+		DEBUG_STACK.push(std::format("Deleting local mod archive: {}", name), DebugStack::Color::INFO);
+
+		std::vector<std::string> presetsToDelete;
+		for (const auto& [uuid, preset] : presets) {
+			if (preset.metadata.MOD_ARCHIVE == name) {
+				presetsToDelete.push_back(uuid);
+			}
+		}
+		std::vector<std::string> presetGroupsToDelete;
+		for (const auto& [uuid, presetGroup] : presetGroups) {
+			if (presetGroup.metadata.MOD_ARCHIVE == name) {
+				presetGroupsToDelete.push_back(uuid);
+			}
+		}
+		std::vector<PlayerData> overridesToDelete;
+		for (const auto& [player, playerOverride] : playerOverrides) {
+			if (playerOverride.metadata.MOD_ARCHIVE == name) {
+				overridesToDelete.push_back(player);
+			}
+		}
+
+		for (const std::string& uuid : presetsToDelete) {
+			deletePreset(uuid, true);
+		}
+		for (const std::string& uuid : presetGroupsToDelete) {
+			deletePresetGroup(uuid);
+		}
+		for (const PlayerData& player : overridesToDelete) {
+			deletePlayerOverride(player);
+		}
+
+		DEBUG_STACK.push(std::format("Deleted {} presets, {} preset groups, and {} player overrides from mod archive: {}", 
+			presetsToDelete.size(), presetGroupsToDelete.size(), overridesToDelete.size(), name), DebugStack::Color::SUCCESS);
+	}
+
+	std::unordered_map<std::string, KBFDataManager::ModArchiveCounts> KBFDataManager::getModArchiveInfo() const {
+		std::unordered_map<std::string, ModArchiveCounts> counts;
+		for (const auto& [uuid, preset] : presets) {
+			if (!preset.metadata.MOD_ARCHIVE.empty()) {
+				counts[preset.metadata.MOD_ARCHIVE].presets++;
+			}
+		}
+		for (const auto& [uuid, presetGroup] : presetGroups) {
+			if (!presetGroup.metadata.MOD_ARCHIVE.empty()) {
+				counts[presetGroup.metadata.MOD_ARCHIVE].presetGroups++;
+			}
+		}
+		for (const auto& [player, playerOverride] : playerOverrides) {
+			if (!playerOverride.metadata.MOD_ARCHIVE.empty()) {
+				counts[playerOverride.metadata.MOD_ARCHIVE].playerOverrides++;
+			}
+		}
+		return counts;
 	}
 
 	void KBFDataManager::verifyDirectoriesExist() const {
@@ -944,35 +1197,7 @@ namespace kbf {
 
 		out->name = path.stem().string();
 
-		bool parsed = true;
-
-		parsed &= parseString(presetDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
-		parsed &= parseString(presetDoc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
-		
-		// Metadata
-		parsed &= parseString(presetDoc, PRESET_UUID_ID, PRESET_UUID_ID, &out->uuid);
-		parsed &= parseString(presetDoc, PRESET_BUNDLE_ID, PRESET_BUNDLE_ID, &out->bundle);
-		parsed &= parseString(presetDoc, PRESET_ARMOUR_NAME_ID, PRESET_ARMOUR_NAME_ID, &out->armour.name);
-		parsed &= parseBool(presetDoc, PRESET_ARMOUR_FEMALE_ID, PRESET_ARMOUR_FEMALE_ID, &out->armour.female);
-		parsed &= parseBool(presetDoc, PRESET_FEMALE_ID, PRESET_FEMALE_ID, &out->female);
-		parsed &= parseFloat(presetDoc, PRESET_BODY_MOD_LIMIT_ID, PRESET_BODY_MOD_LIMIT_ID, &out->bodyModLimit);
-		parsed &= parseFloat(presetDoc, PRESET_LEGS_MOD_LIMIT_ID, PRESET_LEGS_MOD_LIMIT_ID, &out->legsModLimit);
-		parsed &= parseBool(presetDoc, PRESET_BODY_USE_SYMMETRY_ID, PRESET_BODY_USE_SYMMETRY_ID, &out->bodyUseSymmetry);
-		parsed &= parseBool(presetDoc, PRESET_LEGS_USE_SYMMETRY_ID, PRESET_LEGS_USE_SYMMETRY_ID, &out->legsUseSymmetry);
-
-		// Body bone Bone modifiers
-		parsed &= parseObject(presetDoc, PRESET_BONE_MODIFIERS_BODY_ID, PRESET_BONE_MODIFIERS_BODY_ID);
-		if (parsed) {
-			const rapidjson::Value& boneModifiers = presetDoc[PRESET_BONE_MODIFIERS_BODY_ID];
-			parsed &= loadBoneModifiers(boneModifiers, &out->bodyBoneModifiers);
-		}
-
-		// Legs bone Bone modifiers
-		parsed &= parseObject(presetDoc, PRESET_BONE_MODIFIERS_LEGS_ID, PRESET_BONE_MODIFIERS_LEGS_ID);
-		if (parsed) {
-			const rapidjson::Value& legsBoneModifiers = presetDoc[PRESET_BONE_MODIFIERS_LEGS_ID];
-			parsed &= loadBoneModifiers(legsBoneModifiers, &out->legsBoneModifiers);
-		}
+		bool parsed = loadPresetData(presetDoc, out);
 
 		if (!parsed) {
 			DEBUG_STACK.push(std::format("Failed to parse preset {}. One or more required values were invalid / missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
@@ -981,7 +1206,43 @@ namespace kbf {
 		return parsed;
 	}
 
-	bool KBFDataManager::loadBoneModifiers(const rapidjson::Value& object, std::map<std::string, BoneModifier>* out) {
+	bool KBFDataManager::loadPresetData(const rapidjson::Value& doc, Preset* out) const {
+		assert(out != nullptr);
+
+		bool parsed = true;
+
+		parsed &= parseString(doc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parsed &= parseString(doc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
+
+		// Metadata
+		parsed &= parseString(doc, PRESET_UUID_ID, PRESET_UUID_ID, &out->uuid);
+		parsed &= parseString(doc, PRESET_BUNDLE_ID, PRESET_BUNDLE_ID, &out->bundle);
+		parsed &= parseString(doc, PRESET_ARMOUR_NAME_ID, PRESET_ARMOUR_NAME_ID, &out->armour.name);
+		parsed &= parseBool(doc, PRESET_ARMOUR_FEMALE_ID, PRESET_ARMOUR_FEMALE_ID, &out->armour.female);
+		parsed &= parseBool(doc, PRESET_FEMALE_ID, PRESET_FEMALE_ID, &out->female);
+		parsed &= parseFloat(doc, PRESET_BODY_MOD_LIMIT_ID, PRESET_BODY_MOD_LIMIT_ID, &out->bodyModLimit);
+		parsed &= parseFloat(doc, PRESET_LEGS_MOD_LIMIT_ID, PRESET_LEGS_MOD_LIMIT_ID, &out->legsModLimit);
+		parsed &= parseBool(doc, PRESET_BODY_USE_SYMMETRY_ID, PRESET_BODY_USE_SYMMETRY_ID, &out->bodyUseSymmetry);
+		parsed &= parseBool(doc, PRESET_LEGS_USE_SYMMETRY_ID, PRESET_LEGS_USE_SYMMETRY_ID, &out->legsUseSymmetry);
+
+		// Body bone Bone modifiers
+		parsed &= parseObject(doc, PRESET_BONE_MODIFIERS_BODY_ID, PRESET_BONE_MODIFIERS_BODY_ID);
+		if (parsed) {
+			const rapidjson::Value& boneModifiers = doc[PRESET_BONE_MODIFIERS_BODY_ID];
+			parsed &= loadBoneModifiers(boneModifiers, &out->bodyBoneModifiers);
+		}
+
+		// Legs bone Bone modifiers
+		parsed &= parseObject(doc, PRESET_BONE_MODIFIERS_LEGS_ID, PRESET_BONE_MODIFIERS_LEGS_ID);
+		if (parsed) {
+			const rapidjson::Value& legsBoneModifiers = doc[PRESET_BONE_MODIFIERS_LEGS_ID];
+			parsed &= loadBoneModifiers(legsBoneModifiers, &out->legsBoneModifiers);
+		}
+
+		return parsed;
+	}
+
+	bool KBFDataManager::loadBoneModifiers(const rapidjson::Value& object, std::map<std::string, BoneModifier>* out) const {
 		assert(out != nullptr);
 
 		bool parsed = true;
@@ -1224,25 +1485,7 @@ namespace kbf {
 
 		out->name = path.stem().string();
 
-		bool parsed = true;
-		parsed &= parseString(presetGroupDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
-		parsed &= parseString(presetGroupDoc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
-
-		parsed &= parseString(presetGroupDoc, PRESET_GROUP_UUID_ID, PRESET_GROUP_UUID_ID, &out->uuid);
-		parsed &= parseBool(presetGroupDoc, PRESET_GROUP_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->female);
-
-		parsed &= parseObject(presetGroupDoc, PRESET_GROUP_BODY_PRESETS_ID, PRESET_GROUP_BODY_PRESETS_ID);
-		if (parsed) {
-			const rapidjson::Value& assignedPresets = presetGroupDoc[PRESET_GROUP_BODY_PRESETS_ID];
-			parsed &= loadAssignedPresets(assignedPresets, &out->bodyPresets);
-		}
-
-		// Legs bone Bone modifiers
-		parsed &= parseObject(presetGroupDoc, PRESET_GROUP_LEGS_PRESETS_ID, PRESET_GROUP_LEGS_PRESETS_ID);
-		if (parsed) {
-			const rapidjson::Value& assignedPresets = presetGroupDoc[PRESET_GROUP_LEGS_PRESETS_ID];
-			parsed &= loadAssignedPresets(assignedPresets, &out->legsPresets);
-		}
+		bool parsed = loadPresetGroupData(presetGroupDoc, out);
 
 		if (!parsed) {
 			DEBUG_STACK.push(std::format("Failed to parse preset group {}. One or more required values were missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
@@ -1251,7 +1494,31 @@ namespace kbf {
 		return parsed;
 	}
 
-	bool KBFDataManager::loadAssignedPresets(const rapidjson::Value& object, std::unordered_map<ArmourSet, std::string>* out) {
+	bool KBFDataManager::loadPresetGroupData(const rapidjson::Value& doc, PresetGroup* out) const {
+		bool parsed = true;
+		parsed &= parseString(doc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parsed &= parseString(doc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
+
+		parsed &= parseString(doc, PRESET_GROUP_UUID_ID, PRESET_GROUP_UUID_ID, &out->uuid);
+		parsed &= parseBool(doc, PRESET_GROUP_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->female);
+
+		parsed &= parseObject(doc, PRESET_GROUP_BODY_PRESETS_ID, PRESET_GROUP_BODY_PRESETS_ID);
+		if (parsed) {
+			const rapidjson::Value& assignedPresets = doc[PRESET_GROUP_BODY_PRESETS_ID];
+			parsed &= loadAssignedPresets(assignedPresets, &out->bodyPresets);
+		}
+
+		// Legs bone Bone modifiers
+		parsed &= parseObject(doc, PRESET_GROUP_LEGS_PRESETS_ID, PRESET_GROUP_LEGS_PRESETS_ID);
+		if (parsed) {
+			const rapidjson::Value& assignedPresets = doc[PRESET_GROUP_LEGS_PRESETS_ID];
+			parsed &= loadAssignedPresets(assignedPresets, &out->legsPresets);
+		}
+
+		return parsed;
+	}
+
+	bool KBFDataManager::loadAssignedPresets(const rapidjson::Value& object, std::unordered_map<ArmourSet, std::string>* out) const {
 		assert(out != nullptr);
 
 		bool parsed = true;
@@ -1376,18 +1643,26 @@ namespace kbf {
 		rapidjson::Document overrideDoc = loadConfigJson(path.string(), nullptr);
 		if (!overrideDoc.IsObject() || overrideDoc.HasParseError()) return false;
 
-		bool parsed = true;
-		parsed &= parseString(overrideDoc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
-		parsed &= parseString(overrideDoc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
-
-		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PLAYER_NAME_ID, PLAYER_OVERRIDE_PLAYER_NAME_ID, &out->player.name);
-		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, &out->player.hunterId);
-		parsed &= parseBool(overrideDoc, PLAYER_OVERRIDE_PLAYER_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->player.female);
-		parsed &= parseString(overrideDoc, PLAYER_OVERRIDE_PRESET_GROUP_UUID_ID, PLAYER_OVERRIDE_PRESET_GROUP_UUID_ID, &out->presetGroup);
+		bool parsed = loadPlayerOverrideData(overrideDoc, out);
 
 		if (!parsed) {
 			DEBUG_STACK.push(std::format("Failed to parse player override {}. One or more required values were missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
 		}
+
+		return parsed;
+	}
+
+	bool KBFDataManager::loadPlayerOverrideData(const rapidjson::Value& doc, PlayerOverride* out) const {
+		assert(out != nullptr);
+
+		bool parsed = true;
+		parsed &= parseString(doc, FORMAT_VERSION_ID, FORMAT_VERSION_ID, &out->metadata.VERSION);
+		parsed &= parseString(doc, FORMAT_MOD_ARCHIVE_ID, FORMAT_MOD_ARCHIVE_ID, &out->metadata.MOD_ARCHIVE);
+
+		parsed &= parseString(doc, PLAYER_OVERRIDE_PLAYER_NAME_ID, PLAYER_OVERRIDE_PLAYER_NAME_ID, &out->player.name);
+		parsed &= parseString(doc, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, PLAYER_OVERRIDE_PLAYER_HUNTER_ID_ID, &out->player.hunterId);
+		parsed &= parseBool(doc, PLAYER_OVERRIDE_PLAYER_FEMALE_ID, PRESET_GROUP_FEMALE_ID, &out->player.female);
+		parsed &= parseString(doc, PLAYER_OVERRIDE_PRESET_GROUP_UUID_ID, PLAYER_OVERRIDE_PRESET_GROUP_UUID_ID, &out->presetGroup);
 
 		return parsed;
 	}
