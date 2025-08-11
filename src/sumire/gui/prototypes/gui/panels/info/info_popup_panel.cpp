@@ -7,11 +7,21 @@ namespace kbf {
 	InfoPopupPanel::InfoPopupPanel(
 		const std::string& label,
 		const std::string& strID,
+		const std::vector<std::string>& messages,
+		const std::string& okLabel,
+		const std::string& cancelLabel,
+		const bool allowClose
+	) : iPanel(label, strID), messages{ messages }, okLabel{ okLabel }, cancelLabel{ cancelLabel }, allowClose{ allowClose } {}
+
+	InfoPopupPanel::InfoPopupPanel(
+		const std::string& label,
+		const std::string& strID,
 		const std::string& message,
 		const std::string& okLabel,
 		const std::string& cancelLabel,
 		const bool allowClose
-	) : iPanel(label, strID), message{ message }, okLabel{ okLabel }, cancelLabel{ cancelLabel}, allowClose{ allowClose } {}
+	) : iPanel(label, strID), messages{ std::vector{ message } }, okLabel{ okLabel }, cancelLabel{ cancelLabel }, allowClose{ allowClose } {
+	}
 
 	bool InfoPopupPanel::draw() {
 		bool open = true;
@@ -19,9 +29,13 @@ namespace kbf {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
 		ImGui::Begin(nameWithID.c_str(), allowClose ? &open : nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
 
-		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + wrapWidth);
-		ImGui::TextWrapped("%s", message.c_str());
-		ImGui::PopTextWrapPos();
+		for (const std::string& message : messages) {
+			ImVec2 text_size = ImGui::CalcTextSize(message.c_str(), nullptr, true, wrapWidth);
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (ImGui::GetColumnWidth() - ImGui::CalcTextSize(message.c_str()).x) * 0.5f);
+			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + wrapWidth);
+			ImGui::TextWrapped("%s", message.c_str());
+			ImGui::PopTextWrapPos();
+		}
 
 		ImGui::Spacing();
 		ImGui::Spacing();

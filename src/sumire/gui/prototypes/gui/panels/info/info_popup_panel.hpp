@@ -12,6 +12,13 @@ namespace kbf {
 	public:
 		InfoPopupPanel(
 			const std::string& label,
+			const std::string& strID,
+			const std::vector<std::string>& messages,
+			const std::string& okLabel = "OK",
+			const std::string& cancelLabel = "",
+			const bool allowClose = true);
+		InfoPopupPanel(
+			const std::string& label,
 			const std::string& strID, 
 			const std::string& message,
 			const std::string& okLabel = "OK",
@@ -24,7 +31,7 @@ namespace kbf {
 
 	private:
 		constexpr static float wrapWidth = 900.0f; // Width for text wrapping
-		std::string message;
+		std::vector<std::string> messages;
 		std::string okLabel;
 		std::string cancelLabel;
 		const bool allowClose;
