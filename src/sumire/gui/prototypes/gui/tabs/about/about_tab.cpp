@@ -100,11 +100,6 @@ namespace kbf {
         ImGui::TextWrapped(
             "Without this information, bug fixing will potentially be very difficult and I may just have to ignore the bug."
         );
-
-        //assert(monoFontTiny != nullptr);
-        //ImGui::PushFont(monoFontTiny);
-        //ImGui::TextUnformatted(ASCII_ART_SPLASH);
-        //ImGui::PopFont();
         
         ImGui::PopStyleVar();
     }
@@ -113,11 +108,174 @@ namespace kbf {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 15));
         ImGui::Spacing();
 
-        if (ImGui::CollapsingHeader("Migrating From FBS"))    drawTutorials_MigratingFromFbs();
-        if (ImGui::CollapsingHeader("Sharing Presets"))       drawTutorials_SharingPresets();
-        if (ImGui::CollapsingHeader("Manually Updating KBF")) drawTutorials_ManuallyUpdatingKBF();
+        if (ImGui::CollapsingHeader("Getting Started"))           drawTutorials_GettingStarted();
+        if (ImGui::CollapsingHeader("Creating Presets"))          drawTutorials_CreatingPresets();
+        if (ImGui::CollapsingHeader("Creating Preset Groups"))    drawTutorials_CreatingPresetGroups();
+		if (ImGui::CollapsingHeader("Creating Player Overrides")) drawTutorials_CreatingPlayerOverrides();
+        if (ImGui::CollapsingHeader("Migrating From FBS"))        drawTutorials_MigratingFromFbs();
+        if (ImGui::CollapsingHeader("Sharing Presets"))           drawTutorials_SharingPresets();
+        if (ImGui::CollapsingHeader("Manually Updating KBF"))     drawTutorials_ManuallyUpdatingKBF();
 
         ImGui::PopStyleVar();
+    }
+
+    void AboutTab::drawTutorials_GettingStarted() {
+        ImGui::TextWrapped(
+            "KBF Allows you to modify bones of characters with three types of configs:"
+        );
+
+		WRAP_BULLET("1.", "Preset Groups - These are collections of presets that can be assigned globally to players and npcs.");
+        WRAP_BULLET("2.", "Presets - These are individual settings for a specific armour set, which can be assigned to a preset group, or individual npc outfits (e.g. alma, gemma...).");
+        WRAP_BULLET("3.", "Player Overrides - These are preset groups applied specifically to a single player, overriding any default preset groups set.");
+
+        ImGui::TextWrapped(
+            "To get started with KBF, it is recommended to make at least one preset group, and the presets you wish to use within it."
+        );
+        ImGui::TextWrapped(
+            "This is very simple if you've used FBS previously. Check the \"Migrating from FBS\" tutorial. This will show you how to create a Preset Group & Presets from your existing FBS presets."
+        );
+        ImGui::TextWrapped(
+            "Otherwise, you can follow the tutorials \"Creating Presets\", \"Creating Preset Groups\" & \"Creating Player Overrides\" to set things up properly."
+        );
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(
+            "Once created, you can apply preset groups globally to players or npcs by clicking Players > Male / Female, or NPCs > Male / Female"
+        );
+
+        ImGui::TextWrapped(
+            "Individual presets can be applied to specific NPC outfits by clicking them in the NPCs tab."
+        );
+    }
+
+    void AboutTab::drawTutorials_CreatingPresets() {
+        ImGui::TextWrapped(
+            "Presets are collections of bone modifiers for a specific armour set, which can be assigned to a preset group, or individual npc outfits (e.g. alma, gemma...). They also allow you to hide your slinger / weapon"
+		);
+
+        ImGui::Spacing();
+        ImGui::TextWrapped(
+            "To Create a Preset:"
+        );
+        
+        ImGui::TextWrapped("Set-up basic info");
+        ImGui::Separator();
+        ImGui::Indent();
+        WRAP_BULLET("-", "Click the \"Create Preset\" button at the top of the Presets tab");
+        WRAP_BULLET("-", "If you already have a similar preset to the one you wish to create, you can opt to copy the existing preset here.");
+		WRAP_BULLET("-", "Enter a name for your preset in the \"Name\" field.");
+		WRAP_BULLET("-", "Enter a bundle name for your preset in the \"Bundle\" field. This is used to group similar presets together, e.g. \"Kana's Presets\", \"Alma Presets\", etc.");
+		WRAP_BULLET("-", "Select the suggested sex for this preset in the \"Sex\" combo box. This is used only as a visual aid when selecting presets for characters of a certain sex.");
+		WRAP_BULLET("-", "Select the armour set this preset is intended for in the armour list. If you want the preset to be generic, you can select \"Default\".");
+		WRAP_BULLET("-", "Click the \"Create\" button to create the preset.");
+        ImGui::Unindent();
+        ImGui::Spacing();
+        ImGui::TextWrapped("Modify Bones");
+        ImGui::Separator();
+        ImGui::Indent();
+        WRAP_BULLET("-", "Open the preset you just created in the Editor via Editor > Edit a Preset, or by clicking on it in the preset tab > Edit.");
+		WRAP_BULLET("-", "Once open in the Editor, click \"Body Modifiers\" / \"Leg Modifiers\" to begin adjusting bones for the body / legs");
+		WRAP_BULLET("-", "Click the \"Add Bone Modifier\" button to add a new bone modifier.");
+		WRAP_BULLET("-", "In the pop-up list select a bone, or add a list of the commonly appearing bones via \"Add Defaults\" at the bottom.");
+		WRAP_BULLET("-", "Adjust the sliders for bones that appear in the bone list.");
+        ImGui::Unindent();
+        ImGui::Spacing();
+		ImGui::TextWrapped("Remove Parts (Optional)");
+        ImGui::Separator();
+        ImGui::Indent();
+        WRAP_BULLET("-", "Click the \"Remove Parts\" tab in the Editor.");
+		WRAP_BULLET("-", "You can optionally hide the slinger and weapon by checking the \"Hide Slinger\" and \"Hide Weapon\" checkboxes.");
+		WRAP_BULLET("-", "You can remove parts of the armour set by clicking the \"Remove Parts\" button and selecting the parts you want to remove from the list.");
+		WRAP_BULLET("-", "Any parts that appear in the part list will be hidden for this specific preset.");
+        ImGui::Unindent();
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::TextWrapped(
+            "Once you are done modifying the preset, you can save it by clicking the \"Save\" button at the bottom of the Editor."
+        );
+        ImGui::TextWrapped(
+            "You can also preview the effect of the preset on your own player by equipping the piece and toggling \"Preview\" next to the revert and save buttons."
+        );
+        // Pastel orange text
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.6f, 1.0f));
+        ImGui::TextWrapped(
+            "Important Note: Bone & Part selection operates on a cache-based system. They won't necessarily show up in menus until they are loaded for the first time ever in-game with KBF installed."
+            " It is recommended to hop into a big public lobby or equip the desired armour set before modifying."
+		);
+        ImGui::PopStyleColor();
+    }
+
+    void AboutTab::drawTutorials_CreatingPresetGroups() {
+        ImGui::TextWrapped(
+            "Preset Groups are collections of presets that can be assigned to players and unnamed hunters (npcs)."
+		);
+        ImGui::TextWrapped(
+            "They contain presets that are applied based on the armour set a player / npc is wearing."
+		);
+
+        ImGui::Spacing();
+        ImGui::TextWrapped(
+            "To Create a Preset Group:"
+        );
+
+        ImGui::TextWrapped("Set it up manually");
+        ImGui::Separator();
+        ImGui::Indent();
+        WRAP_BULLET("-", "Click the \"Create Preset Group\" button at the top of the Preset Groups tab");
+		WRAP_BULLET("-", "If you already have a similar preset group to the one you intend to make, you can opt to copy it here.");
+		WRAP_BULLET("-", "Enter a name for your preset group in the \"Name\" field.");
+        WRAP_BULLET("-", "Enter a suggested character sex for the preset group to be used with in the \"Sex\" combo box. This is used only as a visual aid when using the preset group for characters.");
+		WRAP_BULLET("-", "Click the \"Create\" button to create the preset group.");
+		ImGui::Unindent();
+		ImGui::Spacing();
+		ImGui::TextWrapped("Assign Presets");
+		ImGui::Separator();
+		ImGui::Indent();
+		WRAP_BULLET("-", "Open the preset group you just created in the Editor via Editor > Edit a Preset Group, or by clicking on it in the preset group tab > Edit.");
+		WRAP_BULLET("-", "Click the \"Assigned Presets\" tab in the Editor.");
+		WRAP_BULLET("-", "Assign presets to specific armour pieces by clicking the grid cells in the Body / Legs columns.");
+		WRAP_BULLET("-", "Presets will apply to characters using this preset group based on the specified armour set that is equipped.");
+		WRAP_BULLET("-", "If no preset is assigned for a particular armour piece, the preset assigned to \"Default\" will be used.");
+		ImGui::Unindent();
+		ImGui::Spacing();
+		ImGui::TextWrapped("Alternatively: Create from a Preset Bundle");
+		ImGui::Separator();
+		ImGui::Indent();
+		WRAP_BULLET("-", "Click the \"Create From Preset Bundle\" button at the top of the Preset Groups tab");
+		WRAP_BULLET("-", "Enter a name for your preset group in the \"Name\" field.");
+		WRAP_BULLET("-", "Enter a suggested sex for the preset group to be used with in the \"Sex\" combo box. This is used only as a visual aid when using the preset group for characters.");
+		WRAP_BULLET("-", "Select the bundle to use. Presets will be automatically assigned to armour sets based on their suggested armour sets.");
+		WRAP_BULLET("-", "Click the \"Create\" button to create the preset group.");
+		WRAP_BULLET("-", "If you got a pop up saying there were conflicts, you should check which presets conflicted (used the same armour piece) in Debug > Log, and adjust assigned presets accordingly in the editor.");
+		ImGui::Unindent();
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(
+            "Once you are done modifying the preset group, you can save it by clicking the \"Save\" button at the bottom of the Editor."
+		);
+    }
+
+    void AboutTab::drawTutorials_CreatingPlayerOverrides() {
+        ImGui::TextWrapped(
+            "Player Overrides are configs that allow you to apply a specific preset group to a specific player, independently of any default preset groups set."
+        );
+
+        ImGui::Spacing();
+        ImGui::TextWrapped("Creating a Player Override is Simple:");
+        ImGui::Separator();
+        ImGui::Indent();
+        WRAP_BULLET("-", "Click the \"Add Override\" button at the bottom of the Players tab");
+        WRAP_BULLET("-", "Select the player you want to create an override for in the appearing player list.");
+        WRAP_BULLET("-", "Select the newly created override in the override list, and select the preset group you'd like to apply.");
+        ImGui::Unindent();
     }
 
     void AboutTab::drawTutorials_MigratingFromFbs() {
@@ -132,7 +290,7 @@ namespace kbf {
         ImGui::Unindent();
 
         ImGui::TextWrapped(
-            "Step 3 is particularly important if you received a notification at set 2 saying that there were some conflicts with the presets you imported."
+            "Step 3 is particularly important if you received a notification at step 2 saying that there were some conflicts with the presets you imported."
         );
 
         ImGui::TextWrapped(
@@ -152,7 +310,9 @@ namespace kbf {
         );
         ImGui::Indent();
         WRAP_BULLET("1.", "Manual bone settings - these are ambiguous in FBS, but not in KBF.");
-        WRAP_BULLET("2.", "Face Presets - Unsupported in KBF. Might make it into a future release.");
+        WRAP_BULLET("2.", "Slinger visibility - these are global in FBS, but per-preset in KBF.");
+        WRAP_BULLET("3.", "Part Enables - these are global in FBS, but per-preset in KBF.");
+        WRAP_BULLET("4.", "Face Presets - Unsupported in KBF. Might make it into a future release.");
         ImGui::Unindent();
 
         ImGui::TextWrapped(
@@ -182,7 +342,67 @@ namespace kbf {
     }
 
     void AboutTab::drawTutorials_SharingPresets() {
+        ImGui::TextWrapped(
+            "Tools for sharing are found in the \"Share\" tab. Sharing presets can allow you to use others' premade settings."
+        );
 
+        ImGui::TextWrapped(
+            "If you share between friends, you can use imported presets to create a player override so that your friend appears on your screen as they appear on theirs."
+        );
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(
+            "There are two ways to Import / Export presets into KBF - as a .KBF File or as a .zip (mod) archive."
+        );
+
+        ImGui::TextWrapped(
+            "These are functionally identical, but are more convenient depending on if you're looking for single-time import or contininual updates (e.g. as a mod)."
+        );
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::SeparatorText(".KBF File");
+
+        ImGui::TextWrapped(
+            "This option is best used if you want to share presets a single time, e.g. to create a back-up of your own presets."
+        );
+
+        ImGui::Spacing();
+        ImGui::TextWrapped("Export");
+        ImGui::Separator();
+		WRAP_BULLET("-", "Click on \"Export .KBF File\" in the Share tab.");
+        WRAP_BULLET("-", "Select the presets you want to export, and click \"Export\".");
+        WRAP_BULLET("-", "Select a location to save the .KBF file to, and click \"Save\".");
+        WRAP_BULLET("-", "You can now share this file with others, or keep it as a back-up.");
+        ImGui::Spacing();
+        ImGui::TextWrapped("Import");
+        ImGui::Separator();
+        WRAP_BULLET("-", "Click on \"Import .KBF File\" in the Share tab.");
+        WRAP_BULLET("-", "Select the .KBF file you want to import in windows explorer, and click \"Open\".");
+        WRAP_BULLET("-", "The presets will be imported into KBF and will be available for use.");
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::SeparatorText(".zip Archive");
+        ImGui::TextWrapped(
+            "This option is best used if you want to share presets as a mod, e.g. to create a mod that can be updated with new presets."
+        );
+        ImGui::Spacing();
+        ImGui::TextWrapped("Export");
+        ImGui::Separator();
+        WRAP_BULLET("-", "Click on \"Export Mod Archive\" in the Share tab.");
+        WRAP_BULLET("-", "Select the presets you want to export, and click \"Export\".");
+        WRAP_BULLET("-", "Select a location to save the .zip archive to, and click \"Save\".");
+        WRAP_BULLET("-", "You can now share this archive with others, or keep it as a back-up.");
+        ImGui::Spacing();
+        ImGui::TextWrapped("Import");
+        ImGui::Separator();
+        WRAP_BULLET("-", "Extract the exported .zip archive in the game's base directory, or drop it into Vortex.");
+
+		ImGui::Spacing();
     }
 
     void AboutTab::drawTutorials_ManuallyUpdatingKBF() {
@@ -201,7 +421,11 @@ namespace kbf {
         endCodeListing();
 
         ImGui::TextWrapped(
-            "Any changes made will not be reflected until you restart the plugin / game. On restart, it is recommended to check Debug > Log to ensure your modified list was properly loaded (if not - a fallback is used)."
+            "Any changes made will not be reflected until you restart the plugin / game."
+        );
+
+        ImGui::TextWrapped(
+            "On restart, it is recommended to check Debug > Log for any errors to ensure your modified list was properly loaded (if not - an internal fallback is used)."
         );
 
         ImGui::Spacing();
@@ -246,15 +470,14 @@ namespace kbf {
             "The following examples show some correct and incorrect usages of this data format."
         );
 
-        ImGui::Spacing();
-
 		// Green text for correct entries, red for incorrect
 
         // Correct examples
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
         ImGui::SeparatorText("Complete Entry (valid)");
+        ImGui::PopStyleColor();
 
         startCodeListing("##ArmourListEntryComplete");
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
         ImGui::Indent();
         ImGui::TextWrapped("{...");
         ImGui::Indent();
@@ -267,13 +490,13 @@ namespace kbf {
         ImGui::Unindent();
         ImGui::TextWrapped("}");
         ImGui::Unindent();
-        ImGui::PopStyleColor();
         endCodeListing();
 
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
 		ImGui::SeparatorText("Optional Female Entry (valid)");
+        ImGui::PopStyleColor();
 
         startCodeListing("##ArmourListEntryOptionalFemale");
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
         ImGui::Indent();
         ImGui::TextWrapped("{...");
         ImGui::Indent();
@@ -285,13 +508,13 @@ namespace kbf {
         ImGui::Unindent();
         ImGui::TextWrapped("}");
         ImGui::Unindent();
-        ImGui::PopStyleColor();
         endCodeListing();
 
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
         ImGui::SeparatorText("Optional Body Entry (valid)");
+        ImGui::PopStyleColor();
 
         startCodeListing("##ArmourListEntryOptionalBody");
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
         ImGui::Indent();
         ImGui::TextWrapped("{...");
         ImGui::Indent();
@@ -304,13 +527,13 @@ namespace kbf {
         ImGui::Unindent();
         ImGui::TextWrapped("}");
         ImGui::Unindent();
-        ImGui::PopStyleColor();
         endCodeListing();
 
-        ImGui::SeparatorText("Optional Female/Legs Entry (valid)");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+        ImGui::SeparatorText("Optional Female & Legs Entry (valid)");
+        ImGui::PopStyleColor();
 
         startCodeListing("##ArmourListEntryOptionalFemaleAndLegs");
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
         ImGui::Indent();
         ImGui::TextWrapped("{...");
         ImGui::Indent();
@@ -322,14 +545,14 @@ namespace kbf {
         ImGui::Unindent();
         ImGui::TextWrapped("}");
         ImGui::Unindent();
-        ImGui::PopStyleColor();
         endCodeListing();
 
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
         ImGui::SeparatorText("Empty Female/Male Entry (invalid)");
+        ImGui::PopStyleColor();
 
         // Incorrect example
         startCodeListing("##ArmourListEntryEmpty");
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
         ImGui::Indent();
         ImGui::TextWrapped("{...");
         ImGui::Indent();
@@ -338,14 +561,14 @@ namespace kbf {
         ImGui::Unindent();
         ImGui::TextWrapped("}");
         ImGui::Unindent();
-        ImGui::PopStyleColor();
         endCodeListing();
 
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
         ImGui::SeparatorText("Empty Body/Legs Entry (invalid)");
+        ImGui::PopStyleColor();
 
         // Incorrect example
         startCodeListing("##ArmourListEntryEmptyLegs/Body");
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
         ImGui::Indent();
         ImGui::TextWrapped("{...");
         ImGui::Indent();
@@ -358,7 +581,6 @@ namespace kbf {
         ImGui::Unindent();
         ImGui::TextWrapped("}");
         ImGui::Unindent();
-        ImGui::PopStyleColor();
         endCodeListing();
     }
 

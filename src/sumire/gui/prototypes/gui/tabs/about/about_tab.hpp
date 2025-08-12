@@ -28,6 +28,10 @@ namespace kbf {
 		void drawInfoTab();
 
 		void drawTutorialsTab();
+		void drawTutorials_GettingStarted();
+		void drawTutorials_CreatingPresets();
+		void drawTutorials_CreatingPresetGroups();
+		void drawTutorials_CreatingPlayerOverrides();
 		void drawTutorials_MigratingFromFbs();
 		void drawTutorials_SharingPresets();
 		void drawTutorials_ManuallyUpdatingKBF();
