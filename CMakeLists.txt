@@ -65,6 +65,7 @@ set(TINYOBJ_PATH       external/tinyobjloader)     # TINY OBJ LOADER
 set(TINYGLTF_PATH      external/tinygltf)          # TINY GLTF LOADER
 set(IMGUI_PATH         external/imgui)             # IMGUI
 set(IMGUI_BACKEND_PATH external/imgui/backends)    #  |-
+set(IMGUI_TOGGLE_PATH  external/imgui-toggle)      # IMGUI TOGGLE COMPONENT
 set(MIKKTSPACE_PATH    external/MikkTSpace)        # MIKKTSPACE
 set(RAPIDJSON_PATH     external/rapidjson)         # RAPIDJSON
 set(GLM_PATH           external/glm)               # GLM
@@ -89,6 +90,11 @@ SET(IMGUI_SOURCES
 SET(IMGUI_BACKEND_SOURCES
     "${IMGUI_BACKEND_PATH}/imgui_impl_vulkan.cpp"
     "${IMGUI_BACKEND_PATH}/imgui_impl_glfw.cpp")
+SET(IMGUI_TOGGLE_SOURCES
+    "${IMGUI_TOGGLE_PATH}/imgui_toggle.cpp"
+    "${IMGUI_TOGGLE_PATH}/imgui_toggle_palette.cpp"
+    "${IMGUI_TOGGLE_PATH}/imgui_toggle_presets.cpp"
+    "${IMGUI_TOGGLE_PATH}/imgui_toggle_renderer.cpp")
 
 # ---- Sumire Sources --------------------------------------------------------------------------------------------
 SET(SUMIRE_SOURCES
@@ -136,10 +142,12 @@ SET(SUMIRE_SOURCES
     "${SUMIRE_SRC_DIR}/core/windowing/sumi_window.cpp"
     "${SUMIRE_SRC_DIR}/core/sumire.cpp"
     "${SUMIRE_SRC_DIR}/gui/prototypes/data/armour/armour_list.cpp"
+    "${SUMIRE_SRC_DIR}/gui/prototypes/data/armour/part_cache_manager.cpp"
     "${SUMIRE_SRC_DIR}/gui/prototypes/data/bones/bone_cache_manager.cpp"
     "${SUMIRE_SRC_DIR}/gui/prototypes/data/kbf_data_manager.cpp"
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/info/info_popup_panel.cpp"
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/lists/bone_panel.cpp"
+    "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/lists/part_remover_panel.cpp"
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/lists/player_list_panel.cpp"
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/lists/preset_group_panel.cpp"
     "${SUMIRE_SRC_DIR}/gui/prototypes/gui/panels/lists/preset_panel.cpp"
@@ -195,6 +203,7 @@ add_executable(${PROJECT_NAME}
     ${SUMIRE_SOURCES} 
     ${IMGUI_SOURCES} 
     ${IMGUI_BACKEND_SOURCES} 
+    ${IMGUI_TOGGLE_SOURCES}
     ${MIKKTSPACE_SOURCES})
  
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
@@ -220,6 +229,7 @@ if (WIN32)
             ${TINYGLTF_PATH}
             ${IMGUI_PATH}
             ${IMGUI_BACKEND_PATH}
+            ${IMGUI_TOGGLE_PATH}
             ${MIKKTSPACE_PATH}
             ${RAPIDJSON_PATH}/include
             ${GLFW_INCLUDE_DIRS}
