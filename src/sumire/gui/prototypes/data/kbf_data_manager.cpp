@@ -9,6 +9,7 @@
 #include <sumire/gui/prototypes/data/ids/player_override_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/format_ids.hpp>
 #include <sumire/gui/prototypes/data/ids/kbf_file_ids.hpp>
+#include <sumire/gui/prototypes/data/ids/settings_ids.hpp>
 #include <sumire/gui/prototypes/debug/debug_stack.hpp>
 #include <sumire/gui/prototypes/util/id/uuid_generator.hpp>
 #include <sumire/gui/prototypes/util/functional/invoke_callback.hpp>
@@ -28,6 +29,8 @@ namespace kbf {
 		DEBUG_STACK.push("Loading Data...", DebugStack::Color::DEBUG);
 
 		verifyDirectoriesExist();
+
+		loadSettings();
 
 		loadAlmaConfig(&presetDefaults.alma);
 		loadErikConfig(&presetDefaults.erik);
@@ -897,6 +900,12 @@ namespace kbf {
 
 		if (!config.IsObject() || config.HasParseError()) {
 			DEBUG_STACK.push(std::format("Failed to parse json at {}. Please rectify or delete the file.", path), DebugStack::Color::ERROR);
+
+			bool createdDefault = INVOKE_OPTIONAL_CALLBACK_TYPED(bool, false, onRequestCreateDefault);
+
+			if (createdDefault) {
+				DEBUG_STACK.push(std::format("Created default json at {}", path), DebugStack::Color::SUCCESS);
+			}
 		}
 
 		return config;
@@ -950,6 +959,55 @@ namespace kbf {
 			return false;
 		}
 
+	}
+
+	bool KBFDataManager::loadSettings(KBFSettings* out) {
+		assert(out != nullptr);
+
+		rapidjson::Document config = loadConfigJson(settingsPath.string(), [&]() {
+			KBFSettings temp{};
+			return writeSettings(temp);
+		});
+		if (!config.IsObject() || config.HasParseError()) return false;
+
+		// Outfits 
+		parseBool(config, SETTINGS_KBF_ENABLED_ID, SETTINGS_KBF_ENABLED_ID, &out->enabled);
+		parseFloat(config, SETTINGS_DELAY_ON_EQUIP_ID, SETTINGS_DELAY_ON_EQUIP_ID, &out->delayOnEquip);
+		parseFloat(config, SETTINGS_APPLICATION_RANGE_ID, SETTINGS_APPLICATION_RANGE_ID, &out->applicationRange);
+		parseInt(config, SETTINGS_MAX_CONCURRENT_APPLICATIONS_ID, SETTINGS_MAX_CONCURRENT_APPLICATIONS_ID, &out->maxConcurrentApplications);
+		parseInt(config, SETTINGS_FRAMES_BETWEEN_BONE_FETCHES_ID, SETTINGS_FRAMES_BETWEEN_BONE_FETCHES_ID, &out->framesBetweenBoneFetches);
+		parseBool(config, SETTINGS_ENABLE_DURING_QUESTS_ONLY_ID, SETTINGS_ENABLE_DURING_QUESTS_ONLY_ID, &out->enableDuringQuestsOnly);
+
+		DEBUG_STACK.push(std::format("Loaded Settings from {}", settingsPath.string()), DebugStack::Color::SUCCESS);
+		return true;
+	}
+
+	bool KBFDataManager::writeSettings(const KBFSettings& settings) const {
+		rapidjson::StringBuffer s;
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+
+		writer.StartObject();
+		writer.Key(SETTINGS_KBF_ENABLED_ID);
+		writer.Bool(settings.enabled);
+		writer.Key(SETTINGS_DELAY_ON_EQUIP_ID);
+		writer.Double(settings.delayOnEquip);
+		writer.Key(SETTINGS_APPLICATION_RANGE_ID);
+		writer.Double(settings.applicationRange);
+		writer.Key(SETTINGS_MAX_CONCURRENT_APPLICATIONS_ID);
+		writer.Int(settings.maxConcurrentApplications);
+		writer.Key(SETTINGS_FRAMES_BETWEEN_BONE_FETCHES_ID);
+		writer.Int(settings.framesBetweenBoneFetches);
+		writer.Key(SETTINGS_ENABLE_DURING_QUESTS_ONLY_ID);
+		writer.Bool(settings.enableDuringQuestsOnly);
+		writer.EndObject();
+
+		bool success = writeJsonFile(settingsPath.string(), s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write settings to {}", settingsPath.string()), DebugStack::Color::ERROR);
+		}
+
+		return success;
 	}
 	
 	bool KBFDataManager::loadAlmaConfig(AlmaDefaults* out) {
@@ -1230,6 +1288,16 @@ namespace kbf {
 		parsed &= parseFloat(doc, PRESET_LEGS_MOD_LIMIT_ID, PRESET_LEGS_MOD_LIMIT_ID, &out->legsModLimit);
 		parsed &= parseBool(doc, PRESET_BODY_USE_SYMMETRY_ID, PRESET_BODY_USE_SYMMETRY_ID, &out->bodyUseSymmetry);
 		parsed &= parseBool(doc, PRESET_LEGS_USE_SYMMETRY_ID, PRESET_LEGS_USE_SYMMETRY_ID, &out->legsUseSymmetry);
+		parsed &= parseBool(doc, PRESET_HIDE_SLINGER_ID, PRESET_HIDE_SLINGER_ID, &out->hideSlinger);
+		parsed &= parseBool(doc, PRESET_HIDE_WEAPON_ID, PRESET_HIDE_WEAPON_ID, &out->hideWeapon);
+
+		std::vector<std::string> bodyRemovedParts;
+		parsed &= parseStringArray(doc, PRESET_REMOVED_PARTS_BODY_ID, PRESET_REMOVED_PARTS_BODY_ID, &bodyRemovedParts);
+		out->removedPartsBody = std::set<std::string>(bodyRemovedParts.begin(), bodyRemovedParts.end());
+
+		std::vector<std::string> legsRemovedParts;
+		parsed &= parseStringArray(doc, PRESET_REMOVED_PARTS_LEGS_ID, PRESET_REMOVED_PARTS_LEGS_ID, &legsRemovedParts);
+		out->removedPartsLegs = std::set<std::string>(legsRemovedParts.begin(), legsRemovedParts.end());
 
 		// Body bone Bone modifiers
 		parsed &= parseObject(doc, PRESET_BONE_MODIFIERS_BODY_ID, PRESET_BONE_MODIFIERS_BODY_ID);
@@ -1314,6 +1382,22 @@ namespace kbf {
 		writer.Bool(preset.bodyUseSymmetry);
 		writer.Key(PRESET_LEGS_USE_SYMMETRY_ID);
 		writer.Bool(preset.legsUseSymmetry);
+		writer.Key(PRESET_HIDE_SLINGER_ID);
+		writer.Bool(preset.hideSlinger);
+		writer.Key(PRESET_HIDE_WEAPON_ID);
+		writer.Bool(preset.hideWeapon);
+		writer.Key(PRESET_REMOVED_PARTS_BODY_ID);
+		writer.StartArray();
+		for (const auto& part : preset.removedPartsBody) {
+			writer.String(part.c_str());
+		}
+		writer.EndArray();
+		writer.Key(PRESET_REMOVED_PARTS_LEGS_ID);
+		writer.StartArray();
+		for (const auto& part : preset.removedPartsLegs) {
+			writer.String(part.c_str());
+		}
+		writer.EndArray();
 
 		auto writeCompactBoneModifier = [](const auto& modifier) {
 			rapidjson::StringBuffer buf;

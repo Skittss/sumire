@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sumire/gui/prototypes/data/bones/bone_cache_manager.hpp>
+#include <sumire/gui/prototypes/data/armour/part_cache_manager.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_group.hpp>
 #include <sumire/gui/prototypes/data/formats/preset.hpp>
 #include <sumire/gui/prototypes/data/fbs_compat/fbs_preset.hpp>
@@ -8,6 +9,7 @@
 #include <sumire/gui/prototypes/data/formats/preset_group_defaults.hpp>
 #include <sumire/gui/prototypes/data/formats/preset_defaults.hpp>
 #include <sumire/gui/prototypes/data/formats/kbf_file_data.hpp>
+#include <sumire/gui/prototypes/data/formats/kbf_settings.hpp>
 #include <sumire/gui/prototypes/data/armour/armour_list.hpp>
 
 #include <rapidjson/document.h>
@@ -34,6 +36,7 @@ namespace kbf {
 		//        JSON handler classes that derive from some base.
 
 		BoneCacheManager& boneCache() { return boneCacheManager; }
+		PartCacheManager& partCache() { return partCacheManager; }
 
 		PlayerDefaults& playerDefaults() { return presetGroupDefaults.player; }
 		NpcDefaults& npcDefaults() { return presetGroupDefaults.npc; }
@@ -118,7 +121,11 @@ namespace kbf {
 		};
 		std::unordered_map<std::string, ModArchiveCounts> getModArchiveInfo() const;
 
-		// const Config& config() { return m_config; }
+		KBFSettings& settings() { return m_settings; }
+		bool loadSettings(KBFSettings* out);
+		bool loadSettings() { return loadSettings(&m_settings); }
+		bool writeSettings(const KBFSettings& settings) const;
+		bool writeSettings() const { return writeSettings(m_settings); }
 
 		const std::filesystem::path dataBasePath;
 		const std::filesystem::path fbsPath;
@@ -134,6 +141,7 @@ namespace kbf {
 		const std::filesystem::path npcConfigPath      = defaultConfigsPath / "npc.json";
 		const std::filesystem::path playerConfigPath   = defaultConfigsPath / "players.json";
 
+		const std::filesystem::path settingsPath   = dataBasePath / "settings.json";
 		const std::filesystem::path armourListPath = dataBasePath / "armour_list.json";
 
 	private:
@@ -146,8 +154,6 @@ namespace kbf {
 		std::string readJsonFile(const std::string& path) const;
 		bool writeJsonFile(std::string path, const std::string& json) const;
 		bool deleteJsonFile(std::string path) const;
-
-		void loadSettings();
 
 		bool loadAlmaConfig(AlmaDefaults* out);
 		bool writeAlmaConfig(const AlmaDefaults& out) const;
@@ -207,7 +213,9 @@ namespace kbf {
 		bool writeArmourList(const std::filesystem::path& path, const ArmourMapping& mapping) const;
 		void writeArmourListJsonContent(const ArmourMapping& mapping, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
 
-		BoneCacheManager boneCacheManager;
+		KBFSettings m_settings;
+		BoneCacheManager boneCacheManager{ dataBasePath };
+		PartCacheManager partCacheManager{ dataBasePath };
 
 		ImFont* regularFontOverride = nullptr;
 	};
