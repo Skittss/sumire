@@ -8,6 +8,9 @@
 #include <chrono>
 #include <sstream>
 
+// Remove this stupid windows macro
+#undef ERROR
+
 namespace kbf {
 
 	void DebugTab::draw() {
@@ -45,6 +48,16 @@ namespace kbf {
 
         ImGui::Spacing();
         ImGui::Checkbox("Autoscroll", &consoleAutoscroll);
+        ImGui::SameLine();
+		ImGui::Checkbox("Debug", &showDebug);
+		ImGui::SameLine();
+        ImGui::Checkbox("Info", &showInfo);
+		ImGui::SameLine();
+		ImGui::Checkbox("Success", &showSuccess);
+		ImGui::SameLine();
+		ImGui::Checkbox("Warn", &showWarn);
+		ImGui::SameLine();
+		ImGui::Checkbox("Error", &showError);
 
         // Delete Button
         ImGui::SameLine();
@@ -73,6 +86,14 @@ namespace kbf {
             ImGui::PushTextWrapPos();
 
             for (const LogData& entry : DEBUG_STACK) {
+                if ((entry.colour == DebugStack::Color::DEBUG && !showDebug) ||
+                    (entry.colour == DebugStack::Color::INFO && !showInfo) ||
+					(entry.colour == DebugStack::Color::SUCCESS && !showSuccess) ||
+                    (entry.colour == DebugStack::Color::WARNING && !showWarn) ||
+                    (entry.colour == DebugStack::Color::ERROR && !showError)) {
+                    continue; // Skip entries based on filter settings
+				}
+
                 ImGui::PushTextWrapPos(ImGui::GetColumnWidth() - timestampWidth);
 
                 // Payload

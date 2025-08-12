@@ -23,6 +23,11 @@ namespace kbf {
 
 		ImFont* monoFont;
 		bool consoleAutoscroll = true;
+		bool showInfo = true;
+		bool showSuccess = true;
+		bool showWarn = true;
+		bool showError = true;
+		bool showDebug = true;
 	};
 
 }
