@@ -9,6 +9,11 @@
 #define PRESET_BODY_MOD_LIMIT_ID    "bodyModLimit"
 #define PRESET_LEGS_USE_SYMMETRY_ID "legsUseSymmetry"
 #define PRESET_BODY_USE_SYMMETRY_ID "bodyUseSymmetry"
+#define PRESET_HIDE_SLINGER_ID      "hideSlinger"
+#define PRESET_HIDE_WEAPON_ID       "hideWeapon"
+
+#define PRESET_REMOVED_PARTS_BODY_ID "removedPartsBody"
+#define PRESET_REMOVED_PARTS_LEGS_ID "removedPartsLegs"
 
 #define PRESET_BONE_MODIFIERS_BODY_ID     "bodyBoneModifiers"
 #define PRESET_BONE_MODIFIERS_LEGS_ID     "legsBoneModifiers"
