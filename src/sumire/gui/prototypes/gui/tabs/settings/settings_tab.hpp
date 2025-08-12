@@ -17,6 +17,12 @@ namespace kbf {
 	private:
 		KBFDataManager& dataManager;
 
+		bool needsWrite = false;
+		constexpr static float writeRateLimit = 0.2f; // seconds
+		static std::chrono::steady_clock::time_point lastWriteTime;
+
+		void pushToggleColors(bool enabled);
+		void popToggleColors();
 	};
 
 }
