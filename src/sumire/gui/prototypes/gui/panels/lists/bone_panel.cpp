@@ -26,7 +26,7 @@ namespace kbf {
         bool open = true;
         processFocus();
         ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(350, 0), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(550, 0), ImGuiCond_Once);
         ImGui::Begin(nameWithID.c_str(), &open, ImGuiWindowFlags_NoCollapse);
 
         float width = ImGui::GetWindowSize().x;
@@ -38,7 +38,7 @@ namespace kbf {
         const BoneCache* cache = dataManager.boneCache().getCachedBones((**preset).armour);
         if (cache) {
             HashedBoneList cacheBoneList = body ? cache->body : cache->legs;
-            std::vector<std::string> cacheBones = cacheBoneList.getBones();
+            cacheBones = cacheBoneList.getBones();
         }
 
         std::set<std::string> selectableBones = (**preset).female
@@ -117,7 +117,7 @@ namespace kbf {
         }
 
         if (boneList.size() == 0 || boneDrawCount == 0) {
-            const char* noneFoundStr = boneList.size() == 0 ? "No Bones Found" : "All Recognised Bones Already Added";
+            const char* noneFoundStr = boneList.size() == 0 ? "No Bones Found In Cache. (Try Equipping the Armour in-game)" : "All Recognised Bones Already Added";
 
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (ImGui::GetColumnWidth() - ImGui::CalcTextSize(noneFoundStr).x) * 0.5f);
