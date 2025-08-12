@@ -12,13 +12,39 @@
 
 namespace kbf {
 
-	BoneCacheManager::BoneCacheManager() {
+	BoneCacheManager::BoneCacheManager(const std::filesystem::path& dataBasePath) : dataBasePath{ dataBasePath } {
 		verifyDirectoryExists();
 		loadBoneCaches();
 	}
 
-	void BoneCacheManager::cacheBones(const ArmourSet& armourSet, const std::vector<std::string>& bones) {
+	void BoneCacheManager::cacheBones(const ArmourSet& armourSet, const std::vector<std::string>& bones, bool body) {
 		size_t hash = HashedBoneList::hashBones(bones);
+
+		bool changed = false;
+		if (caches.find(armourSet) != caches.end()) {
+			BoneCache& existingCache = caches.at(armourSet);
+			if (body) {
+				if (existingCache.body.getHash() == hash) return; // No need to update if the hash is the same
+				existingCache.body = HashedBoneList{ bones, static_cast<uint32_t>(hash) };
+				changed = true;
+			}
+			else {
+				if (existingCache.legs.getHash() == hash) return;
+				existingCache.legs = HashedBoneList{ bones, static_cast<uint32_t>(hash) };
+				changed = true;
+			}
+		}
+		else {
+			BoneCache newCache{
+				armourSet,
+				body ? HashedBoneList{ bones, static_cast<uint32_t>(hash) } : HashedBoneList{},
+				body ? HashedBoneList{} : HashedBoneList{ bones, static_cast<uint32_t>(hash) }
+			};
+			caches.emplace(armourSet, newCache);
+			changed = true;
+		}
+
+		if (changed) writeBoneCache(armourSet);
 	}
 
 	const BoneCache* BoneCacheManager::getCachedBones(const ArmourSet& armourSet) const {
@@ -81,7 +107,7 @@ namespace kbf {
 		parsed &= parseStringArray(presetDoc, BONE_CACHE_BODY_ID, BONE_CACHE_BODY_ID, &bodyBones);
 		parsed &= parseUint(presetDoc, BONE_CACHE_BODY_HASH_ID, BONE_CACHE_BODY_HASH_ID, &bodyHash);
 		parsed &= parseStringArray(presetDoc, BONE_CACHE_LEGS_ID, BONE_CACHE_LEGS_ID, &legsBones);
-		parsed &= parseUint(presetDoc, BONE_CACHE_LEGS_HASH_ID, BONE_CACHE_BODY_HASH_ID, &legsHash);
+		parsed &= parseUint(presetDoc, BONE_CACHE_LEGS_HASH_ID, BONE_CACHE_LEGS_HASH_ID, &legsHash);
 
 		if (!parsed) {
 			DEBUG_STACK.push(std::format("Failed to parse bone cache \"{}\". One or more required values were missing. Please rectify or remove the file.", path.string()), DebugStack::Color::ERROR);
@@ -146,6 +172,49 @@ namespace kbf {
 		}
 
 		return false;
+	}
+
+	bool BoneCacheManager::writeBoneCache(const ArmourSet& armourSet) const {
+		if (caches.find(armourSet) == caches.end()) {
+			DEBUG_STACK.push(std::format("Tried to write bone cache for armour set {} ({}), but no cache data exists.", armourSet.name, armourSet.female ? "F" : "M"), DebugStack::Color::ERROR);
+			return false;
+		}
+
+		return writeBoneCacheJson(boneCachesPath / getBoneCacheFilename(armourSet), caches.at(armourSet));
+	}
+
+	bool BoneCacheManager::writeBoneCacheJson(const std::filesystem::path& path, const BoneCache& out) const {
+		DEBUG_STACK.push(std::format("Writing Bone Cache @ \"{}\"...", path.string()), DebugStack::Color::INFO);
+
+		rapidjson::StringBuffer s;
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(s);
+
+		writer.StartObject();
+		writer.Key(BONE_CACHE_BODY_ID);
+		writer.StartArray();
+		for (const auto& bone : out.body.getBones()) {
+			writer.String(bone.c_str());
+		}
+		writer.EndArray();
+		writer.Key(BONE_CACHE_BODY_HASH_ID);
+		writer.Uint(out.body.getHash());
+		writer.Key(BONE_CACHE_LEGS_ID);
+		writer.StartArray();
+		for (const auto& bone : out.legs.getBones()) {
+			writer.String(bone.c_str());
+		}
+		writer.EndArray();
+		writer.Key(BONE_CACHE_LEGS_HASH_ID);
+		writer.Uint(out.legs.getHash());
+		writer.EndObject();
+
+		bool success = writeJsonFile(path.string(), s.GetString());
+
+		if (!success) {
+			DEBUG_STACK.push(std::format("Failed to write bone cache to {}", path.string()), DebugStack::Color::ERROR);
+		}
+
+		return success;
 	}
 
 	std::string BoneCacheManager::getBoneCacheFilename(const ArmourSet& armourSet) const {

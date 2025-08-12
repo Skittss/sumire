@@ -13,9 +13,9 @@ namespace kbf {
 
 	class BoneCacheManager {
 	public:
-		BoneCacheManager();
+		BoneCacheManager(const std::filesystem::path& dataBasePath);
 
-		void cacheBones(const ArmourSet& armourSet, const std::vector<std::string>& bones);
+		void cacheBones(const ArmourSet& armourSet, const std::vector<std::string>& bones, bool body);
 
 		const BoneCache* getCachedBones(const ArmourSet& armourSet) const;
 
@@ -31,10 +31,9 @@ namespace kbf {
 		// UNSAFE - Do not use directly. Call loadCacheJson instead.
 		std::string readJsonFile(const std::string& path) const;
 		bool writeJsonFile(std::string path, const std::string& json) const;
-		bool deleteJsonFile(std::string path) const;
 
-		bool readBoneCache();
-		bool writeBoneCache(const std::filesystem::path& path, const BoneCache& out);
+		bool writeBoneCache(const ArmourSet& armourSet) const;
+		bool writeBoneCacheJson(const std::filesystem::path& path, const BoneCache& out) const;
 
 		std::string getBoneCacheFilename(const ArmourSet& armourSet) const;
 		bool getBoneCacheArmourSet(const std::string& filename, ArmourSet* out) const;
