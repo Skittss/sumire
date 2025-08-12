@@ -16,6 +16,8 @@
 
 #include <sumire/gui/prototypes/util/string/to_lower.hpp>
 
+#include <imgui_toggle.h>
+
 #include <format>
 #include <unordered_set>
 
@@ -37,6 +39,7 @@ namespace kbf {
         presetPanel.draw();
         presetGroupPanel.draw();
         selectBonePanel.draw();
+        partRemoverPanel.draw();
         navWarnUnsavedPanel.draw();
         assignPresetPanel.draw();
     }
@@ -45,6 +48,7 @@ namespace kbf {
         presetPanel.close();
         presetGroupPanel.close();
         selectBonePanel.close();
+		partRemoverPanel.close();
         navWarnUnsavedPanel.close();
         assignPresetPanel.close();
     }
@@ -54,6 +58,7 @@ namespace kbf {
         presetPanel.close();
         presetGroupPanel.close();
         selectBonePanel.close();
+		partRemoverPanel.close();
         assignPresetPanel.close();
         initializePresetGroupBuffers(presetGroup);
     }
@@ -65,6 +70,7 @@ namespace kbf {
         presetPanel.close();
         presetGroupPanel.close();
         selectBonePanel.close();
+		partRemoverPanel.close();
         assignPresetPanel.close();
         initializePresetBuffers(preset);
     }
@@ -163,7 +169,7 @@ namespace kbf {
         selectBonePanel.openNew("Add Bone Modifier", "EditPreset_BoneModifierPanel", dataManager, &openObject.ptrAfter.preset, body, wsSymbolFont);
         selectBonePanel.get()->focus();
 
-        selectBonePanel.get()->onSelectBone([&](std::string name) {
+        selectBonePanel.get()->onSelectBone([&, body](std::string name) {
             if (body) {
                 openObject.ptrAfter.preset->bodyBoneModifiers.emplace(name, BoneModifier{});
             }
@@ -173,7 +179,7 @@ namespace kbf {
             selectBonePanel.close();
         });
 
-        selectBonePanel.get()->onCheckBoneDisabled([&](std::string name) {
+        selectBonePanel.get()->onCheckBoneDisabled([&, body](std::string name) {
             if (body) return openObject.ptrAfter.preset->bodyBoneModifiers.find(name) != openObject.ptrAfter.preset->bodyBoneModifiers.end();
             return openObject.ptrAfter.preset->legsBoneModifiers.find(name) != openObject.ptrAfter.preset->legsBoneModifiers.end();
         });
@@ -197,6 +203,26 @@ namespace kbf {
                 }
             }
             selectBonePanel.close();
+        });
+    }
+
+    void EditorTab::openPartRemoverPanel() {
+        partRemoverPanel.openNew("Remove Armour Part", "EditPreset_PartRemoverPanel", dataManager, openObject.ptrAfter.preset->armour, wsSymbolFont);
+        partRemoverPanel.get()->focus();
+
+        partRemoverPanel.get()->onSelectPart([&](std::string name, bool body) {
+            if (body) {
+                openObject.ptrAfter.preset->removedPartsBody.insert(name);
+            }
+            else {
+                openObject.ptrAfter.preset->removedPartsLegs.insert(name);
+            }
+            partRemoverPanel.close();
+        });
+
+        partRemoverPanel.get()->onCheckPartDisabled([&](std::string name, bool body) {
+            if (body) return openObject.ptrAfter.preset->removedPartsBody.find(name) != openObject.ptrAfter.preset->removedPartsBody.end();
+            return openObject.ptrAfter.preset->removedPartsLegs.find(name) != openObject.ptrAfter.preset->removedPartsLegs.end();
         });
     }
 
@@ -226,6 +252,8 @@ namespace kbf {
 
         bool drawTabContent = drawStickyNavigationWidget(
             std::format("Editing Preset Group \"{}\"", presetGroupBefore.name),
+            nullptr,
+            nullptr,
             // Callback funcs
             [&]() { return *openObject.ptrBefore.presetGroup != *openObject.ptrAfter.presetGroup; },
             [&]() { openObject.revertPresetGroup(); initializePresetGroupBuffers(openObject.ptrAfter.presetGroup); },
@@ -458,9 +486,12 @@ namespace kbf {
         assert(openObject.type == EditableObject::ObjectType::PRESET && openObject.ptrAfter.preset != nullptr);
         const Preset& presetBefore = *openObject.ptrBefore.preset;
 
+        bool needsPreview = false; // TODO: This needs to feed to the applier or something
         bool drawTabContent = drawStickyNavigationWidget(
             std::format("Editing Preset \"{}\"", presetBefore.name),
+            &needsPreview,
             // Callback funcs
+            nullptr,  // TODO: Func that checks if required armour equipped
             [&]() { return *openObject.ptrBefore.preset != *openObject.ptrAfter.preset; },
             [&]() { openObject.revertPreset(); initializePresetBuffers(openObject.ptrAfter.preset); },
             [&](std::string& errMsg) { return canSavePreset(errMsg); },
@@ -497,6 +528,17 @@ namespace kbf {
                 ImGui::EndTabItem();
             }
             if (ImGui::IsItemClicked()) selectBonePanel.close();
+            
+            bool disableParts = openObject.ptrAfter.preset->armour == ArmourList::DefaultArmourSet();
+            if (disableParts) ImGui::BeginDisabled();
+            if (ImGui::BeginTabItem("Remove Parts")) {
+                ImGui::Spacing();
+                drawPresetEditor_PartVisibilities(&openObject.ptrAfter.preset);
+                ImGui::EndTabItem();
+            }
+            if (ImGui::IsItemClicked()) selectBonePanel.close();
+			if (disableParts) ImGui::EndDisabled();
+            if (disableParts) ImGui::SetItemTooltip("Must select a specific armour set instead of \"Any\" in order to remove parts");
             ImGui::EndTabBar();
         }
     }
@@ -926,6 +968,121 @@ namespace kbf {
         if (changedZ && ImGui::IsKeyDown(ImGuiKey_LeftShift)) { group.x = group.z; group.y = group.z; }
     }
 
+    void EditorTab::drawPresetEditor_PartVisibilities(Preset** preset) {
+		ImGui::Toggle(" Hide Slinger ", &(**preset).hideSlinger, ImGuiToggleFlags_Animated);
+        ImGui::SameLine();
+        ImGui::Toggle(" Hide Weapon ", &(**preset).hideWeapon, ImGuiToggleFlags_Animated);
+        ImGui::SameLine();
+        if (ImGui::Button("Remove Part", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            openPartRemoverPanel();
+        }
+        ImGui::Separator();
+
+        if ((**preset).removedPartsBody.empty() && (**preset).removedPartsLegs.empty()) {
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+            constexpr char const* noBoneStr = "No Parts Currently Being Removed.";
+            preAlignCellContentHorizontal(noBoneStr);
+            ImGui::Text(noBoneStr);
+            ImGui::PopStyleColor();
+        }
+        else {
+            ImGui::BeginChild("PartVisibilitiesTable");
+            if (!(**preset).removedPartsBody.empty()) {
+                if (ImGui::CollapsingHeader("Body Parts", ImGuiTreeNodeFlags_SpanFullWidth)) {
+                   drawPresetEditor_PartVisibilitiesTable("Body Parts", (**preset).removedPartsBody);
+                }
+            }
+            if (!(**preset).removedPartsLegs.empty()) {
+                if (ImGui::CollapsingHeader("Legs Parts", ImGuiTreeNodeFlags_SpanFullWidth)) {
+				    drawPresetEditor_PartVisibilitiesTable("Legs Parts", (**preset).removedPartsLegs);
+                }
+            }
+            ImGui::EndChild();
+        }
+
+    }
+
+    void EditorTab::drawPresetEditor_PartVisibilitiesTable(std::string tableName, std::set<std::string>& parts) {
+        std::vector<std::string> removedParts(parts.begin(), parts.end());
+
+        constexpr float deleteButtonScale = 1.2f;
+        constexpr float linkButtonScale = 1.0f;
+        constexpr float tableVpad = 5.0f;
+		constexpr float selectableHeight = 70.0f;
+        constexpr float alignAdjust = 10.0f;
+
+        constexpr ImGuiTableFlags boneModTableFlags =
+            ImGuiTableFlags_RowBg
+            | ImGuiTableFlags_PadOuterX
+            | ImGuiTableFlags_Sortable;
+        ImGui::BeginTable("##PartRemoverList", 2, boneModTableFlags);
+
+        constexpr ImGuiTableColumnFlags stretchSortFlags =
+            ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch;
+        constexpr ImGuiTableColumnFlags fixedNoSortFlags =
+            ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed;
+
+        ImGui::TableSetupColumn("", fixedNoSortFlags, 0.0f);
+        ImGui::TableSetupColumn("Part", stretchSortFlags, 0.0f);
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableHeadersRow();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(LIST_PADDING.x, tableVpad));
+
+        float contentRegionWidth = ImGui::GetContentRegionAvail().x;
+
+        // Sort - this is kinda horrible.
+        static bool sortDirAscending = true;
+        static bool sort = false;
+
+        if (sort) {
+            std::sort(removedParts.begin(), removedParts.end(), [&](const std::string& a, const std::string& b) {
+                std::string lowa = toLower(a); std::string lowb = toLower(b);
+                return sortDirAscending ? lowa < lowb : lowa > lowb;
+                });
+        }
+
+        if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs()) {
+            if (sort_specs->SpecsDirty && sort_specs->SpecsCount > 0) {
+                const ImGuiTableColumnSortSpecs& sort_spec = sort_specs->Specs[0];
+                sortDirAscending = sort_spec.SortDirection == ImGuiSortDirection_Ascending;
+
+                switch (sort_spec.ColumnIndex)
+                {
+                case 1: sort = true;
+                }
+
+                sort_specs->SpecsDirty = false;
+            }
+        }
+
+        std::vector<std::string> partRemoversToDelete{};
+        for (const std::string& partName : removedParts) {
+            ImGui::TableNextRow(0, selectableHeight);
+            ImGui::TableNextColumn();
+
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (selectableHeight - alignAdjust + tableVpad - ImGui::GetFontSize() * deleteButtonScale) * 0.5f);
+            if (ImDeleteButton(("##del_" + partName).c_str(), deleteButtonScale)) {
+                partRemoversToDelete.push_back(partName);
+            }
+            ImGui::PopStyleColor(2);
+
+            ImGui::TableNextColumn();
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (selectableHeight - alignAdjust + tableVpad - ImGui::CalcTextSize(partName.c_str()).y) * 0.5f);
+            ImGui::Text(partName.c_str());
+        }
+
+        for (const std::string& partName : partRemoversToDelete) {
+            parts.erase(partName);
+        }
+
+        ImGui::PopStyleVar();
+        ImGui::EndTable();
+    }
+
     bool EditorTab::canSavePreset(std::string& errMsg) const {
         assert(openObject.type == EditableObject::ObjectType::PRESET && openObject.ptrAfter.preset != nullptr);
 
@@ -971,6 +1128,10 @@ namespace kbf {
             {
                 std::string selectableId = std::format("##{}_{}", armourSet.name, armourSet.female ? "f" : "m");
                 if (ImGui::Selectable(selectableId.c_str(), preset.armour == armourSet)) {
+                    if (preset.armour != armourSet) {
+                        preset.removedPartsBody.clear();
+                        preset.removedPartsLegs.clear();
+					}
                     preset.armour = armourSet;
                 }
 
@@ -1015,6 +1176,8 @@ namespace kbf {
 
     bool EditorTab::drawStickyNavigationWidget(
         const std::string& text,
+        bool* previewOut,
+        std::function<bool()> canPreviewCb,
         std::function<bool()> canRevertCb,
         std::function<void()> revertCb,
         std::function<bool(std::string&)> canSaveCb,
@@ -1061,18 +1224,44 @@ namespace kbf {
         // Cancel Button
         ImGui::SameLine();
 
-        static constexpr const char* kRevertLabel = "Revert";
-        static constexpr const char* kSaveLabel   = "Save";
+        static constexpr const char* kRevertLabel  = "Revert";
+        static constexpr const char* kSaveLabel    = "Save";
+        static constexpr const char* kPreviewLabel = "Preview";
 
         float revertButtonWidth = ImGui::CalcTextSize(kRevertLabel).x + ImGui::GetStyle().FramePadding.x * 2;
         float saveButtonWidth = ImGui::CalcTextSize(kSaveLabel).x + ImGui::GetStyle().FramePadding.x * 2;
-        float totalWidth = revertButtonWidth + saveButtonWidth + spacing;
+        float previewButtonWidth = ImGui::CalcTextSize(kSaveLabel).x + ImGui::GetStyle().ItemSpacing.x + 65.0f; // manual guess of how big the button is
+
+        float useablePreviewWidth = previewOut ? previewButtonWidth : 0.0f;
+        float useableSpacing = previewOut ? spacing * 2.0f : spacing;
+        float totalWidth = revertButtonWidth + saveButtonWidth + useablePreviewWidth + useableSpacing;
 
         float cancelButtonPos = availableWidth - totalWidth;
         ImGui::SetCursorPosX(cancelButtonPos);
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.20f, 0.20f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.10f, 0.10f, 0.10f, 1.0f));
+        
+        if (previewOut != nullptr) {
+            bool previewDisabled = INVOKE_OPTIONAL_CALLBACK_TYPED(bool, false, canPreviewCb);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.75f));
+            ImGui::Text("Preview");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            if (previewDisabled) {
+                ImGui::BeginDisabled();
+                *previewOut = false;
+            }
+            ImGui::Toggle("##PreviewToggle", previewOut);
+            ImGui::SameLine();
+            if (previewDisabled) {
+                ImGui::EndDisabled();
+                ImGui::SetItemTooltip("Equip the matching armour set on your player to preview.");
+            }
+            else {
+			    ImGui::SetItemTooltip("Preview this preset on your character.");
+            }
+        }
 
         if (!canRevert) ImGui::BeginDisabled();
         if (ImGui::Button(kRevertLabel)) {
@@ -1089,7 +1278,7 @@ namespace kbf {
             INVOKE_REQUIRED_CALLBACK(saveCb);
         }
         if (!canSave) ImGui::EndDisabled();
-        if (!canRevert) ImGui::SetItemTooltip("Preset is unchanged.");
+        if (!canRevert) ImGui::SetItemTooltip("No changes made.");
         else if (!canSave) ImGui::SetItemTooltip(errMsg.c_str());
 
         ImGui::Spacing();

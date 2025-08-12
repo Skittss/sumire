@@ -9,6 +9,7 @@
 #include <sumire/gui/prototypes/gui/panels/lists/preset_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/lists/preset_group_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/lists/bone_panel.hpp>
+#include <sumire/gui/prototypes/gui/panels/lists/part_remover_panel.hpp>
 #include <sumire/gui/prototypes/gui/panels/info/info_popup_panel.hpp>
 #include <sumire/gui/prototypes/data/bones/sortable_bone_modifier.hpp>
 
@@ -48,10 +49,12 @@ namespace kbf {
 		void openCopyPresetPanel();
 		void openCopyPresetGroupPanel();
 		void openSelectBonePanel(bool body);
+		void openPartRemoverPanel();
 		void openAssignPresetPanel(ArmourSet armourSet, bool body);
 		UniquePanel<PresetPanel>      presetPanel;
 		UniquePanel<PresetGroupPanel> presetGroupPanel;
 		UniquePanel<BonePanel>        selectBonePanel;
+		UniquePanel<PartRemoverPanel> partRemoverPanel;
 		UniquePanel<PresetPanel>      assignPresetPanel;
 
 		// Preset Group Editor
@@ -72,7 +75,6 @@ namespace kbf {
 			std::map<std::string, BoneModifier>& modifiers, 
 			bool categorizeBones, 
 			bool useSymmetry);
-
 		void drawCompactBoneModifierTable(
 			std::string tableName, 
 			std::vector<SortableBoneModifier>& sortableModifiers,
@@ -85,6 +87,9 @@ namespace kbf {
 			float modLimit);
 		void drawCompactBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, ImVec2 size, std::string fmtPrefix = "");
 		void drawBoneModifierGroup(const std::string& strID, glm::vec3& group, float limit, float width, float speed);
+		void drawPresetEditor_PartVisibilities(Preset** preset);
+		void drawPresetEditor_PartVisibilitiesTable(std::string tableName, std::set<std::string>& parts);
+
 		bool canSavePreset(std::string& errMsg) const;
 
 		void drawArmourList(Preset& preset, const std::string& filter);
@@ -98,6 +103,8 @@ namespace kbf {
 
 		bool drawStickyNavigationWidget(
 			const std::string& text,
+			bool* previewOut,
+			std::function<bool()> canPreviewCb,
 			std::function<bool()> canRevertCb,
 			std::function<void()> revertCb,
 			std::function<bool(std::string&)> canSaveCb,
