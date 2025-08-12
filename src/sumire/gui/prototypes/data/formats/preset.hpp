@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include <string>
+#include <set>
 #include <map>
 
 namespace kbf {
@@ -25,6 +26,11 @@ namespace kbf {
 		bool  bodyUseSymmetry = true;
 		bool  legsUseSymmetry = true;
 
+		std::set<std::string> removedPartsBody;
+		std::set<std::string> removedPartsLegs;
+		bool hideSlinger = false;
+		bool hideWeapon = false;
+
 		FormatMetadata metadata;
 
 		bool operator==(const Preset& other) const {
@@ -39,12 +45,19 @@ namespace kbf {
 				legsModLimit == other.legsModLimit &&
 				bodyModLimit == other.bodyModLimit &&
 				bodyUseSymmetry == other.bodyUseSymmetry &&
-				legsUseSymmetry == other.legsUseSymmetry
+				legsUseSymmetry == other.legsUseSymmetry &&
+				removedPartsBody == other.removedPartsBody &&
+				removedPartsLegs == other.removedPartsLegs &&
+				hideSlinger == other.hideSlinger &&
+				hideWeapon == other.hideWeapon
 			);
 		}
 
 		bool hasLegs() const { return legsBoneModifiers.size() > 0; }
 		bool hasBody() const { return bodyBoneModifiers.size() > 0; }
+
+		bool hasLegsRemovers() const { return !removedPartsLegs.empty(); }
+		bool hasBodyRemovers() const { return !removedPartsBody.empty(); }
 	};
 
 }
