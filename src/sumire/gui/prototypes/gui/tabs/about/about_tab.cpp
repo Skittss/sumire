@@ -407,7 +407,7 @@ namespace kbf {
 
     void AboutTab::drawTutorials_ManuallyUpdatingKBF() {
         ImGui::TextWrapped(
-            "KBF comes with a set of default presets for all armours in the game, but these may not always be up to date with the latest content if you're playing before I release an official update."
+            "KBF comes with a default look-up list for all armours in the game, but these may not always be up to date with the latest content if you're playing before I release an official update."
 		);
 
         ImGui::TextWrapped(
