@@ -33,13 +33,9 @@ namespace kbf {
 	private:
 		void initializeFonts();
 
-		void drawSexMarker(const bool male, const bool sameline = true, const bool center = true);
-
 		void drawKbfMenuItem(const std::string& label, const KBFTab tabId);
 		void drawMenuBar();
 
-		void drawTab_NPCs();
-		void drawTab_PresetGroups();
 		void drawTab();
 		void drawPopouts();
 
